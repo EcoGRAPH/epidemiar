@@ -1,10 +1,10 @@
 # All run_epidemiar() subfunctions related to early detection
 
 ## Early Detection
-run_early_detection <- function(epi_data, quo_popfield, quo_groupfield, groupings, 
+run_early_detection <- function(epi_data, quo_popfield, quo_groupfield, groupings,
                                 ed_method, ed_control, report_dates){
   message("Running early detection")
-  
+
   #only supporting Farrington Improved method from Surveillance right now,
   #leaving option open for expanding later
   if (ed_method == "Farrington") {
@@ -13,7 +13,7 @@ run_early_detection <- function(epi_data, quo_popfield, quo_groupfield, grouping
   } else stop("Early Detection method not supported")
 }
 
-run_farrington <- function(epi_data, quo_popfield, quo_groupfield, groupings, 
+run_farrington <- function(epi_data, quo_popfield, quo_groupfield, groupings,
                            ed_control, report_dates){
   ## Make sts objects
   #check about population offset
@@ -27,22 +27,22 @@ run_farrington <- function(epi_data, quo_popfield, quo_groupfield, groupings,
       } else stop("Population offset is TRUE, but population field not given")
     } else epi_stss <- make_stss(epi_data, quo_popfield = NULL, quo_groupfield, groupings) #popoffset is FALSE, so no pop to sts
   } else epi_stss <- make_stss(epi_data, quo_popfield = NULL, quo_groupfield, groupings) #if null, default is false, so pop = NULL
-  
+
   ## Set up new control list for Farrington (using their names)
   far_control <- list()
-  
+
   #get evaluation period (range of row numbers)
   far_control[["range"]] <- seq(nrow(epi_stss[[1]]) - length(report_dates$full$seq) + 1, nrow(epi_stss[[1]]))
-  
+
   #set number of years to go back in time
   # allow user set b, else calculate maximum number of years previous data available
   if (is.null(ed_control[["b"]])){
-    #probably more properly done with isoyears and isoweeks, honestly.  <<>> 
+    #probably more properly done with isoyears and isoweeks, honestly.  <<>>
     daydiff <- difftime(report_dates$full$min, min(epi_data$Date), "days") %>% as.numeric()
-    far_control[["b"]] <- floor(daydiff / 365.242) 
-    
+    far_control[["b"]] <- floor(daydiff / 365.242)
+
   } else far_control[["b"]] <- ed_control[["b"]]
-  
+
   #test for all other parameters that can be passed onto Farrington flexible method
   # if not null, use user parameter, otherwise leave as null to use its defaults
   if (!is.null(ed_control[["w"]])){
@@ -84,16 +84,16 @@ run_farrington <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   if (!is.null(ed_control[["thresholdMethod"]])){
     far_control[["thresholdMethod"]] <- ed_control[["thresholdMethod"]]
   }
-  
+
   #run Farringtons
   far_res_list <- vector('list', length(epi_stss))
   for (i in 1:length(epi_stss)){
     far_res_list[[i]] <- farringtonFlexible(epi_stss[[i]], control = far_control)
   }
-  
+
   #results into output report data form
   far_res <- stss_res_to_output_data(far_res_list, quo_popfield, quo_groupfield, groupings, report_dates)
-  
+
   far_res
 }
 
@@ -102,33 +102,33 @@ make_stss <- function(epi_data, quo_popfield, quo_groupfield, groupings){
   stss <- vector('list', length(groupings))
   for (i in 1:length(groupings)){
     g <- groupings[i]
-    g_data <- dplyr::filter(epi_data, !!quo_groupfield == g) %>% 
+    g_data <- dplyr::filter(epi_data, !!quo_groupfield == g) %>%
       #confirming sorting by date
-      arrange(Date) 
+      arrange(Date)
     #Surveillance::sts() expecting a dataframe
     g_df <- as.data.frame(g_data)
     #get NA interpolated case field
-    g_cases <- select(g_df, cases_epidemiar) %>% 
+    g_cases <- select(g_df, cases_epidemiar) %>%
       #sts() likes matrices
       as.matrix()
     #if population field given, get population
     # doesn't matter if populationoffset is FALSE for farringtons, that will be handled in the controls of ed method
     if (!is.null(quo_popfield)){
-      g_pop <- select(g_df, !!quo_popfield) %>% 
+      g_pop <- select(g_df, !!quo_popfield) %>%
         #sts() likes matrices
         as.matrix()
     } else g_pop <- NULL
-    
+
     #start year and week values
     g_start <- c(g_df[ which(g_df$Date == min(g_df$Date)), "year_epidemiar"],
                  g_df[ which(g_df$Date == min(g_df$Date)), "week_epidemiar"])
-    
+
     #make that group's sts object
     stss[[i]] <- surveillance::sts(observed = g_cases,
                                    start = g_start,
                                    frequency = 52,  #weekly <<>>
                                    population = g_pop,
-                                   epochAsDate = TRUE, 
+                                   epochAsDate = TRUE,
                                    epoch = as.numeric(g_data$Date))
   } # end for loop
   stss
@@ -137,17 +137,17 @@ make_stss <- function(epi_data, quo_popfield, quo_groupfield, groupings){
 stss_res_to_output_data <- function(stss_res_list, quo_popfield, quo_groupfield, groupings, report_dates){
   #take results of a surveillance event detection and reshape to output data format
   #stss to dfs
-  stss_res_dfs <- lapply(stss_res_list, as.data.frame)
-  
+  stss_res_dfs <- lapply(stss_res_list, surveillance::as.data.frame)
+
   #add groupings back in (lost when creating sts object)
   #note importance of alphabetical order for groupings & initial sort at beginning of main function
   stss_res_grp <- mapply(cbind, stss_res_dfs, group_temp = groupings, SIMPLIFY = FALSE)
   #flatten out of list (now that we have the grouping labels)
   stss_res_flat <- do.call(rbind, stss_res_grp)
-  
+
   #gather early detection (KNOWN - pre-forecast) event detection alert series
-  ed_alert_res <- stss_res_flat %>% 
-    filter(epoch %in% report_dates$known$seq) %>% 
+  ed_alert_res <- stss_res_flat %>%
+    filter(epoch %in% report_dates$known$seq) %>%
     mutate(series = "ed",
            Date = epoch,
            value = alarm,
@@ -155,10 +155,10 @@ stss_res_to_output_data <- function(stss_res_list, quo_popfield, quo_groupfield,
            upper = NA,
            lower = NA) %>%
     select(group_temp, Date, series, value, lab, upper, lower)
-  
+
   #gather early WARNING event detection alert series
-  ew_alert_res <- stss_res_flat %>% 
-    filter(epoch %in% report_dates$forecast$seq) %>% 
+  ew_alert_res <- stss_res_flat %>%
+    filter(epoch %in% report_dates$forecast$seq) %>%
     mutate(series = "ew",
            Date = epoch,
            value = alarm,
@@ -166,9 +166,9 @@ stss_res_to_output_data <- function(stss_res_list, quo_popfield, quo_groupfield,
            upper = NA,
            lower = NA) %>%
     select(group_temp, Date, series, value, lab, upper, lower)
-  
+
   #gather event detection threshold series
-  ed_thresh_res <- stss_res_flat %>% 
+  ed_thresh_res <- stss_res_flat %>%
     mutate(series = "thresh",
            Date = epoch,
            value = upperbound / population * 1000, #Incidence, from stss
@@ -176,12 +176,12 @@ stss_res_to_output_data <- function(stss_res_list, quo_popfield, quo_groupfield,
            upper = NA,
            lower = NA) %>%
     select(group_temp, Date, series, value, lab, upper, lower)
-  
+
   #combine ed results
   ed <- rbind(ed_alert_res, ew_alert_res, ed_thresh_res)
   #fix group name field with dplyr programming
-  ed <- ed %>% 
+  ed <- ed %>%
     dplyr::rename(!!quo_name(quo_groupfield) := group_temp)
-  
-  ed 
+
+  ed
 }

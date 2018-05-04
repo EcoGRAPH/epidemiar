@@ -1,3 +1,10 @@
+#' Adds ISO or CDC datefields to a data set with a "Date" (Date) field
+#'
+#' @return dataframe (or tibble) with week and year fields added
+#'
+#' @export
+#'
+
 add_datefields <- function(df, type = "ISO"){
   type <- match.arg(type)
   # get morb df (or accepts any df with Date field) and adds year and week numbers

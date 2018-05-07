@@ -72,60 +72,56 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 }
 
 #forecasting helper functions
-# this creates a modified b-spline basis
+# this creates a modified b-spline basis, which is still (piecewise) polynomial, so
+# we will keep this name
 truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
 
+  # create frame to hold modified b-spline basis
+  xdf  <- data.frame(x=x)
 
+  # figure out where we apparently have data
+  apparentminobs <- min(xdf$x, na.rm=TRUE)
+  apparentmaxobs <- max(xdf$x, na.rm=TRUE)
 
-  # figure out which are truncated
-  xdf <- data.frame(x=x)
-  xdf$trunc <- 0
-  if (!is.null(maxobs)) {
-
-    xdf$trunc[which(xdf$x >= maxobs)] <- 1
-
-  }
+  # figure out where the bspline basis will have support
   if (!is.null(minobs)) {
 
-    xdf$trunc[which(xdf$x <= minobs)] <- 1
+    actualminobs <- max(apparentminobs, minobs)
 
-  }
-  # create a placeholder
-  xdf$poly <- matrix(rep(NA, degree*nrow(xdf)), nrow(xdf), degree)
-
-  # calculate the polynomial for the nontruncated value
-  xdf$poly[xdf$trunc == 0,] <- poly(xdf$x[xdf$trunc == 0],
-                                    degree=degree,
-                                    simple=TRUE,
-                                    raw=FALSE)
-
-  # continue on the polynomials below and above
+  } else { actualminobs <- apparentminobs }
   if (!is.null(maxobs)) {
 
-    for (i in 1:degree) {
+    actualmaxobs <- min(apparentmaxobs, maxobs)
 
-      maxval <- xdf$poly[xdf$x == max(xdf$x[xdf$trunc==0], na.rm=TRUE),i]
-      maxval <- maxval[1]
-      xdf$poly[xdf$x >= maxobs,i] <- maxval
+  } else { actualmaxobs <- apparentmaxobs }
 
-    }
+  # create a full frame to hold this basis before truncation
+  xdf2     <- data.frame(x = actualminobs:actualmaxobs)
+  xdf2$bas <- bs(x=xdf2$x, degree=degree)
+
+  print(xdf2)
+
+  # reverse the last spline basis function
+  xdf2$bas[,degree] <- rev(xdf2$bas[,degree])
+
+  # delete the next to last spline basis function
+  xdf2$bas <- xdf2$bas[,-(degree-1)]
+
+  # merge with original frame
+  xdf <- left_join(xdf, xdf2, by="x")
+
+  # make values 0 where we extend beyond actualmax/minobs
+  for (colnum in 1:ncol(xdf$bas)) {
+
+    xdf$bas[is.na(xdf$bas[,colnum]),colnum] <- 0
 
   }
-  if (!is.null(minobs)) {
 
-    for (i in 1:degree) {
-
-      minval <- xdf$poly[xdf$x == min(xdf$x[xdf$trunc==0], na.rm=TRUE),i]
-      minval <- minval[1]
-      xdf$poly[xdf$x <= minobs,i] <- minval
-
-    }
-
-  }
-
-  return(xdf$poly)
+  return(as.matrix(xdf[,2:ncol(xdf)]))
 
 }
+#matplot(truncpoly(x=1:500, maxobs=400, degree=7), type="l")
+
 
 pull_model_envvars <- function(env_data, quo_obsfield, fc_control){
   #extract values (environment ids) of vars.1 to vars.x from GA output
@@ -494,6 +490,16 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   # create a doy field so that we can use a cyclical spline
   epi_lag <- mutate(epi_lag, doy = as.numeric(format(Date, "%j")))
 
+  #filter to known a little earlier, so we can access the maxobs to create the modified bspline basis
+  epi_known <- epi_lag %>%
+    filter(known == 1)
+
+  # create modified bspline basis in epi_lag file to model longterm trends
+  epi_lag <- mutate(epi_lag,
+                    modbsplinebas = truncpoly(x=epi_lag$Date,
+                                              degree=6,
+                                              maxobs=max(epi_known$Date, na.rm=TRUE)))
+
   #due to dplyr NSE and bandsum eq piece, easier to create expression to give to lm()
   # reg_eq <- as.formula(paste("logcase ~ ", quo_name(quo_groupfield), "+",
   #                            quo_name(quo_groupfield),
@@ -507,9 +513,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                              "* truncpoly(Date, degree=2, maxobs=max(epi_known$Date, na.rm=TRUE)) +",
                              bandsums_eq))
 
-  #filter to known
-  epi_known <- epi_lag %>%
-    filter(known == 1)
+
 
   #run regression
   #cluster_regress <- lm(reg_eq, data = epi_known)

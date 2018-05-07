@@ -2,6 +2,9 @@
 
 
 ## Forecasting
+#' Runs the forecast modeling
+#' @export
+#'
 run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
                          env_data, quo_obsfield, quo_valuefield, env_variables,
                          fc_control, env_ref_data, env_info, report_dates, week_type){
@@ -74,6 +77,9 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 #forecasting helper functions
 # this creates a modified b-spline basis, which is still (piecewise) polynomial, so
 # we will keep this name
+#' Truncates poly
+#' @export
+#'
 truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
 
   # create frame to hold modified b-spline basis
@@ -99,8 +105,6 @@ truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
   xdf2     <- data.frame(x = actualminobs:actualmaxobs)
   xdf2$bas <- bs(x=xdf2$x, degree=degree)
 
-  print(xdf2)
-
   # reverse the last spline basis function
   xdf2$bas[,degree] <- rev(xdf2$bas[,degree])
 
@@ -117,12 +121,15 @@ truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
 
   }
 
-  return(as.matrix(xdf[,2:ncol(xdf)]))
+  return(as.matrix(xdf$bas))
 
 }
 #matplot(truncpoly(x=1:500, maxobs=400, degree=7), type="l")
 
 
+#' Pull only model env variables
+#' @export
+#'
 pull_model_envvars <- function(env_data, quo_obsfield, fc_control){
   #extract values (environment ids) of vars.1 to vars.x from GA output
   model_var_ids <- fc_control$model[, which(grepl("vars.", names(fc_control$model)))] %>%
@@ -138,6 +145,9 @@ pull_model_envvars <- function(env_data, quo_obsfield, fc_control){
     filter(!!quo_obsfield %in% model_vars)
 }
 
+#' Extend environmental data into the future
+#' @export
+#'
 extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield, quo_valuefield,
                               env_ref_data, env_info, env_variables_used, report_dates, week_type){
   #extending time into future forecast
@@ -278,7 +288,9 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
   extended_env_fill
 }
 
-
+#' Calculate mean of last week env values
+#' @export
+#'
 env_last_week_mean <- function(env_df, env_variables_used, quo_groupfield, quo_obsfield, groupings){
   #gets mean of previous week of daily env data, puts in first NA slot
     #per grouping, per env variable
@@ -309,6 +321,9 @@ env_last_week_mean <- function(env_df, env_variables_used, quo_groupfield, quo_o
   env_mean
 }
 
+#' Fill env data down
+#' @export
+#'
 env_fill_down <- function(env_df, quo_groupfield, quo_obsfield, quo_valuefield){
   #to fill down values (except for original value field) for remaining length of dataset given
   env_filled <- env_df %>%
@@ -321,6 +336,9 @@ env_fill_down <- function(env_df, quo_groupfield, quo_obsfield, quo_valuefield){
   env_filled
 }
 
+#' Extend epidemiology dataframe into future
+#' @export
+#'
 extend_epi_future <- function(epi_data, quo_popfield, quo_groupfield, groupings, report_dates){
   #extended epi data into future dates
   #for use in modeling later (results will be put elsewhere), this is for env and lags and modeling dataset
@@ -340,19 +358,24 @@ extend_epi_future <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   extended_epi
 }
 
+#' Format env data for modeling
+#' @export
+#'
 env_format_fc <- function(env_data_extd, quo_groupfield, quo_obsfield){
   env_spread <- env_data_extd %>%
     mutate(numericdate = as.numeric(Date)) %>%
     select(!!quo_groupfield, !!quo_obsfield, Date, numericdate, val_epidemiar) %>%
     spread(key = !!quo_obsfield, value = val_epidemiar)
 
-  #Because ragged environmental data (per groupfield/obsfield) might exist,
-  #fill in here <<>> #figure out how to better handle?  this might be best?
-  env_spread <- fill(env_spread, everything(), .direction = "down")
+  #no longer needed with updated extend_env_future()
+  #env_spread <- fill(env_spread, everything(), .direction = "down")
 
   env_spread
 }
 
+#' Format epi data for modeling
+#' @export
+#'
 epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
   #cluster information from model
   cluster_groups <- fc_control$model[, which(grepl("clusters.", names(fc_control$model)))] %>%
@@ -381,6 +404,9 @@ epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
   epi_format
 }
 
+#' Lag the env data
+#' @export
+#'
 lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
                                env_fc, env_variables_used, laglen){
   #create lag frame
@@ -461,6 +487,9 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
   epi_lagged
 }
 
+#' Run forecast regression
+#' @export
+#'
 forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                                 env_variables_used, req_date){
 

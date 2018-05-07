@@ -2,7 +2,7 @@
 
 ## Data prep & cleaning functions
 #interpolate NA data -- new case field -- cases_epidemiar & val_epidemiar
-#'
+#' Interpolates missing epi data
 #' @export
 #'
 epi_NA_interpolate <- function(epi_data, quo_casefield, quo_groupfield){
@@ -16,7 +16,7 @@ epi_NA_interpolate <- function(epi_data, quo_casefield, quo_groupfield){
     ungroup()
 }
 
-#'
+#' Interpolates missing env data
 #' @export
 #'
 env_NA_interpolate <- function(env_data, quo_obsfield, quo_valuefield, quo_groupfield){
@@ -36,7 +36,7 @@ env_NA_interpolate <- function(env_data, quo_obsfield, quo_valuefield, quo_group
 
 
 ## Environmental Data for report
-#'
+#' Formats env data for report
 #' @export
 #'
 environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
@@ -105,7 +105,7 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
 
 
 ## Setting up summary data
-#'
+#' Creates summary data
 #' @export
 #'
 create_summary_data <- function(ed_res, quo_groupfield, report_dates){
@@ -162,7 +162,7 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
   summary_data
 }
 
-#'
+#' Creates summary of incidence in ED period
 #' @export
 #'
 create_epi_summary <- function(obs_res, quo_groupfield, report_dates){
@@ -183,7 +183,7 @@ create_epi_summary <- function(obs_res, quo_groupfield, report_dates){
 
 
 ## Calculate anomalies
-#'
+#' Calculates anomalies
 #' @export
 #'
 calc_env_anomalies <- function(env_ts, quo_groupfield, quo_obsfield, report_dates){
@@ -200,7 +200,7 @@ calc_env_anomalies <- function(env_ts, quo_groupfield, quo_obsfield, report_date
 }
 
 #Helper functions
-#'
+#' Create a named list
 #' @export
 #'
 create_named_list <- function(...){

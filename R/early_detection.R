@@ -1,7 +1,7 @@
 # All run_epidemiar() subfunctions related to early detection
 
 ## Early Detection
-#'
+#' Run early detection algorithm
 #' @export
 #'
 run_early_detection <- function(epi_data, quo_popfield, quo_groupfield, groupings,
@@ -16,7 +16,7 @@ run_early_detection <- function(epi_data, quo_popfield, quo_groupfield, grouping
   } else stop("Early Detection method not supported")
 }
 
-#'
+#' Run the Farrington early detection algorithm
 #' @export
 #'
 run_farrington <- function(epi_data, quo_popfield, quo_groupfield, groupings,
@@ -103,7 +103,7 @@ run_farrington <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   far_res
 }
 
-#'
+#' Make the list of sts objects
 #' @export
 #'
 make_stss <- function(epi_data, quo_popfield, quo_groupfield, groupings){
@@ -143,7 +143,7 @@ make_stss <- function(epi_data, quo_popfield, quo_groupfield, groupings){
   stss
 }
 
-#'
+#' Formats output data from sts result objects
 #' @export
 #'
 stss_res_to_output_data <- function(stss_res_list, quo_popfield, quo_groupfield, groupings, report_dates){

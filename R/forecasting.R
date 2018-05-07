@@ -2,7 +2,7 @@
 
 
 ## Forecasting
-#'
+#' Runs the forecast modeling
 #' @export
 #'
 run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
@@ -71,7 +71,7 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 #   return(tempr2)
 # }
 
-#'
+#' Truncates poly
 #' @export
 #'
 truncpoly <- function(x = NULL, degree = 1, maxobs = NULL, minobs = NULL){
@@ -126,7 +126,7 @@ truncpoly <- function(x = NULL, degree = 1, maxobs = NULL, minobs = NULL){
 
 }
 
-#'
+#' Pull only model env variables
 #' @export
 #'
 pull_model_envvars <- function(env_data, quo_obsfield, fc_control){
@@ -144,7 +144,7 @@ pull_model_envvars <- function(env_data, quo_obsfield, fc_control){
     filter(!!quo_obsfield %in% model_vars)
 }
 
-#'
+#' Extend environmental data into the future
 #' @export
 #'
 extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield, quo_valuefield,
@@ -287,7 +287,7 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
   extended_env_fill
 }
 
-#'
+#' Calculate mean of last week env values
 #' @export
 #'
 env_last_week_mean <- function(env_df, env_variables_used, quo_groupfield, quo_obsfield, groupings){
@@ -320,7 +320,7 @@ env_last_week_mean <- function(env_df, env_variables_used, quo_groupfield, quo_o
   env_mean
 }
 
-#'
+#' Fill env data down
 #' @export
 #'
 env_fill_down <- function(env_df, quo_groupfield, quo_obsfield, quo_valuefield){
@@ -335,7 +335,7 @@ env_fill_down <- function(env_df, quo_groupfield, quo_obsfield, quo_valuefield){
   env_filled
 }
 
-#'
+#' Extend epidemiology dataframe into future
 #' @export
 #'
 extend_epi_future <- function(epi_data, quo_popfield, quo_groupfield, groupings, report_dates){
@@ -357,7 +357,7 @@ extend_epi_future <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   extended_epi
 }
 
-#'
+#' Format env data for modeling
 #' @export
 #'
 env_format_fc <- function(env_data_extd, quo_groupfield, quo_obsfield){
@@ -372,7 +372,7 @@ env_format_fc <- function(env_data_extd, quo_groupfield, quo_obsfield){
   env_spread
 }
 
-#'
+#' Format epi data for modeling
 #' @export
 #'
 epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
@@ -403,7 +403,7 @@ epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
   epi_format
 }
 
-#'
+#' Lag the env data
 #' @export
 #'
 lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
@@ -486,7 +486,7 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
   epi_lagged
 }
 
-#'
+#' Run forecast regression
 #' @export
 #'
 forecast_regression <- function(epi_lag, quo_groupfield, groupings,

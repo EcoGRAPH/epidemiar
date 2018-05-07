@@ -1,6 +1,9 @@
 # All run_epidemiar() subfunctions related to early detection
 
 ## Early Detection
+#'
+#' @export
+#'
 run_early_detection <- function(epi_data, quo_popfield, quo_groupfield, groupings,
                                 ed_method, ed_control, report_dates){
   message("Running early detection")
@@ -13,6 +16,9 @@ run_early_detection <- function(epi_data, quo_popfield, quo_groupfield, grouping
   } else stop("Early Detection method not supported")
 }
 
+#'
+#' @export
+#'
 run_farrington <- function(epi_data, quo_popfield, quo_groupfield, groupings,
                            ed_control, report_dates){
   ## Make sts objects
@@ -97,6 +103,9 @@ run_farrington <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   far_res
 }
 
+#'
+#' @export
+#'
 make_stss <- function(epi_data, quo_popfield, quo_groupfield, groupings){
   #create a list of surveillance::sts objects, one for each group
   stss <- vector('list', length(groupings))
@@ -134,6 +143,9 @@ make_stss <- function(epi_data, quo_popfield, quo_groupfield, groupings){
   stss
 }
 
+#'
+#' @export
+#'
 stss_res_to_output_data <- function(stss_res_list, quo_popfield, quo_groupfield, groupings, report_dates){
   #take results of a surveillance event detection and reshape to output data format
   #stss to dfs

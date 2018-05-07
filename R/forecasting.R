@@ -11,7 +11,8 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   message("Running forecasts")
 
   # create the modeling variable
-  epi_data <- mutate(epi_data, logcase = log(cases_epidemiar + 1))
+  # epi_data <- mutate(epi_data, logcase = log(cases_epidemiar + 1))
+  epi_data <- mutate(epi_data, modeledvar = cases_epidemiar)
 
   # trim to the needed env variables as dictated by the model
   env_data <- pull_model_envvars(env_data, quo_obsfield, fc_control)
@@ -46,10 +47,18 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   }
 
   #create cases value from log
+  # preds_catch <- preds_catch %>%
+  #   mutate(fc_cases = exp(fit.fit) + 1,
+  #          fc_cases_upr = exp(fit.upr) + 1,
+  #          fc_cases_lwr = exp(fit.lwr) + 1)
+
+  # Since we're not doing prediction intervals and since we're modeling untransformed data, this is
+  # just an identity transformation, but we retain the variables for compatibility and perhaps further
+  # expansion. This is just a guess at how it might work.
   preds_catch <- preds_catch %>%
-    mutate(fc_cases = exp(fit.fit) + 1,
-           fc_cases_upr = exp(fit.upr) + 1,
-           fc_cases_lwr = exp(fit.lwr) + 1)
+    mutate(fc_cases = fit.fit,
+           fc_cases_upr = NA,
+           fc_cases_lwr = NA)
 
   # extract fc series into report format
   fc_res <- preds_catch %>%
@@ -66,15 +75,11 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 }
 
 #forecasting helper functions
-# r2 <- function(obs = NULL, pred = NULL){
-#   tempr2 <- 1-sum((obs-pred)^2, na.rm=TRUE) / sum( (obs - mean(obs, na.rm=TRUE))^2, na.rm=TRUE)
-#   return(tempr2)
-# }
-
 #' Truncates poly
 #' @export
 #'
-truncpoly <- function(x = NULL, degree = 1, maxobs = NULL, minobs = NULL){
+# this creates a modified b-spline basis
+truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
 
   # figure out which are truncated
   xdf <- data.frame(x=x)
@@ -515,8 +520,18 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
     bandsums_eq <- glue::collapse(bandsums_list, sep = " + ")
   }
 
+  # create a doy field so that we can use a cyclical spline
+  epi_lag <- mutate(epi_lag, doy = as.numeric(format(Date, "%j")))
+
   #due to dplyr NSE and bandsum eq piece, easier to create expression to give to lm()
-  reg_eq <- as.formula(paste("logcase ~ ", quo_name(quo_groupfield), "+",
+  # reg_eq <- as.formula(paste("logcase ~ ", quo_name(quo_groupfield), "+",
+  #                            quo_name(quo_groupfield),
+  #                            "* truncpoly(Date, degree=2, maxobs=max(epi_known$Date, na.rm=TRUE)) +",
+  #                            bandsums_eq))
+  reg_eq <- as.formula(paste("modeledvar ~ s(doy, bs=\"cc\", by=",
+                             quo_name(quo_groupfield),
+                             ") + ",
+                             quo_name(quo_groupfield), "+",
                              quo_name(quo_groupfield),
                              "* truncpoly(Date, degree=2, maxobs=max(epi_known$Date, na.rm=TRUE)) +",
                              bandsums_eq))
@@ -526,14 +541,32 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
     filter(known == 1)
 
   #run regression
-  cluster_regress <- lm(reg_eq, data = epi_known)
+  #cluster_regress <- lm(reg_eq, data = epi_known)
+
+  # set up clusters for parallel gam, hardcoded at moment - rosa has 24, so we take a quarter of them
+  numcluster <- 6
+  cl <- makeCluster(numcluster)
+
+  # run bam
+  cluster_regress <- bam(reg_eq, data = epi_known,
+                         family=poisson(),
+                         chunk.size=5000,
+                         cluster=cl)
+
+  # shut down cluster
+  stopCluster(cl)
 
   #output prediction (through req_date now)
+  # cluster_preds <- predict(cluster_regress,
+  #                          newdata = epi_lag %>% filter(Date <= req_date),
+  #                          se.fit = TRUE,
+  #                          interval = "prediction",
+  #                          level = 0)
   cluster_preds <- predict(cluster_regress,
                            newdata = epi_lag %>% filter(Date <= req_date),
-                           se.fit = TRUE,
-                           interval = "prediction",
-                           level = 0)
+                           se.fit = TRUE,                # included for backwards compatibility
+                           # interval = "prediction",    # cannot include for backwards compatibility, will probably break something
+                           type="response")
 
   #bind back to epi_lag so can group and take desired predictions
   #nested matrices giving issues on capturing output to report format

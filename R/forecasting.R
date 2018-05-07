@@ -519,30 +519,28 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   # create a doy field so that we can use a cyclical spline
   epi_lag <- mutate(epi_lag, doy = as.numeric(format(Date, "%j")))
 
-  #filter to known a little earlier, so we can access the maxobs to create the modified bspline basis
-  epi_known <- epi_lag %>%
-    filter(known == 1)
-
   # create modified bspline basis in epi_lag file to model longterm trends
   epi_lag <- mutate(epi_lag,
                     modbsplinebas = truncpoly(x=epi_lag$Date,
                                               degree=6,
-                                              maxobs=max(epi_known$Date, na.rm=TRUE)))
+                                              maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE)))
+
+  #filter to known
+  epi_known <- epi_lag %>%
+    filter(known == 1)
 
   #due to dplyr NSE and bandsum eq piece, easier to create expression to give to lm()
   # reg_eq <- as.formula(paste("logcase ~ ", quo_name(quo_groupfield), "+",
   #                            quo_name(quo_groupfield),
   #                            "* truncpoly(Date, degree=2, maxobs=max(epi_known$Date, na.rm=TRUE)) +",
   #                            bandsums_eq))
-  reg_eq <- as.formula(paste("modeledvar ~ s(doy, bs=\"cc\", by=",
+  reg_eq <- as.formula(paste("modeledvar ~ modbsplinebas*",
+                             quo_name(quo_groupfield),
+                             "+s(doy, bs=\"cc\", by=",
                              quo_name(quo_groupfield),
                              ") + ",
                              quo_name(quo_groupfield), "+",
-                             quo_name(quo_groupfield),
-                             "* truncpoly(Date, degree=2, maxobs=max(epi_known$Date, na.rm=TRUE)) +",
                              bandsums_eq))
-
-
 
   #run regression
   #cluster_regress <- lm(reg_eq, data = epi_known)

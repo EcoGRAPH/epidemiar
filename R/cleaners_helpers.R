@@ -3,6 +3,9 @@
 ## Data prep & cleaning functions
 #interpolate NA data -- new case field -- cases_epidemiar & val_epidemiar
 #' Interpolates missing epi data
+#'
+#' @return To fill in
+#'
 #' @export
 #'
 epi_NA_interpolate <- function(epi_data, quo_casefield, quo_groupfield){

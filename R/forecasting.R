@@ -584,7 +584,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                          family=poisson(),
                          chunk.size=1000,
                          cluster=cl,
-                         gam.control(trace=TRUE))
+                         control=gam.control(trace=TRUE))
 
   # shut down cluster
   stopCluster(cl)

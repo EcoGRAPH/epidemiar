@@ -542,6 +542,9 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   epi_lag$modbsplinebas <- truncpoly(x=epi_lag$Date,
                                      degree=6,
                                      maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))
+  # debugging
+  matplot(epi_lag$modbsplinebas)
+
 
   #filter to known
   epi_known <- epi_lag %>%
@@ -559,6 +562,9 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                              ") + ",
                              quo_name(quo_groupfield), "+",
                              bandsums_eq))
+
+  # debugging
+  print(reg_eq)
 
   #run regression
   #cluster_regress <- lm(reg_eq, data = epi_known)

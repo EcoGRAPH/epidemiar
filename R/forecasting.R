@@ -82,6 +82,11 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 #'
 truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
 
+  # Some of the later functions will convert date to type spline, so
+  # it's best to go ahead and convert now. Left_join doesn't convert
+  # dates to numeric on the fly.
+  x <- as.numeric(x)
+
   # create frame to hold modified b-spline basis
   xdf  <- data.frame(x=x)
 
@@ -111,11 +116,11 @@ truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
   # delete the next to last spline basis function
   xdf2$bas <- xdf2$bas[,-(degree-1)]
 
-  # debugging
-  print(head(xdf))
-  print(head(xdf2))
-  print(typeof(xdf$x))
-  print(typeof(xdf2$x))
+  # # debugging
+  # print(head(xdf))
+  # print(head(xdf2))
+  # print(typeof(xdf$x))
+  # print(typeof(xdf2$x))
 
   # merge with original frame
   xdf <- left_join(xdf, xdf2, by="x")
@@ -524,10 +529,10 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   # create a doy field so that we can use a cyclical spline
   epi_lag <- mutate(epi_lag, doy = as.numeric(format(Date, "%j")))
 
-  # debugging - have identified problematic function
-  print(head(truncpoly(x=epi_lag$Date,
-                       degree=6,
-                       maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
+  # # debugging - have identified problematic function
+  # print(head(truncpoly(x=epi_lag$Date,
+  #                      degree=6,
+  #                      maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
 
   # create modified bspline basis in epi_lag file to model longterm trends
   epi_lag <- mutate(epi_lag,

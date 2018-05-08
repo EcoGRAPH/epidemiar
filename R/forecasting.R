@@ -579,10 +579,12 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   cl <- makeCluster(numcluster)
 
   # run bam
+  message("Beginning bam on historical epi data")
   cluster_regress <- bam(reg_eq, data = epi_known,
                          family=poisson(),
-                         chunk.size=5000,
-                         cluster=cl)
+                         chunk.size=1000,
+                         cluster=cl,
+                         gam.control(trace=TRUE))
 
   # shut down cluster
   stopCluster(cl)

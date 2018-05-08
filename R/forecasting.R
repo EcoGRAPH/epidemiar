@@ -557,14 +557,16 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   #                            bandsums_eq))
   reg_eq <- as.formula(paste("modeledvar ~ modbsplinebas*",
                              quo_name(quo_groupfield),
-                             "+s(doy, bs=\"cc\", by=",
+                             "+s(doy, bs=\"cc\", by=epi_known$",
                              quo_name(quo_groupfield),
                              ") + ",
                              quo_name(quo_groupfield), "+",
                              bandsums_eq))
 
   # debugging
+  print(reg_eq)
   print(head(epi_known))
+  print(head(epi_known$woreda_name))
 
   #run regression
   #cluster_regress <- lm(reg_eq, data = epi_known)

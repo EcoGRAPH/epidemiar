@@ -62,29 +62,29 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
                              quo_name(quo_obsfield))) %>%
     #add week, year fields
     epidemiar::add_datefields(week_type) %>%
+    #trim dates to reduce processing (dates are rough, technically just need week prior to start. 8 is not magical)
+    filter(Date >= report_dates$full$min - 8 & Date <= report_dates$full$max + 8) %>%
     #group by grouping, env var, and date week
     group_by(!!quo_groupfield, !!quo_obsfield, year_epidemiar, week_epidemiar) %>%
-    #summarizing
+    #calculate with case_when at row level (fx is not vectorized, so can't be used inside summarize)
+    mutate(val_epidemiar = case_when(
+      reference_method == "sum"  ~ sum(val_epidemiar, na.rm = TRUE),
+      reference_method == "mean" ~ mean(val_epidemiar, na.rm = TRUE),
+      #default is mean
+      TRUE                       ~ mean(val_epidemiar, na.rm = TRUE))) %>%
+    #now summarize
     #max Date of that week is how the weekly dates are set up
     summarize(Date = max(Date),
-              val_epidemiar_sum = sum(val_epidemiar, na.rm = TRUE),
-              val_epidemiar_mean = mean(val_epidemiar, na.rm = TRUE),
+              #val_epi is the same for the whole grouped set, so just taking the first value
+              val_epidemiar = first(val_epidemiar),
               #will be same throughout week
-              reference_method = unique(reference_method),
-              #observed/interpolated -- Mode, whatever source was most often that week.
+              reference_method = first(reference_method),
+              #observed/interpolated/extended -- Mode, whatever source was most often that week.
               data_source = epidemiaweb::Mode(data_source, na.rm = TRUE)) %>%
-    #now take appropriate summarization based on reference method (case_when does not work inside summarize)
-    mutate(val_epidemiar = case_when(
-      reference_method == "sum"  ~ val_epidemiar_sum,
-      reference_method == "mean" ~ val_epidemiar_mean,
-      #default is mean
-      TRUE                       ~ val_epidemiar_mean)) %>%
-    #remove unwanted columns
-    select(-val_epidemiar_sum, -val_epidemiar_mean) %>%
     #ungroup to end
     ungroup()
 
-  #filter dates
+  #filter exact dates
   environ_timeseries <- env_data_varused_sum %>%
     filter(Date >= report_dates$full$min & Date <= report_dates$full$max) %>%
     arrange(!!quo_groupfield, Date, !!quo_obsfield)

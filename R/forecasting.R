@@ -545,6 +545,10 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   ## debugging
   # matplot(epi_lag$modbsplinebas)
 
+  # ensure that quo_name(quo_groupfield) is a factor - gam/bam will fail if given a character,
+  # which is unusual among regression functions, which typically just coerce into factors.
+  epi_lag <- mutate(epi_lag,
+                    quo_name(quo_groupfield) = factor(quo_name(quo_groupfield)))
 
   #filter to known
   epi_known <- epi_lag %>%
@@ -557,16 +561,16 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   #                            bandsums_eq))
   reg_eq <- as.formula(paste("modeledvar ~ modbsplinebas*",
                              quo_name(quo_groupfield),
-                             "+s(doy, bs=\"cc\", by=epi_known$",
+                             "+s(doy, bs=\"cc\", by=",
                              quo_name(quo_groupfield),
                              ") + ",
                              quo_name(quo_groupfield), "+",
                              bandsums_eq))
 
-  # debugging
-  print(reg_eq)
-  print(head(epi_known))
-  print(head(epi_known$woreda_name))
+  # # debugging
+  # print(reg_eq)
+  # print(head(epi_known))
+  # print(head(epi_known$woreda_name))
 
   #run regression
   #cluster_regress <- lm(reg_eq, data = epi_known)

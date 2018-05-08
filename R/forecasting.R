@@ -518,6 +518,8 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   # create a doy field so that we can use a cyclical spline
   epi_lag <- mutate(epi_lag, doy = as.numeric(format(Date, "%j")))
 
+  message("general kenobi!")
+
   # create modified bspline basis in epi_lag file to model longterm trends
   epi_lag <- mutate(epi_lag,
                     modbsplinebas = truncpoly(x=epi_lag$Date,

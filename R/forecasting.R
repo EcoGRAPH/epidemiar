@@ -111,6 +111,12 @@ truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
   # delete the next to last spline basis function
   xdf2$bas <- xdf2$bas[,-(degree-1)]
 
+  # debugging
+  print(head(xdf))
+  print(head(xdf2))
+  print(typeof(xdf$x))
+  print(typeof(xdf2$x))
+
   # merge with original frame
   xdf <- left_join(xdf, xdf2, by="x")
 
@@ -518,7 +524,10 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   # create a doy field so that we can use a cyclical spline
   epi_lag <- mutate(epi_lag, doy = as.numeric(format(Date, "%j")))
 
-  message("general kenobi!")
+  # debugging - have identified problematic function
+  print(head(truncpoly(x=epi_lag$Date,
+                       degree=6,
+                       maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
 
   # create modified bspline basis in epi_lag file to model longterm trends
   epi_lag <- mutate(epi_lag,

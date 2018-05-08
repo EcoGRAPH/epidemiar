@@ -535,10 +535,13 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   #                      maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
 
   # create modified bspline basis in epi_lag file to model longterm trends
-  epi_lag <- mutate(epi_lag,
-                    modbsplinebas = truncpoly(x=epi_lag$Date,
-                                              degree=6,
-                                              maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE)))
+  # epi_lag <- mutate(epi_lag,
+  #                   modbsplinebas = truncpoly(x=epi_lag$Date,
+  #                                             degree=6,
+  #                                             maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE)))
+  epi_lag$modbsplinebas <- truncpoly(x=epi_lag$Date,
+                                     degree=6,
+                                     maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))
 
   #filter to known
   epi_known <- epi_lag %>%

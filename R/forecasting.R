@@ -124,8 +124,6 @@ truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
   return(as.matrix(xdf$bas))
 
 }
-#matplot(truncpoly(x=1:500, maxobs=400, degree=7), type="l")
-
 
 #' Pull only model env variables
 #' @export
@@ -409,6 +407,7 @@ epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
 #'
 lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
                                env_fc, env_variables_used, laglen){
+
   #create lag frame
   datalagger <- crossing(group_temp = groupings,
                          Date = unique(epi_fc$Date),

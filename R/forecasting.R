@@ -548,7 +548,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   # ensure that quo_name(quo_groupfield) is a factor - gam/bam will fail if given a character,
   # which is unusual among regression functions, which typically just coerce into factors.
   epi_lag <- mutate(epi_lag,
-                    quo_name(quo_groupfield) = factor(quo_name(quo_groupfield)))
+                    quo_expr(quo_groupfield) = factor(quo_expr(quo_groupfield)))
 
   #filter to known
   epi_known <- epi_lag %>%

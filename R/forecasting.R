@@ -12,7 +12,7 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 
   # create the modeling variable
   # epi_data <- mutate(epi_data, logcase = log(cases_epidemiar + 1))
-  epi_data <- mutate(epi_data, modeledvar = cases_epidemiar)
+  epi_data <- mutate(epi_data, modeledvar = floor(cases_epidemiar))
 
   # trim to the needed env variables as dictated by the model
   env_data <- pull_model_envvars(env_data, quo_obsfield, fc_control)

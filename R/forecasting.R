@@ -535,13 +535,11 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   #                      maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
 
   # create modified bspline basis in epi_lag file to model longterm trends
-  # epi_lag <- mutate(epi_lag,
-  #                   modbsplinebas = truncpoly(x=epi_lag$Date,
-  #                                             degree=6,
-  #                                             maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE)))
-  epi_lag$modbsplinebas <- truncpoly(x=epi_lag$Date,
+  # this needs to enter the tibble as something other than a matrix, and it's been suggested
+  # that we can convert to numeric.
+  epi_lag$modbsplinebas <- as.numeric(truncpoly(x=epi_lag$Date,
                                      degree=6,
-                                     maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))
+                                     maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE)))
   ## debugging
   # matplot(epi_lag$modbsplinebas)
 

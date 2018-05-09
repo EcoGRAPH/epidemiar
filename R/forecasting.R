@@ -519,7 +519,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
 
   #create variable bandsummaries equation piece
   #  e.g. 'bandsummaries_{var1} * cluster_id' for however many env var bandsummaries there are
-  bandsums_list <- grep("bandsummaries_*", colnames(epi_lag), value = TRUE)
+  bandsums_list <- grep("bandsum_*", colnames(epi_lag), value = TRUE)
   bandsums_cl_list <- paste0(bandsums_list, "*cluster_id")
   #note, glue:: to distinguish b/t very different dplyr::collapse
   #need variant without known multiplication if <= 1 clusters
@@ -548,6 +548,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                                                  maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
   epi_lag <- data.frame(epi_lag)
   print(head(epi_lag))
+  print(names(epi_lag))
 
   # get list of modbspline reserved variables and format for inclusion into model
   modb_list <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)

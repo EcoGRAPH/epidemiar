@@ -546,6 +546,8 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   epi_lag <- cbind(epi_lag, data.frame(truncpoly(x=epi_lag$Date,
                                                  degree=6,
                                                  maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
+  epi_lag <- data.frame(epi_lag)
+  print(head(epi_lag))
 
   # get list of modbspline reserved variables and format for inclusion into model
   modb_list <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)

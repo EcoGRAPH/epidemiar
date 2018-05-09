@@ -132,7 +132,10 @@ truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
 
   }
 
-  return(as.matrix(xdf$bas))
+  tempdf <- data.frame(xdf$bas)
+  names(tempdf) <- paste("modb_reserved_", names(tempdf), sep="")
+
+  return(tempdf)
 
 }
 
@@ -535,13 +538,16 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   #                      maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
 
   # create modified bspline basis in epi_lag file to model longterm trends
-  # this needs to enter the tibble as something other than a matrix, and it's been suggested
-  # that we can convert to numeric.
-  epi_lag$modbsplinebas <- as.numeric(truncpoly(x=epi_lag$Date,
-                                     degree=6,
-                                     maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE)))
-  ## debugging
-  # matplot(epi_lag$modbsplinebas)
+  # Instead of passing a modbsplinebas matrix back, we're now just binding extra columns
+  # and will have to deal with this in the regression.
+  epi_lag %>% bind_cols(truncpoly(x=epi_lag$Date,
+                                  degree=6,
+                                  maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE)))
+
+  # get list of modbspline reserved variables and format for inclusion into model
+  modb_list <- grep("modb_reserved_*", colnames(epi_lag), value = TRUE)
+  modb_list <- paste(modb_list, "*", quo_name(quo_groupfield))
+  modb_eq <- glue::collapse(modb_list, sep = " + ")
 
   # ensure that quo_name(quo_groupfield) is a factor - gam/bam will fail if given a character,
   # which is unusual among regression functions, which typically just coerce into factors.
@@ -556,13 +562,15 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   #                            quo_name(quo_groupfield),
   #                            "* truncpoly(Date, degree=2, maxobs=max(epi_known$Date, na.rm=TRUE)) +",
   #                            bandsums_eq))
-  reg_eq <- as.formula(paste("modeledvar ~ modbsplinebas*",
-                             quo_name(quo_groupfield),
+  reg_eq <- as.formula(paste("modeledvar ~ ", modb_eq,
                              "+s(doy, bs=\"cc\", by=",
                              quo_name(quo_groupfield),
                              ") + ",
                              quo_name(quo_groupfield), "+",
                              bandsums_eq))
+
+  # debugging
+  print(reg_eq)
 
   # # debugging
   # print(reg_eq)

@@ -54,6 +54,10 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 
   # Since we're not doing prediction intervals and since we're modeling untransformed data, this is
   # just an identity transformation, but we retain the variables for compatibility and perhaps further
+
+  # debugging
+  print(head(preds_catch))
+
   # expansion. This is just a guess at how it might work.
   preds_catch <- preds_catch %>%
     mutate(fc_cases = fit.fit,
@@ -556,12 +560,12 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   cl <- makeCluster(numcluster)
 
   # run bam
-  message("Beginning bam on historical epi data")
+  #message("Beginning bam on historical epi data")
   cluster_regress <- bam(reg_eq, data = epi_known,
                          family=poisson(),
                          chunk.size=1000,
                          cluster=cl,
-                         control=gam.control(trace=TRUE))
+                         control=gam.control(trace=FALSE))
 
   # shut down cluster
   stopCluster(cl)

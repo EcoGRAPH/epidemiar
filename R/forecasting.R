@@ -488,7 +488,6 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 
     #need matrix of them for running model, so just doing that here rather than later
     #epi_lagged[, (paste0("bandsummaries_", curvar))] <- as.matrix(bandsum)
-
     # no longer do a matrix here, since this was making everything awful later
     # just bind the columns instead
     epi_lagged <- bind_cols(epi_lagged, bandsum)
@@ -544,15 +543,9 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   # create modified bspline basis in epi_lag file to model longterm trends
   # Instead of passing a modbsplinebas matrix back, we're now just binding extra columns
   # and will have to deal with this in the regression.
-  # print(head(truncpoly(x=epi_lag$Date,
-  #                degree=6,
-  #                maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
   epi_lag <- cbind(epi_lag, truncpoly(x=epi_lag$Date,
                                       degree=6,
                                       maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE)))
-  # epi_lag <- as.list(as.data.frame(epi_lag))
-  print(head(epi_lag))
-  print(names(epi_lag))
 
   # get list of modbspline reserved variables and format for inclusion into model
   modb_list <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)
@@ -579,8 +572,8 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                              quo_name(quo_groupfield), "+",
                              bandsums_eq))
 
-  # debugging
-  print(reg_eq)
+  # # debugging
+  # print(reg_eq)
 
   # # debugging
   # print(reg_eq)
@@ -599,8 +592,8 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   cluster_regress <- bam(reg_eq, data = epi_known,
                          family=poisson(),
                          chunk.size=1000,
-                         cluster=cl)#,
-                         #)control=gam.control(trace=TRUE))
+                         cluster=cl,
+                         control=gam.control(trace=TRUE))
 
   # shut down cluster
   stopCluster(cl)

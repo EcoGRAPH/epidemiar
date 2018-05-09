@@ -487,7 +487,11 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
     #epi_lagged <- cbind(epi_lagged, bandsum)
 
     #need matrix of them for running model, so just doing that here rather than later
-    epi_lagged[, (paste0("bandsummaries_", curvar))] <- as.matrix(bandsum)
+    #epi_lagged[, (paste0("bandsummaries_", curvar))] <- as.matrix(bandsum)
+
+    # no longer do a matrix here, since this was making everything awful later
+    # just bind the columns instead
+    epi_lagged <- bind_cols(epi_lagged, bandsum)
 
   } #end distr lag summary loop
 
@@ -543,10 +547,10 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   # print(head(truncpoly(x=epi_lag$Date,
   #                degree=6,
   #                maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
-  epi_lag <- cbind(epi_lag, data.frame(truncpoly(x=epi_lag$Date,
-                                                 degree=6,
-                                                 maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
-  epi_lag <- as.list(as.data.frame(epi_lag))
+  epi_lag <- cbind(epi_lag, truncpoly(x=epi_lag$Date,
+                                      degree=6,
+                                      maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE)))
+  # epi_lag <- as.list(as.data.frame(epi_lag))
   print(head(epi_lag))
   print(names(epi_lag))
 

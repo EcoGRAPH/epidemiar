@@ -133,7 +133,7 @@ truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
   }
 
   tempdf <- data.frame(xdf$bas)
-  names(tempdf) <- paste("modb_reserved_", names(tempdf), sep="")
+  names(tempdf) <- paste("modbs_reserved_", names(tempdf), sep="")
 
   return(tempdf)
 
@@ -545,7 +545,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                                              maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE)))
 
   # get list of modbspline reserved variables and format for inclusion into model
-  modb_list <- grep("modb_reserved_*", colnames(epi_lag), value = TRUE)
+  modb_list <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)
   modb_list <- paste(modb_list, "*", quo_name(quo_groupfield))
   modb_eq <- glue::collapse(modb_list, sep = " + ")
 

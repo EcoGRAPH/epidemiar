@@ -116,13 +116,7 @@ truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
   # delete the next to last spline basis function
   xdf2$bas <- xdf2$bas[,-(degree-1)]
 
-  # # debugging
-  # print(head(xdf))
-  # print(head(xdf2))
-  # print(typeof(xdf$x))
-  # print(typeof(xdf2$x))
-
-  # merge with original frame
+    # merge with original frame
   xdf <- left_join(xdf, xdf2, by="x")
 
   # make values 0 where we extend beyond actualmax/minobs
@@ -484,12 +478,8 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
     bandsum <- data.frame(bandsum)
     names(bandsum) <- paste0("bandsum_", curvar, "_", 1:dlagdeg)
 
-    #epi_lagged <- cbind(epi_lagged, bandsum)
-
-    #need matrix of them for running model, so just doing that here rather than later
-    #epi_lagged[, (paste0("bandsummaries_", curvar))] <- as.matrix(bandsum)
-    # no longer do a matrix here, since this was making everything awful later
-    # just bind the columns instead
+    # we used to do a submatrix here so that the regression formulae would
+    # be more easily written, but this was incompatible with dplyr
     epi_lagged <- bind_cols(epi_lagged, bandsum)
 
   } #end distr lag summary loop
@@ -535,14 +525,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   # create a doy field so that we can use a cyclical spline
   epi_lag <- mutate(epi_lag, doy = as.numeric(format(Date, "%j")))
 
-  # # debugging - have identified problematic function
-  # print(head(truncpoly(x=epi_lag$Date,
-  #                      degree=6,
-  #                      maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
-
   # create modified bspline basis in epi_lag file to model longterm trends
-  # Instead of passing a modbsplinebas matrix back, we're now just binding extra columns
-  # and will have to deal with this in the regression.
   epi_lag <- cbind(epi_lag, truncpoly(x=epi_lag$Date,
                                       degree=6,
                                       maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE)))
@@ -560,28 +543,13 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   epi_known <- epi_lag %>%
     filter(known == 1)
 
-  #due to dplyr NSE and bandsum eq piece, easier to create expression to give to lm()
-  # reg_eq <- as.formula(paste("logcase ~ ", quo_name(quo_groupfield), "+",
-  #                            quo_name(quo_groupfield),
-  #                            "* truncpoly(Date, degree=2, maxobs=max(epi_known$Date, na.rm=TRUE)) +",
-  #                            bandsums_eq))
+  #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create expression to give to lm()
   reg_eq <- as.formula(paste("modeledvar ~ ", modb_eq,
                              "+s(doy, bs=\"cc\", by=",
                              quo_name(quo_groupfield),
                              ") + ",
                              quo_name(quo_groupfield), "+",
                              bandsums_eq))
-
-  # # debugging
-  # print(reg_eq)
-
-  # # debugging
-  # print(reg_eq)
-  # print(head(epi_known))
-  # print(head(epi_known$woreda_name))
-
-  #run regression
-  #cluster_regress <- lm(reg_eq, data = epi_known)
 
   # set up clusters for parallel gam, hardcoded at moment - rosa has 24, so we take a quarter of them
   numcluster <- 6
@@ -610,11 +578,13 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                            # interval = "prediction",    # cannot include for backwards compatibility, will probably break something
                            type="response")
 
-  #bind back to epi_lag so can group and take desired predictions
-  #nested matrices giving issues on capturing output to report format
-  band_names <- grep("bandsummaries_*", colnames(epi_lag), value = TRUE)
+  #remove distributed lag summaries and bspline basis, which are no longer helpful
+  band_names <- grep("bandsum_*", colnames(epi_lag), value = TRUE)
+  bspl_names <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)
   #remove
   epi_lag_trim <- select(epi_lag, -one_of(band_names))
+  epi_lag_trim <- select(epi_lag_trim, -one_of(bspl_names))
+
   #now cbind to get ready to return
   epi_preds <- cbind(epi_lag_trim %>% filter(Date <= req_date),
                      as.data.frame(cluster_preds))

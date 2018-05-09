@@ -540,12 +540,12 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   # create modified bspline basis in epi_lag file to model longterm trends
   # Instead of passing a modbsplinebas matrix back, we're now just binding extra columns
   # and will have to deal with this in the regression.
-  print(head(truncpoly(x=epi_lag$Date,
-                 degree=6,
-                 maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
-  epi_lag <- epi_lag %>% bind_cols(data.frame(truncpoly(x=epi_lag$Date,
-                                                        degree=6,
-                                                        maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
+  # print(head(truncpoly(x=epi_lag$Date,
+  #                degree=6,
+  #                maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
+  epi_lag <- cbind(epi_lag, data.frame(truncpoly(x=epi_lag$Date,
+                                                 degree=6,
+                                                 maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE))))
 
   # get list of modbspline reserved variables and format for inclusion into model
   modb_list <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)

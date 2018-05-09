@@ -56,13 +56,13 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   # just an identity transformation, but we retain the variables for compatibility and perhaps further
 
   # debugging
-  print(head(preds_catch))
+  #print(head(preds_catch))
 
   # expansion. This is just a guess at how it might work.
   preds_catch <- preds_catch %>%
-    mutate(fc_cases = fit.fit,
-           fc_cases_upr = NA,
-           fc_cases_lwr = NA)
+    mutate(fc_cases = fit,
+           fc_cases_upr = fit+1.96*sqrt(fit),
+           fc_cases_lwr = fit-1.96*sqrt(fit))
 
   # extract fc series into report format
   fc_res <- preds_catch %>%

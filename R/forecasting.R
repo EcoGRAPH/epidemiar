@@ -581,8 +581,8 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   cluster_regress <- bam(reg_eq, data = epi_known,
                          family=poisson(),
                          chunk.size=1000,
-                         cluster=cl,
-                         control=gam.control(trace=TRUE))
+                         cluster=cl)#,
+                         #)control=gam.control(trace=TRUE))
 
   # shut down cluster
   stopCluster(cl)

@@ -30,9 +30,7 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   epi_fc <- epi_format_fc(epi_data_extd, quo_groupfield, fc_control)
 
   # anomalizing the environ data
-  print(head(env_fc))
   env_fc <- anomalize_env(env_fc, quo_groupfield, quo_obsfield)
-  print(head(env_fc))
 
   # create the lags
   epi_lag <- lag_environ_to_epi(epi_fc, quo_groupfield, groupings,
@@ -424,11 +422,13 @@ epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
 #'
 anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield) {
 
+  # the following code only works on dataframes (e.g. env_fc[,curcol] instead of env_fc[[curcol]])
+  # but I believe there's no use fixing it into tibble format since we're probably going to do it all with NSE,
+  # and this conversion won't be necessary anyway
   env_fc <- as.data.frame(env_fc)
 
   # loop through environmental columns - sorry, can't figure out how to do this with NSE today
-  # this fails if we try factor(env_fc[,1]): 'x' must be atomic for 'sort.list' Have you called 'sort' on a list?
-  regionfactor <- factor(env_fc$woreda_name)
+  regionfactor <- factor(env_fc[,1])
   doy          <- as.numeric(format(env_fc$Date, "%j"))
   for (curcol in 4:ncol(env_fc)) {
 
@@ -444,7 +444,8 @@ anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield) {
 
   }
 
-  env_fc
+  env_fc <- as.tibble(env_fc)
+
 }
 
 #' Lag the env data

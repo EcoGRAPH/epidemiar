@@ -30,12 +30,9 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   epi_fc <- epi_format_fc(epi_data_extd, quo_groupfield, fc_control)
 
   # anomalizing the environ data
-  env_fc <- anomalize_env(env_fc, quo_groupfield, quo_obsfield)
-
-  # figuring out what format the environ data are at this point
   print(head(env_fc))
-  print(quo_name(quo_groupfield))
-  print(quo_name(quo_obsfield))
+  env_fc <- anomalize_env(env_fc, quo_groupfield, quo_obsfield)
+  print(head(env_fc))
 
   # create the lags
   epi_lag <- lag_environ_to_epi(epi_fc, quo_groupfield, groupings,
@@ -427,10 +424,24 @@ epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
 #'
 anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield) {
 
-  # env_fc <- env_fc %>% mutate(!!quo_name(quo_obsfield) :=
-  # epi_lag <- epi_lag %>% mutate(!!quo_name(quo_groupfield) := factor(!!quo_groupfield))
-  env_fc
+  # loop through environmental columns - sorry, can't figure out how to do this with NSE today
+  regionfactor <- factor(env_fc[,1])
+  doy          <- as.numeric(format(env_fc$Date, "%j"))
+  for (curcol in 4:ncol(env_fc)) {
 
+    nc <- 6
+    cl <- makeCluster(nc)
+
+    env_fc[,colnum] <- bam(env_fc[,colnum] ~ regionfactor + s(doy, bs="cc", by=regionfactor),
+                           data=env_fc,
+                           chunk.size=1000,
+                           cluster=cl)$residuals
+
+    stopCluster(cl)
+
+  }
+
+  env_fc
 }
 
 #' Lag the env data

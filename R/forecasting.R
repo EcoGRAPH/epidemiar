@@ -34,8 +34,8 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 
   # figuring out what format the environ data are at this point
   print(head(env_fc))
-  print(quo_groupfield)
-  print(quo_obsfield)
+  print(quo_name(quo_groupfield))
+  print(quo_name(quo_obsfield))
 
   # create the lags
   epi_lag <- lag_environ_to_epi(epi_fc, quo_groupfield, groupings,
@@ -426,7 +426,11 @@ epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
 #' @export
 #'
 anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield) {
+
+  # env_fc <- env_fc %>% mutate(!!quo_name(quo_obsfield) :=
+  # epi_lag <- epi_lag %>% mutate(!!quo_name(quo_groupfield) := factor(!!quo_groupfield))
   env_fc
+
 }
 
 #' Lag the env data

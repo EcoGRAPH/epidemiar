@@ -445,6 +445,7 @@ anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield) {
   }
 
   env_fc <- as.tibble(env_fc)
+  return(env_fc)
 
 }
 

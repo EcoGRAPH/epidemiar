@@ -424,6 +424,8 @@ epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
 #'
 anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield) {
 
+  env_fc <- as.data.frame(env_fc)
+
   # loop through environmental columns - sorry, can't figure out how to do this with NSE today
   # this fails if we try factor(env_fc[,1]): 'x' must be atomic for 'sort.list' Have you called 'sort' on a list?
   regionfactor <- factor(env_fc$woreda_name)

@@ -605,13 +605,6 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   # shut down cluster
   stopCluster(cl)
 
-  # temporary output to investigate whole model matrix
-  tempdf <- epi_known
-  tempdf$preds <- predict(cluster_regress,
-                          newdata=epi_known,
-                          type="response")
-  write.csv(tempdf, "D:\\work\\genetic algorithm on clusters\\clusterregress.csv")
-
   #output prediction (through req_date now)
   # cluster_preds <- predict(cluster_regress,
   #                          newdata = epi_lag %>% filter(Date <= req_date),

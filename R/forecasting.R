@@ -433,7 +433,7 @@ anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield) {
     nc <- 6
     cl <- makeCluster(nc)
 
-    env_fc[,colnum] <- bam(env_fc[,colnum] ~ regionfactor + s(doy, bs="cc", by=regionfactor),
+    env_fc[,curcol] <- bam(env_fc[,curcol] ~ regionfactor + s(doy, bs="cc", by=regionfactor),
                            data=env_fc,
                            chunk.size=1000,
                            cluster=cl)$residuals

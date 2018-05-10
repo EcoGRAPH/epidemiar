@@ -29,6 +29,9 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   env_fc <- env_format_fc(env_data_extd, quo_groupfield, quo_obsfield)
   epi_fc <- epi_format_fc(epi_data_extd, quo_groupfield, fc_control)
 
+  # figuring out what format the environ data are at this point
+  print(head(env_fc))
+
   # create the lags
   epi_lag <- lag_environ_to_epi(epi_fc, quo_groupfield, groupings,
                                 env_fc, env_variables_used, laglen = fc_control$lag_length)

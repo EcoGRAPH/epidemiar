@@ -41,7 +41,7 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   preds_catch <- data.frame()
   #loop by week
   for (w in seq_along(report_dates$full$seq)){
-    #message("Forecasting week ", w)
+    message("Forecasting week ", w, " starting at ", Sys.time())
     dt <- report_dates$full$seq[w]
     dt_preds <- forecast_regression(epi_lag, quo_groupfield, groupings,
                                     env_variables_used,
@@ -179,13 +179,20 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
   #fill in any following days with mean of previous week value
   env_known_fill <- env_fill_down(env_df = env_known, quo_groupfield, quo_obsfield, quo_valuefield)
 
+  #trim env var to end of forecast period, don't need data past forecast period if running historical.
+  env_known_fill <- env_known_fill %>%
+    filter(Date <= report_dates$forecast$max)
 
   ## 2. if need future data, now add value-empty future dataframe (to fill in)
-  max_known_env <- max(env_known_fill$Date, na.rm = TRUE)
-  #if do not have env data in forecast period (this could happen if running report with more known env data than epi data)
-  if (report_dates$forecast$max > max_known_env) {
+  #the minimum date of the maximum dates for each env var data in each groupings
+  min_known_env <- env_known_fill %>%
+    group_by(!!quo_groupfield, !!quo_obsfield) %>%
+    summarize(max_dates = max(Date, na.rm = TRUE)) %>%
+    pull(max_dates) %>% min()
+  #if missing at least some of the env data for the forecast period
+  if (report_dates$forecast$max > min_known_env) {
     #create combination of all groups, env vars, and future dates (DAILY)
-    env_future <- crossing(Date = seq.Date(max_known_env + 1, report_dates$forecast$max, 1),
+    env_future <- crossing(Date = seq.Date(min_known_env + 1, report_dates$forecast$max, 1),
                            group_temp = groupings,
                            obs_temp = env_variables_used)
     #and fix names with NSE
@@ -195,7 +202,12 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
     #could have ragged env data per variable per grouping
     #so, antijoin with env_known_fill first to get actually missing future entries
     env_future_missing <- env_future %>%
-      anti_join(env_known_fill)
+      anti_join(env_known_fill, by = set_names(c(quo_name(quo_groupfield),
+                                                 quo_name(quo_obsfield),
+                                                 "Date"),
+                                               c(quo_name(quo_groupfield),
+                                                 quo_name(quo_obsfield),
+                                                 "Date")))
 
     #bind with existing data (NAs for everything else in env_future)
     extended_env <- bind_rows(env_known_fill, env_future_missing) %>%
@@ -294,7 +306,7 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
     } #end if fc wks >4
 
   } else {
-    #end if report_dates$forecast$max > max_known_env
+    #end if report_dates$forecast$max > min_known_env
     #if already have all needed 'future' env data, filled just in case of ragged env data
     extended_env_fill <- env_known_fill
   }

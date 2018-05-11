@@ -435,10 +435,14 @@ anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield) {
     nc <- 6
     cl <- makeCluster(nc)
 
-    env_fc[,curcol] <- bam(env_fc[,curcol] ~ regionfactor + s(doy, bs="cc", by=regionfactor),
-                           data=env_fc,
-                           chunk.size=1000,
-                           cluster=cl)$residuals
+    tempbam <- bam(env_fc[,curcol] ~ regionfactor + s(doy, bs="cc", by=regionfactor),
+                 data=env_fc,
+                 chunk.size=1000,
+                 cluster=cl)
+
+    # could perhaps more cleverly be figured out by understanding the na.options of bam,
+    # but for the moment just replace non-NA observations with their residuals
+    env_fc[!is.na(env_fc[,curcol]),curcol] <- tempbam$residuals
 
     stopCluster(cl)
 

@@ -10,6 +10,13 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
                          fc_control, env_ref_data, env_info, report_dates, week_type){
   message("Running forecasts")
 
+  #set up default parallel processing number of cores to use number
+    #if user-supplied, use that, otherwise create a default number
+    #used in anomalize_env() and forecast_regression()
+  if (!is.null(fc_control[["ncores"]])){
+    ncores <- fc_control[["ncores"]]
+  } else ncores <- max(detectCores(logical=FALSE) - 1, 1)
+
   # create the modeling variable
   # epi_data <- mutate(epi_data, logcase = log(cases_epidemiar + 1))
   epi_data <- mutate(epi_data, modeledvar = floor(cases_epidemiar))
@@ -30,7 +37,7 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   epi_fc <- epi_format_fc(epi_data_extd, quo_groupfield, fc_control)
 
   # anomalizing the environ data
-  env_fc <- anomalize_env(env_fc, quo_groupfield, quo_obsfield)
+  env_fc <- anomalize_env(env_fc, quo_groupfield, quo_obsfield, ncores)
 
   # create the lags
   epi_lag <- lag_environ_to_epi(epi_fc, quo_groupfield, groupings,
@@ -45,7 +52,8 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
     dt <- report_dates$full$seq[w]
     dt_preds <- forecast_regression(epi_lag, quo_groupfield, groupings,
                                     env_variables_used,
-                                    req_date = dt)
+                                    req_date = dt,
+                                    ncores)
     preds_catch <- rbind(preds_catch, as.data.frame(dt_preds))
   }
 
@@ -432,7 +440,7 @@ epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
 #' Convert environmental data into anomalies
 #' @export
 #'
-anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield) {
+anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield, ncores) {
 
   # the following code only works on dataframes (e.g. env_fc[,curcol] instead of env_fc[[curcol]])
   # but I believe there's no use fixing it into tibble format since we're probably going to do it all with NSE,
@@ -444,8 +452,7 @@ anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield) {
   doy          <- as.numeric(format(env_fc$Date, "%j"))
   for (curcol in 4:ncol(env_fc)) {
 
-    nc <- 6
-    cl <- makeCluster(nc)
+    cl <- makeCluster(ncores)
 
     tempbam <- bam(env_fc[,curcol] ~ regionfactor + s(doy, bs="cc", by=regionfactor),
                  data=env_fc,
@@ -552,7 +559,7 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 #' @export
 #'
 forecast_regression <- function(epi_lag, quo_groupfield, groupings,
-                                env_variables_used, req_date){
+                                env_variables_used, req_date, ncores){
 
   #forecasts are always done knowing up to just before that date
   # <<>> need to test what happens with daily vs 8day to daily data
@@ -606,9 +613,8 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                              quo_name(quo_groupfield), "+",
                              bandsums_eq))
 
-  # set up clusters for parallel gam, hardcoded at moment - rosa has 24, so we take a quarter of them
-  numcluster <- 6
-  cl <- makeCluster(numcluster)
+  # set up clusters for parallel gam
+  cl <- makeCluster(ncores)
 
   # run bam
   #message("Beginning bam on historical epi data")

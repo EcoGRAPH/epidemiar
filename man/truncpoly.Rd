@@ -4,7 +4,7 @@
 \alias{truncpoly}
 \title{Truncates poly}
 \usage{
-truncpoly(x = NULL, degree = 1, maxobs = NULL, minobs = NULL)
+truncpoly(x = NULL, degree = 6, maxobs = NULL, minobs = NULL)
 }
 \description{
 Truncates poly

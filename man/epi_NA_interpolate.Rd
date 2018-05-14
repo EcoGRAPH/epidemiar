@@ -6,6 +6,9 @@
 \usage{
 epi_NA_interpolate(epi_data, quo_casefield, quo_groupfield)
 }
+\value{
+To fill in
+}
 \description{
 Interpolates missing epi data
 }

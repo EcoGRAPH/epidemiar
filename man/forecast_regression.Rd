@@ -5,7 +5,7 @@
 \title{Run forecast regression}
 \usage{
 forecast_regression(epi_lag, quo_groupfield, groupings, env_variables_used,
-  req_date)
+  req_date, ncores)
 }
 \description{
 Run forecast regression

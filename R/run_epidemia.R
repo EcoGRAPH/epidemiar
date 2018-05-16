@@ -69,6 +69,7 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
   quo_valuefield <- enquo(valuefield)
 
   #create alphabetical list of unique groups
+    #must remain in alpha order for early detection using surveillance package to capture results properly
   groupings <- pull(epi_data, !!quo_groupfield) %>% unique() %>% sort()
   #create alphabetical list of all unique environmental variables
   env_variables <- pull(env_data, !!quo_obsfield) %>% unique() %>% sort()
@@ -145,7 +146,8 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
     arrange(!!quo_groupfield, Date)
 
   #run early detection on combined dataset
-  ed_res <- run_early_detection(obs_fc_epi, quo_popfield, quo_groupfield,
+  ed_res <- run_early_detection(epi_fc_data = obs_fc_epi,
+                                quo_popfield, quo_groupfield,
                                 groupings, ed_method, ed_control, report_dates)
 
 

@@ -176,16 +176,41 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
     #if >4 weeks, use progressive blend of mean of previous week & historical means
       #Note: env data is DAILY, env ref is WEEKLY
 
-  ## 1. Complete given env_data, as could have ragged env data -
-    # these were marked interpolation, though technically should be considered extrapolation instead
-  env_data <- env_data %>%
-    #mark which ones still have val_epidemiar as NA as extended series
-    mutate(data_source = ifelse(is.na(val_epidemiar), "Extended", data_source))
+  ## 1. Complete given env_data, as could have ragged env data
+  min_known_in_known <- env_data %>%
+    group_by(!!quo_groupfield, !!quo_obsfield) %>%
+    summarize(max_dates = max(Date, na.rm = TRUE)) %>%
+    pull(max_dates) %>% min()
+  #if missing dates in epi "known" period, complete out
+  if (report_dates$known$max > min_known_in_known){
+    #potentially missing rows of env data in epi known period
+    env_completing <- crossing(Date = seq.Date(min_known_in_known + 1, report_dates$known$max, 1),
+                           group_temp = groupings,
+                           obs_temp = env_variables_used)
+    #and fix names with NSE
+    env_completing <- env_completing %>%
+      dplyr::rename(!!quo_name(quo_groupfield) := group_temp,
+                    !!quo_name(quo_obsfield) := obs_temp)
+    #could have ragged env data per variable per grouping
+    #so, antijoin first to get actually missing entries
+    env_completing_missing <- env_completing %>%
+      anti_join(env_data, by = set_names(c(quo_name(quo_groupfield),
+                                                 quo_name(quo_obsfield),
+                                                 "Date"),
+                                               c(quo_name(quo_groupfield),
+                                                 quo_name(quo_obsfield),
+                                                 "Date")))
+
+    #bind with existing data (NAs for everything else in env_future)
+    env_known_complete <- bind_rows(env_data, env_completing_missing) %>%
+      #mark which are about to be filled in
+      mutate(data_source = ifelse(is.na(val_epidemiar), "Extended", data_source))
+  }
 
   #find 1st NA, then take mean of previous week, input for that day
-  env_known <- env_last_week_mean(env_df = env_data, env_variables_used, quo_groupfield, quo_obsfield, groupings)
+  env_known_mean <- env_last_week_mean(env_df = env_known_complete, env_variables_used, quo_groupfield, quo_obsfield, groupings)
   #fill in any following days with mean of previous week value
-  env_known_fill <- env_fill_down(env_df = env_known, quo_groupfield, quo_obsfield, quo_valuefield)
+  env_known_fill <- env_fill_down(env_df = env_known_mean, quo_groupfield, quo_obsfield, quo_valuefield)
 
   #trim env var to end of forecast period, don't need data past forecast period if running historical.
   env_known_fill <- env_known_fill %>%

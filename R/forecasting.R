@@ -205,7 +205,10 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
     env_known_complete <- bind_rows(env_data, env_completing_missing) %>%
       #mark which are about to be filled in
       mutate(data_source = ifelse(is.na(val_epidemiar), "Extended", data_source))
-  }
+  } else {
+    #all env data known for known epi period
+    env_known_complete <- env_data
+    } #end if report_dates$known$max > min_known_in_known section
 
   #find 1st NA, then take mean of previous week, input for that day
   env_known_mean <- env_last_week_mean(env_df = env_known_complete, env_variables_used, quo_groupfield, quo_obsfield, groupings)

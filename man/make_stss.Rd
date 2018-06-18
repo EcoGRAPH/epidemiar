@@ -4,7 +4,7 @@
 \alias{make_stss}
 \title{Make the list of sts objects}
 \usage{
-make_stss(epi_data, quo_popfield, quo_groupfield, groupings)
+make_stss(epi_fc_data, quo_popfield, quo_groupfield, groupings)
 }
 \description{
 Make the list of sts objects

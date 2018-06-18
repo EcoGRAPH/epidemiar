@@ -4,8 +4,8 @@
 \alias{stss_res_to_output_data}
 \title{Formats output data from sts result objects}
 \usage{
-stss_res_to_output_data(stss_res_list, quo_popfield, quo_groupfield, groupings,
-  report_dates)
+stss_res_to_output_data(stss_res_list, epi_fc_data, quo_popfield,
+  quo_groupfield, groupings, report_dates)
 }
 \description{
 Formats output data from sts result objects

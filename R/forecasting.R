@@ -607,7 +607,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
 
   #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create expression to give to lm()
   reg_eq <- as.formula(paste("modeledvar ~ ", modb_eq,
-                             "+s(doy, bs=\"cc\", by=",
+                             "+mgcv::s(doy, bs=\"cc\", by=",
                              rlang::quo_name(quo_groupfield),
                              ") + ",
                              rlang::quo_name(quo_groupfield), "+",

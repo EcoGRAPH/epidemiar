@@ -11,13 +11,18 @@ Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.0.1
 Imports: 
-    tidyverse, 
     dplyr, 
-    tidyr, 
+    glue,
     lubridate, 
-    rlang, 
-    surveillance, 
-    pracma, 
     mgcv, 
-    splines
+    parallel,
+    pracma, 
+    rlang, 
+    splines,
+    surveillance, 
+    tibble,
+    tidyr, 
+    zoo
+
+    
     

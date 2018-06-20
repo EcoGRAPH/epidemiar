@@ -167,7 +167,7 @@ stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
   stss_res_flat <- stss_res_flat %>%
     dplyr::left_join(epi_fc_data %>%
                        dplyr::select(!!quo_groupfield, !!quo_popfield, Date),
-                     by = set_names(c(rlang::quo_name(quo_groupfield),
+                     by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
                                       "Date"),
                                     c(rlang::quo_name(quo_groupfield),
                                       "epoch")))

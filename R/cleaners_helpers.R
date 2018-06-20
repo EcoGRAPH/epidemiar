@@ -32,7 +32,7 @@ env_NA_interpolate <- function(env_data, quo_obsfield, quo_valuefield, quo_group
     dplyr::arrange(Date) %>%
     #interpolate
     dplyr::mutate(val_epidemiar = !!quo_valuefield,
-           val_epidemiar = epidemiar::na_approx(val_epidemiar)) %>%
+                  val_epidemiar = epidemiar::na_approx(val_epidemiar)) %>%
     #finish by ungrouping
     dplyr::ungroup()
 }
@@ -57,9 +57,9 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
   env_data_varused_sum <- env_data_varused %>%
     #get reference/summarizing method from user supplied env_info
     dplyr::left_join(env_info %>%
-                dplyr::select(!!quo_obsfield, reference_method),
-              by = set_names(rlang::quo_name(quo_obsfield),
-                             rlang::quo_name(quo_obsfield))) %>%
+                       dplyr::select(!!quo_obsfield, reference_method),
+                     by = rlang::set_names(rlang::quo_name(quo_obsfield),
+                                           rlang::quo_name(quo_obsfield))) %>%
     #add week, year fields
     epidemiar::add_datefields(week_type) %>%
     #trim dates to reduce processing (dates are rough, technically just need week prior to start. 8 is not magical)
@@ -75,12 +75,12 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
     #now summarize
     #max Date of that week is how the weekly dates are set up
     dplyr::summarize(Date = max(Date),
-              #val_epi is the same for the whole grouped set, so just taking the first value
-              val_epidemiar = first(val_epidemiar),
-              #will be same throughout week
-              reference_method = first(reference_method),
-              #observed/interpolated/extended -- Mode, whatever source was most often that week.
-              data_source = epidemiaweb::Mode(data_source, na.rm = TRUE)) %>%
+                     #val_epi is the same for the whole grouped set, so just taking the first value
+                     val_epidemiar = first(val_epidemiar),
+                     #will be same throughout week
+                     reference_method = first(reference_method),
+                     #observed/interpolated/extended -- Mode, whatever source was most often that week.
+                     data_source = epidemiaweb::Mode(data_source, na.rm = TRUE)) %>%
     #ungroup to end
     dplyr::ungroup()
 
@@ -95,15 +95,15 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
   environ_timeseries <- environ_timeseries %>%
     #join
     dplyr::left_join(env_ref_varused %>%
-                dplyr::select(!!quo_obsfield, !!quo_groupfield, week_epidemiar,
-                       ref_value, ref_sd, ref_median, ref_uq, ref_lq),
-              #NSE fun
-              by = set_names(c(rlang::quo_name(quo_groupfield),
-                               rlang::quo_name(quo_obsfield),
-                               "week_epidemiar"),
-                             c(rlang::quo_name(quo_groupfield),
-                               rlang::quo_name(quo_obsfield),
-                               "week_epidemiar")))
+                       dplyr::select(!!quo_obsfield, !!quo_groupfield, week_epidemiar,
+                                     ref_value, ref_sd, ref_median, ref_uq, ref_lq),
+                     #NSE fun
+                     by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                                             rlang::quo_name(quo_obsfield),
+                                             "week_epidemiar"),
+                                           c(rlang::quo_name(quo_groupfield),
+                                             rlang::quo_name(quo_obsfield),
+                                             "week_epidemiar")))
 }
 
 
@@ -128,9 +128,9 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
     dplyr::summarize(ed_alert_count = sum(value, na.rm = TRUE)) %>%
     # create 3 levels (0, 1, 2 = >1)
     dplyr::mutate(warning_level = if_else(ed_alert_count > 1, 2, ed_alert_count),
-           #factor to label
-           ed_sum_level = factor(warning_level, levels = 0:2,
-                                 labels = alert_level, ordered = TRUE)) %>%
+                  #factor to label
+                  ed_sum_level = factor(warning_level, levels = 0:2,
+                                        labels = alert_level, ordered = TRUE)) %>%
     #ungroup
     dplyr::ungroup() %>%
     #select minimal cols
@@ -141,17 +141,17 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
   ew_summary <- ed_res %>%
     #get the alert series
     dplyr::filter(series == "ew",
-           #get the forecast results ##not needed anymore b/c of new ew series, but just for completeness
-           Date %in% report_dates$forecast$seq) %>%
+                  #get the forecast results ##not needed anymore b/c of new ew series, but just for completeness
+                  Date %in% report_dates$forecast$seq) %>%
     #group
     dplyr::group_by(!!quo_groupfield) %>%
     #summarize to 1 obs per grouping
     dplyr::summarize(ew_alert_count = sum(value, na.rm = TRUE)) %>%
     # create 3 levels (0, 1, 2 = >1)
     dplyr::mutate(warning_level = if_else(ew_alert_count > 1, 2, ew_alert_count),
-           #factor to label
-           ew_level = factor(warning_level, levels = 0:2,
-                             labels = alert_level, ordered = TRUE)) %>%
+                  #factor to label
+                  ew_level = factor(warning_level, levels = 0:2,
+                                    labels = alert_level, ordered = TRUE)) %>%
     #ungroup
     dplyr::ungroup() %>%
     #select minimal cols
@@ -159,8 +159,8 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
 
   #join results
   summary_data <- dplyr::inner_join(ed_summary, ew_summary,
-                             by = set_names(rlang::quo_name(quo_groupfield),
-                                            rlang::quo_name(quo_groupfield)))
+                                    by = rlang::set_names(rlang::quo_name(quo_groupfield),
+                                                          rlang::quo_name(quo_groupfield)))
 
   summary_data
 }

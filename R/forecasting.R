@@ -205,17 +205,17 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
                                   obs_temp = env_variables_used)
     #and fix names with NSE
     env_future <- env_future %>%
-      dplyr::rename(!!quo_name(quo_groupfield) := group_temp,
-                    !!quo_name(quo_obsfield) := obs_temp)
+      dplyr::rename(!!rlang::quo_name(quo_groupfield) := group_temp,
+                    !!rlang::quo_name(quo_obsfield) := obs_temp)
     #could have ragged env data per variable per grouping
     #so, antijoin with env_known_fill first to get actually missing future entries
     env_future_missing <- env_future %>%
-      dplyr::anti_join(env_known_fill, by = set_names(c(quo_name(quo_groupfield),
-                                                        quo_name(quo_obsfield),
-                                                        "Date"),
-                                                      c(quo_name(quo_groupfield),
-                                                        quo_name(quo_obsfield),
-                                                        "Date")))
+      dplyr::anti_join(env_known_fill, by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                                                               rlang::quo_name(quo_obsfield),
+                                                               "Date"),
+                                                             c(rlang::quo_name(quo_groupfield),
+                                                               rlang::quo_name(quo_obsfield),
+                                                               "Date")))
 
     #bind with existing data (NAs for everything else in env_future)
     extended_env <- dplyr::bind_rows(env_known_fill, env_future_missing) %>%
@@ -257,18 +257,18 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
         #get reference/summarizing method from user supplied env_info
         dplyr::left_join(env_info %>%
                            dplyr::select(!!quo_obsfield, reference_method),
-                         by = set_names(rlang::quo_name(quo_obsfield),
-                                        rlang::quo_name(quo_obsfield))) %>%
+                         by = rlang::set_names(rlang::quo_name(quo_obsfield),
+                                               rlang::quo_name(quo_obsfield))) %>%
         #get weekly ref value
         dplyr::left_join(env_ref_varused %>%
                            dplyr::select(!!quo_obsfield, !!quo_groupfield, week_epidemiar, ref_value),
                          #NSE fun
-                         by = set_names(c(rlang::quo_name(quo_groupfield),
-                                          rlang::quo_name(quo_obsfield),
-                                          "week_epidemiar"),
-                                        c(rlang::quo_name(quo_groupfield),
-                                          rlang::quo_name(quo_obsfield),
-                                          "week_epidemiar")))
+                         by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                                                 rlang::quo_name(quo_obsfield),
+                                                 "week_epidemiar"),
+                                               c(rlang::quo_name(quo_groupfield),
+                                                 rlang::quo_name(quo_obsfield),
+                                                 "week_epidemiar")))
 
       #Monster loop
       #first day of week (so can use fill down, later)
@@ -429,8 +429,8 @@ epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
     #get group_id
     dplyr::left_join(fc_control$groupcodes,
                      #NSE
-                     by = set_names(rlang::quo_name(quo_groupfield),
-                                    rlang::quo_name(quo_groupfield))) %>%
+                     by = rlang::set_names(rlang::quo_name(quo_groupfield),
+                                           rlang::quo_name(quo_groupfield))) %>%
     #get cluster_id
     dplyr::left_join(cluster_groups, by = "group_id")
 
@@ -494,8 +494,8 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
   #add env data
   datalagger <- dplyr::left_join(datalagger, env_fc,
                                  #because dplyr NSE, notice flip order
-                                 by = set_names(c(rlang::quo_name(quo_groupfield), "Date"),
-                                                c(rlang::quo_name(quo_groupfield), "laggeddate")))
+                                 by = rlang::set_names(c(rlang::quo_name(quo_groupfield), "Date"),
+                                                       c(rlang::quo_name(quo_groupfield), "laggeddate")))
 
   # pivot lagged environmental data to epi data
   epi_lagged <- epi_fc #to more easily debug and rerun
@@ -511,8 +511,8 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
     #join cur var wide data to epi data
     epi_lagged <- dplyr::left_join(epi_lagged, meandat,
                                    #dplyr NSE
-                                   by = set_names(c(rlang::quo_name(quo_groupfield), "Date"),
-                                                  c(rlang::quo_name(quo_groupfield), "Date")))
+                                   by = rlang::set_names(c(rlang::quo_name(quo_groupfield), "Date"),
+                                                         c(rlang::quo_name(quo_groupfield), "Date")))
   } #end pivot loop
 
   # set up distributed lag basis functions

@@ -622,7 +622,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                                family=poisson(),
                                chunk.size=1000,
                                cluster=cl,
-                               control=gam.control(trace=FALSE))
+                               control=mgcv::gam.control(trace=FALSE))
 
   # shut down cluster
   parallel::stopCluster(cl)

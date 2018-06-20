@@ -139,7 +139,7 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
     dplyr::filter(Date %in% report_dates$forecast$seq)
   #combine existing and future
   obs_fc_epi <- dplyr::bind_rows(epi_data, future_fc) %>%
-    dplyr::mutate(cases_epidemiar = ifelse(!are_na(cases_epidemiar),
+    dplyr::mutate(cases_epidemiar = ifelse(!rlang::are_na(cases_epidemiar),
                                            cases_epidemiar,
                                            fc_cases)) %>%
     #will be lost by end, but need for early detection methods using surveillance::sts objects

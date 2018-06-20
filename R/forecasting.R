@@ -15,7 +15,7 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   #used in anomalize_env() and forecast_regression()
   if (!is.null(fc_control[["ncores"]])){
     ncores <- fc_control[["ncores"]]
-  } else ncores <- max(detectCores(logical=FALSE) - 1, 1)
+  } else ncores <- max(parallel::detectCores(logical=FALSE) - 1, 1)
 
   # create the modeling variable
   # epi_data <- mutate(epi_data, logcase = log(cases_epidemiar + 1))

@@ -11,12 +11,12 @@ add_datefields <- function(df, type = "ISO"){
   if (type == "ISO"){
     df <- df %>%
       #add iso wk/yr
-      mutate(week_epidemiar = epidemiar::epiweek(Date, system = "who"),
-             year_epidemiar = epidemiar::epiyear(Date, system = "who"))
+      dplyr::mutate(week_epidemiar = epidemiar::epiweek(Date, system = "who"),
+                    year_epidemiar = epidemiar::epiyear(Date, system = "who"))
   } else if (type == "CDC"){
     #add CDC epi wk/yr
-    mutate(week_epidemiar = epidemiar::epiweek(Date, system = "cdc"),
-           year_epidemiar = epidemiar::epiyear(Date, system = "cdc"))
+    dplyr::mutate(week_epidemiar = epidemiar::epiweek(Date, system = "cdc"),
+                  year_epidemiar = epidemiar::epiyear(Date, system = "cdc"))
   }
   df
 }

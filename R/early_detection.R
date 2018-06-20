@@ -4,6 +4,7 @@
 #' Run early detection algorithm
 #' @export
 #'
+#'
 run_early_detection <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings,
                                 ed_method, ed_control, report_dates){
   message("Running early detection")
@@ -95,7 +96,7 @@ run_farrington <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings,
   #run Farringtons
   far_res_list <- vector('list', length(epi_stss))
   for (i in 1:length(epi_stss)){
-    far_res_list[[i]] <- farringtonFlexible(epi_stss[[i]], control = far_control)
+    far_res_list[[i]] <- surveillance::farringtonFlexible(epi_stss[[i]], control = far_control)
   }
 
   #results into output report data form
@@ -115,17 +116,17 @@ make_stss <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings){
     g <- groupings[i]
     g_data <- dplyr::filter(epi_fc_data, !!quo_groupfield == g) %>%
       #confirming sorting by date
-      arrange(Date)
+      dplyr::arrange(Date)
     #Surveillance::sts() expecting a dataframe
     g_df <- as.data.frame(g_data)
     #get NA interpolated case field
-    g_cases <- select(g_df, cases_epidemiar) %>%
+    g_cases <- dplyr::select(g_df, cases_epidemiar) %>%
       #sts() likes matrices
       as.matrix()
     #if population field given, get population
-      #only is passed in when popoffset = TRUE & population field is given
+    #only is passed in when popoffset = TRUE & population field is given
     if (!is.null(quo_popfield)){
-      g_pop <- select(g_df, !!quo_popfield) %>%
+      g_pop <- dplyr::select(g_df, !!quo_popfield) %>%
         #sts() likes matrices
         as.matrix()
     } else g_pop <- NULL
@@ -164,44 +165,44 @@ stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
 
   #recover population (for incidence calculations), not present if popoffset was FALSE
   stss_res_flat <- stss_res_flat %>%
-    left_join(epi_fc_data %>%
-                select(!!quo_groupfield, !!quo_popfield, Date),
-              by = set_names(c(quo_name(quo_groupfield),
-                               "Date"),
-                             c(quo_name(quo_groupfield),
-                               "epoch")))
+    dplyr::left_join(epi_fc_data %>%
+                       dplyr::select(!!quo_groupfield, !!quo_popfield, Date),
+                     by = set_names(c(rlang::quo_name(quo_groupfield),
+                                      "Date"),
+                                    c(rlang::quo_name(quo_groupfield),
+                                      "epoch")))
 
   #gather early detection (KNOWN - pre-forecast) event detection alert series
   ed_alert_res <- stss_res_flat %>%
-    filter(epoch %in% report_dates$known$seq) %>%
-    mutate(series = "ed",
-           Date = epoch,
-           value = alarm,
-           lab = "Early Detection Alert",
-           upper = NA,
-           lower = NA) %>%
-    select(!!quo_groupfield, Date, series, value, lab, upper, lower)
+    dplyr::filter(epoch %in% report_dates$known$seq) %>%
+    dplyr::mutate(series = "ed",
+                  Date = epoch,
+                  value = alarm,
+                  lab = "Early Detection Alert",
+                  upper = NA,
+                  lower = NA) %>%
+    dplyr::select(!!quo_groupfield, Date, series, value, lab, upper, lower)
 
   #gather early WARNING event detection alert series
   ew_alert_res <- stss_res_flat %>%
-    filter(epoch %in% report_dates$forecast$seq) %>%
-    mutate(series = "ew",
-           Date = epoch,
-           value = alarm,
-           lab = "Early Warning Alert",
-           upper = NA,
-           lower = NA) %>%
-    select(!!quo_groupfield, Date, series, value, lab, upper, lower)
+    dplyr::filter(epoch %in% report_dates$forecast$seq) %>%
+    dplyr::mutate(series = "ew",
+                  Date = epoch,
+                  value = alarm,
+                  lab = "Early Warning Alert",
+                  upper = NA,
+                  lower = NA) %>%
+    dplyr::select(!!quo_groupfield, Date, series, value, lab, upper, lower)
 
   #gather event detection threshold series
   ed_thresh_res <- stss_res_flat %>%
-    mutate(series = "thresh",
-           Date = epoch,
-           value = upperbound / !!quo_popfield * 1000, #Incidence, from stss & epi_fc_data
-           lab = "Alert Threshold",
-           upper = NA,
-           lower = NA) %>%
-    select(!!quo_groupfield, Date, series, value, lab, upper, lower)
+    dplyr::mutate(series = "thresh",
+                  Date = epoch,
+                  value = upperbound / !!quo_popfield * 1000, #Incidence, from stss & epi_fc_data
+                  lab = "Alert Threshold",
+                  upper = NA,
+                  lower = NA) %>%
+    dplyr::select(!!quo_groupfield, Date, series, value, lab, upper, lower)
 
   #combine ed results
   ed <- rbind(ed_alert_res, ew_alert_res, ed_thresh_res)

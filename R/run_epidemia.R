@@ -25,6 +25,8 @@
 #'
 #' @export
 #'
+#' @importFrom magrittr %>%
+#' @importFrom rlang !!
 
 
 ## Main Modeling (Early Detection, Forecasting) Function
@@ -62,39 +64,39 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
   #env_info: lookup table for environmental data - reference creation method, future extension method, report label, GA ID, etc.
 
   #dplyr programming steps for passing of field names
-  quo_casefield <- enquo(casefield)
-  quo_popfield <- enquo(populationfield)
-  quo_groupfield <- enquo(groupfield)
-  quo_obsfield <- enquo(obsfield)
-  quo_valuefield <- enquo(valuefield)
+  quo_casefield <- rlang::enquo(casefield)
+  quo_popfield <- rlang::enquo(populationfield)
+  quo_groupfield <- rlang::enquo(groupfield)
+  quo_obsfield <- rlang::enquo(obsfield)
+  quo_valuefield <- rlang::enquo(valuefield)
 
   #create alphabetical list of unique groups
-    #must remain in alpha order for early detection using surveillance package to capture results properly
-  groupings <- pull(epi_data, !!quo_groupfield) %>% unique() %>% sort()
+  #must remain in alpha order for early detection using surveillance package to capture results properly
+  groupings <- dplyr::pull(epi_data, !!quo_groupfield) %>% unique() %>% sort()
   #create alphabetical list of all unique environmental variables
-  env_variables <- pull(env_data, !!quo_obsfield) %>% unique() %>% sort()
+  env_variables <- dplyr::pull(env_data, !!quo_obsfield) %>% unique() %>% sort()
 
   ## Create report date information - for passing to interval functions, and report output
   #REM: report_period is full # of weeks of report.  forecast_future is how many of those weeks should be in the future.
   #full report
   report_dates <- list(full = list(min = max(epi_data$Date, na.rm = TRUE) -
-                                     as.difftime((report_period - forecast_future - 1),
-                                                 unit = "weeks"),
+                                     lubridate::as.difftime((report_period - forecast_future - 1),
+                                                            unit = "weeks"),
                                    max = max(epi_data$Date, na.rm = TRUE) +
-                                     as.difftime(forecast_future,
-                                                 units = "weeks")))
+                                     lubridate::as.difftime(forecast_future,
+                                                            units = "weeks")))
   report_dates$full$seq <- report_dates$full %>% {seq.Date(.$min, .$max, "week")}
   #dates with known epidemological data
   report_dates$known <- list(min = report_dates$full$min,
                              max = max(epi_data$Date, na.rm = TRUE))
   report_dates$known$seq <- report_dates$known %>% {seq.Date(.$min, .$max, "week")}
   #forecast period
-  report_dates$forecast <- list(min = report_dates$known$max + as.difftime(1, units = "weeks"),
+  report_dates$forecast <- list(min = report_dates$known$max + lubridate::as.difftime(1, units = "weeks"),
                                 #could calculate from forecast_future, but already done so in $full
                                 max = report_dates$full$max)
   report_dates$forecast$seq <- report_dates$forecast %>% {seq.Date(.$min, .$max, "week")}
   #early detection summary period (ED runs over full report, this is for summary in defined ED period)
-  report_dates$ed_sum <- list(min = report_dates$known$max - as.difftime(ed_summary_period - 1, units = "weeks"),
+  report_dates$ed_sum <- list(min = report_dates$known$max - lubridate::as.difftime(ed_summary_period - 1, units = "weeks"),
                               max = report_dates$known$max)
   report_dates$ed_sum$seq <- report_dates$ed_sum %>% {seq.Date(.$min, .$max, "week")}
 
@@ -104,24 +106,24 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
   #cases_epidemiar field name from data clearning (epi)
   epi_data <- epi_NA_interpolate(epi_data, quo_casefield, quo_groupfield) %>%
     #and sort by alphabetical groupfield
-    arrange(!!quo_groupfield, Date)
+    dplyr::arrange(!!quo_groupfield, Date)
   #val_epidemiar field name from data cleaning (env)
   env_data <- env_NA_interpolate(env_data, quo_obsfield, quo_valuefield, quo_groupfield) %>%
     #and sort by alphabetical groupfield
-    arrange(!!quo_groupfield, !!quo_obsfield, Date)
+    dplyr::arrange(!!quo_groupfield, !!quo_obsfield, Date)
 
   ## Set up output report data format
   #create observed data series
   obs_res <- epi_data %>%
     #include only observed data from requested start of report
-    filter(Date >= report_dates$full$min) %>%
-    mutate(series = "obs",
-           #INCIDENCE; also note use of original not interpolated cases
-           value = !!quo_casefield / !!quo_popfield * 1000,
-           lab = "Observed",
-           upper = NA,
-           lower = NA) %>%
-    select(!!quo_groupfield, Date, series, value, lab, upper, lower)
+    dplyr::filter(Date >= report_dates$full$min) %>%
+    dplyr::mutate(series = "obs",
+                  #INCIDENCE; also note use of original not interpolated cases
+                  value = !!quo_casefield / !!quo_popfield * 1000,
+                  lab = "Observed",
+                  upper = NA,
+                  lower = NA) %>%
+    dplyr::select(!!quo_groupfield, Date, series, value, lab, upper, lower)
 
 
   ## Forecast
@@ -134,16 +136,16 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
   #need to calculate early detection on existing epi data & FUTURE FORECASTED results
   future_fc <- fc_res_all$fc_epi %>%
     #get future forecasted results ONLY
-    filter(Date %in% report_dates$forecast$seq)
+    dplyr::filter(Date %in% report_dates$forecast$seq)
   #combine existing and future
-  obs_fc_epi <- bind_rows(epi_data, future_fc) %>%
-    mutate(cases_epidemiar = ifelse(!are_na(cases_epidemiar),
-                                    cases_epidemiar,
-                                    fc_cases)) %>%
+  obs_fc_epi <- dplyr::bind_rows(epi_data, future_fc) %>%
+    dplyr::mutate(cases_epidemiar = ifelse(!are_na(cases_epidemiar),
+                                           cases_epidemiar,
+                                           fc_cases)) %>%
     #will be lost by end, but need for early detection methods using surveillance::sts objects
     epidemiar::add_datefields() %>%
     #arrange (for viewing/checking)
-    arrange(!!quo_groupfield, Date)
+    dplyr::arrange(!!quo_groupfield, Date)
 
   #run early detection on combined dataset
   ed_res <- run_early_detection(epi_fc_data = obs_fc_epi,
@@ -152,7 +154,7 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
 
 
   ## Combine epi datasets
-  epi_res <- bind_rows(obs_res, fc_res_all$fc_res, ed_res)
+  epi_res <- dplyr::bind_rows(obs_res, fc_res_all$fc_res, ed_res)
   #add week fields
   modeling_results_data <- epidemiar::add_datefields(epi_res, week_type)
 

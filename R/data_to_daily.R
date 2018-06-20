@@ -8,23 +8,23 @@ data_to_daily <- function(data_notdaily, valuefield, interpolate = TRUE){
   #Date field as.Date()
 
   #dplyr programming, NSE
-  quo_valuefield <- enquo(valuefield)
+  quo_valuefield <- rlang::enquo(valuefield)
 
   data_1day <- data_notdaily %>%
     #should handle all grouping/categories, and therefore any ragged data
-    group_by_at(vars(-Date, -!!quo_valuefield)) %>%
+    dplyr::group_by_at(dplyr::vars(-Date, -!!quo_valuefield)) %>%
     #all explicit missing data - line for every Date for all groupings (above)
-    complete(Date = full_seq(c(min(data_notdaily$Date), max(data_notdaily$Date)), 1)) %>%
-    ungroup()
+    tidyr::complete(Date = tidyr::full_seq(c(min(data_notdaily$Date), max(data_notdaily$Date)), 1)) %>%
+    dplyr::ungroup()
 
   if (interpolate){
     data_1day <- data_1day %>%
       #should handle all grouping/categories, and therefore any ragged data
-      group_by_at(vars(-Date, -!!quo_valuefield)) %>%
+      dplyr::group_by_at(dplyr::vars(-Date, -!!quo_valuefield)) %>%
       #will not extrapolate beyond last known value, that will happen inside run_epidemia()
       mutate(!!quo_name(quo_valuefield) := epidemiar::na_approx(!!quo_valuefield)) %>%
       #finish by ungrouping
-      ungroup()
+      dplyr::ungroup()
   }
 
   data_1day

@@ -454,7 +454,7 @@ anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield, ncores) {
 
     cl <- parallel::makeCluster(ncores)
 
-    tempbam <- mgcv::bam(env_fc[,curcol] ~ regionfactor + mgcv::s(doy, bs="cc", by=regionfactor),
+    tempbam <- mgcv::bam(env_fc[,curcol] ~ regionfactor + s(doy, bs="cc", by=regionfactor),
                          data=env_fc,
                          chunk.size=1000,
                          cluster=cl)

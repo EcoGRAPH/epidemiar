@@ -633,7 +633,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   #                          se.fit = TRUE,
   #                          interval = "prediction",
   #                          level = 0)
-  cluster_preds <- mgcv::predict(cluster_regress,
+  cluster_preds <- mgcv::predict.bam(cluster_regress,
                                  newdata = epi_lag %>% dplyr::filter(Date <= req_date),
                                  se.fit = TRUE,                # included for backwards compatibility
                                  # interval = "prediction",    # cannot include for backwards compatibility, will probably break something

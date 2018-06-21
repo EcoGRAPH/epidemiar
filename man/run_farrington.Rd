@@ -4,7 +4,7 @@
 \alias{run_farrington}
 \title{Run the Farrington early detection algorithm}
 \usage{
-run_farrington(epi_data, quo_popfield, quo_groupfield, groupings, ed_control,
+run_farrington(epi_fc_data, quo_popfield, quo_groupfield, groupings, ed_control,
   report_dates)
 }
 \description{

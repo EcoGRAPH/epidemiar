@@ -4,14 +4,15 @@
 #' Run early detection algorithm
 #' @export
 #'
-run_early_detection <- function(epi_data, quo_popfield, quo_groupfield, groupings,
+#'
+run_early_detection <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings,
                                 ed_method, ed_control, report_dates){
   message("Running early detection")
 
   #only supporting Farrington Improved method from Surveillance right now,
   #leaving option open for expanding later
   if (ed_method == "Farrington") {
-    ed_far_res <- run_farrington(epi_data, quo_popfield, quo_groupfield, groupings, ed_control, report_dates)
+    ed_far_res <- run_farrington(epi_fc_data, quo_popfield, quo_groupfield, groupings, ed_control, report_dates)
     return(ed_far_res)
   } else stop("Early Detection method not supported")
 }
@@ -19,7 +20,7 @@ run_early_detection <- function(epi_data, quo_popfield, quo_groupfield, grouping
 #' Run the Farrington early detection algorithm
 #' @export
 #'
-run_farrington <- function(epi_data, quo_popfield, quo_groupfield, groupings,
+run_farrington <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings,
                            ed_control, report_dates){
   ## Make sts objects
   #check about population offset
@@ -29,10 +30,11 @@ run_farrington <- function(epi_data, quo_popfield, quo_groupfield, groupings,
     if (ed_control[["populationOffset"]] == TRUE){
       #if so, did they give the population field
       if (!is.null(quo_popfield)){
-        epi_stss <- make_stss(epi_data, quo_popfield, quo_groupfield, groupings)
+        epi_stss <- make_stss(epi_fc_data, quo_popfield, quo_groupfield, groupings)
       } else stop("Population offset is TRUE, but population field not given")
-    } else epi_stss <- make_stss(epi_data, quo_popfield = NULL, quo_groupfield, groupings) #popoffset is FALSE, so no pop to sts
-  } else epi_stss <- make_stss(epi_data, quo_popfield = NULL, quo_groupfield, groupings) #if null, default is false, so pop = NULL
+    } else epi_stss <- make_stss(epi_fc_data, quo_popfield = NULL, quo_groupfield, groupings) #popoffset is FALSE, so no pop to sts
+  } else epi_stss <- make_stss(epi_fc_data, quo_popfield = NULL, quo_groupfield, groupings) #if null, default is false, so pop = NULL
+  #though note that pop is still a required field atm, so this path will fail later in early detection
 
   ## Set up new control list for Farrington (using their names)
   far_control <- list()
@@ -44,7 +46,7 @@ run_farrington <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   # allow user set b, else calculate maximum number of years previous data available
   if (is.null(ed_control[["b"]])){
     #probably more properly done with isoyears and isoweeks, honestly.  <<>>
-    daydiff <- difftime(report_dates$full$min, min(epi_data$Date), "days") %>% as.numeric()
+    daydiff <- difftime(report_dates$full$min, min(epi_fc_data$Date), "days") %>% as.numeric()
     far_control[["b"]] <- floor(daydiff / 365.242)
 
   } else far_control[["b"]] <- ed_control[["b"]]
@@ -94,11 +96,12 @@ run_farrington <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   #run Farringtons
   far_res_list <- vector('list', length(epi_stss))
   for (i in 1:length(epi_stss)){
-    far_res_list[[i]] <- farringtonFlexible(epi_stss[[i]], control = far_control)
+    far_res_list[[i]] <- surveillance::farringtonFlexible(epi_stss[[i]], control = far_control)
   }
 
   #results into output report data form
-  far_res <- stss_res_to_output_data(far_res_list, quo_popfield, quo_groupfield, groupings, report_dates)
+  far_res <- stss_res_to_output_data(stss_res_list = far_res_list, epi_fc_data,
+                                     quo_popfield, quo_groupfield, groupings, report_dates)
 
   far_res
 }
@@ -106,24 +109,24 @@ run_farrington <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 #' Make the list of sts objects
 #' @export
 #'
-make_stss <- function(epi_data, quo_popfield, quo_groupfield, groupings){
+make_stss <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings){
   #create a list of surveillance::sts objects, one for each group
   stss <- vector('list', length(groupings))
   for (i in 1:length(groupings)){
     g <- groupings[i]
-    g_data <- dplyr::filter(epi_data, !!quo_groupfield == g) %>%
+    g_data <- dplyr::filter(epi_fc_data, !!quo_groupfield == g) %>%
       #confirming sorting by date
-      arrange(Date)
+      dplyr::arrange(Date)
     #Surveillance::sts() expecting a dataframe
     g_df <- as.data.frame(g_data)
     #get NA interpolated case field
-    g_cases <- select(g_df, cases_epidemiar) %>%
+    g_cases <- dplyr::select(g_df, cases_epidemiar) %>%
       #sts() likes matrices
       as.matrix()
     #if population field given, get population
-    # doesn't matter if populationoffset is FALSE for farringtons, that will be handled in the controls of ed method
+    #only is passed in when popoffset = TRUE & population field is given
     if (!is.null(quo_popfield)){
-      g_pop <- select(g_df, !!quo_popfield) %>%
+      g_pop <- dplyr::select(g_df, !!quo_popfield) %>%
         #sts() likes matrices
         as.matrix()
     } else g_pop <- NULL
@@ -146,7 +149,8 @@ make_stss <- function(epi_data, quo_popfield, quo_groupfield, groupings){
 #' Formats output data from sts result objects
 #' @export
 #'
-stss_res_to_output_data <- function(stss_res_list, quo_popfield, quo_groupfield, groupings, report_dates){
+stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
+                                    quo_popfield, quo_groupfield, groupings, report_dates){
   #take results of a surveillance event detection and reshape to output data format
   #stss to dfs
   stss_res_dfs <- lapply(stss_res_list, surveillance::as.data.frame)
@@ -155,45 +159,53 @@ stss_res_to_output_data <- function(stss_res_list, quo_popfield, quo_groupfield,
   #note importance of alphabetical order for groupings & initial sort at beginning of main function
   stss_res_grp <- mapply(cbind, stss_res_dfs, group_temp = groupings, SIMPLIFY = FALSE)
   #flatten out of list (now that we have the grouping labels)
-  stss_res_flat <- do.call(rbind, stss_res_grp)
+  stss_res_flat <- do.call(rbind, stss_res_grp) %>%
+    #fix group name field with dplyr programming
+    dplyr::rename(!!quo_name(quo_groupfield) := group_temp)
+
+  #recover population (for incidence calculations), not present if popoffset was FALSE
+  stss_res_flat <- stss_res_flat %>%
+    dplyr::left_join(epi_fc_data %>%
+                       dplyr::select(!!quo_groupfield, !!quo_popfield, Date),
+                     by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                                      "Date"),
+                                    c(rlang::quo_name(quo_groupfield),
+                                      "epoch")))
 
   #gather early detection (KNOWN - pre-forecast) event detection alert series
   ed_alert_res <- stss_res_flat %>%
-    filter(epoch %in% report_dates$known$seq) %>%
-    mutate(series = "ed",
-           Date = epoch,
-           value = alarm,
-           lab = "Early Detection Alert",
-           upper = NA,
-           lower = NA) %>%
-    select(group_temp, Date, series, value, lab, upper, lower)
+    dplyr::filter(epoch %in% report_dates$known$seq) %>%
+    dplyr::mutate(series = "ed",
+                  Date = epoch,
+                  value = alarm,
+                  lab = "Early Detection Alert",
+                  upper = NA,
+                  lower = NA) %>%
+    dplyr::select(!!quo_groupfield, Date, series, value, lab, upper, lower)
 
   #gather early WARNING event detection alert series
   ew_alert_res <- stss_res_flat %>%
-    filter(epoch %in% report_dates$forecast$seq) %>%
-    mutate(series = "ew",
-           Date = epoch,
-           value = alarm,
-           lab = "Early Warning Alert",
-           upper = NA,
-           lower = NA) %>%
-    select(group_temp, Date, series, value, lab, upper, lower)
+    dplyr::filter(epoch %in% report_dates$forecast$seq) %>%
+    dplyr::mutate(series = "ew",
+                  Date = epoch,
+                  value = alarm,
+                  lab = "Early Warning Alert",
+                  upper = NA,
+                  lower = NA) %>%
+    dplyr::select(!!quo_groupfield, Date, series, value, lab, upper, lower)
 
   #gather event detection threshold series
   ed_thresh_res <- stss_res_flat %>%
-    mutate(series = "thresh",
-           Date = epoch,
-           value = upperbound / population * 1000, #Incidence, from stss
-           lab = "Alert Threshold",
-           upper = NA,
-           lower = NA) %>%
-    select(group_temp, Date, series, value, lab, upper, lower)
+    dplyr::mutate(series = "thresh",
+                  Date = epoch,
+                  value = upperbound / !!quo_popfield * 1000, #Incidence, from stss & epi_fc_data
+                  lab = "Alert Threshold",
+                  upper = NA,
+                  lower = NA) %>%
+    dplyr::select(!!quo_groupfield, Date, series, value, lab, upper, lower)
 
   #combine ed results
   ed <- rbind(ed_alert_res, ew_alert_res, ed_thresh_res)
-  #fix group name field with dplyr programming
-  ed <- ed %>%
-    dplyr::rename(!!quo_name(quo_groupfield) := group_temp)
 
   ed
 }

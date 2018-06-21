@@ -10,13 +10,13 @@
 #'
 epi_NA_interpolate <- function(epi_data, quo_casefield, quo_groupfield){
   epi_data %>%
-    group_by(!!quo_groupfield) %>%
+    dplyr::group_by(!!quo_groupfield) %>%
     #confirm date sorting
-    arrange(Date) %>%
+    dplyr::arrange(Date) %>%
     #interpolate
-    mutate(cases_epidemiar = epidemiar::na_approx(!!quo_casefield)) %>%
+    dplyr::mutate(cases_epidemiar = epidemiar::na_approx(!!quo_casefield)) %>%
     #finish by ungrouping
-    ungroup()
+    dplyr::ungroup()
 }
 
 #' Interpolates missing env data
@@ -25,16 +25,16 @@ epi_NA_interpolate <- function(epi_data, quo_casefield, quo_groupfield){
 env_NA_interpolate <- function(env_data, quo_obsfield, quo_valuefield, quo_groupfield){
   env_data %>%
     #first, mark which ones are observed versus (will be) interpolated
-    mutate(data_source = ifelse(!is.na(!!quo_valuefield), "Observed", "Interpolated")) %>%
+    dplyr::mutate(data_source = ifelse(!is.na(!!quo_valuefield), "Observed", "Interpolated")) %>%
     #two levels of group_by
-    group_by(!!quo_groupfield, !!quo_obsfield) %>%
+    dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
     #confirm date sorting
-    arrange(Date) %>%
+    dplyr::arrange(Date) %>%
     #interpolate
-    mutate(val_epidemiar = !!quo_valuefield,
-           val_epidemiar = epidemiar::na_approx(val_epidemiar)) %>%
+    dplyr::mutate(val_epidemiar = !!quo_valuefield,
+                  val_epidemiar = epidemiar::na_approx(val_epidemiar)) %>%
     #finish by ungrouping
-    ungroup()
+    dplyr::ungroup()
 }
 
 
@@ -47,63 +47,63 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
                                   week_type, report_dates){
   #daily env data
   env_data_varused <- env_ext_data %>%
-    filter(!!quo_obsfield %in% env_used)
+    dplyr::filter(!!quo_obsfield %in% env_used)
 
   #reference/climatology environmental data
   env_ref_varused <- env_ref_data %>%
-    filter(!!quo_obsfield %in% env_used)
+    dplyr::filter(!!quo_obsfield %in% env_used)
 
   ##properly summarize to weekly (from daily)
   env_data_varused_sum <- env_data_varused %>%
     #get reference/summarizing method from user supplied env_info
-    left_join(env_info %>%
-                select(!!quo_obsfield, reference_method),
-              by = set_names(quo_name(quo_obsfield),
-                             quo_name(quo_obsfield))) %>%
+    dplyr::left_join(env_info %>%
+                       dplyr::select(!!quo_obsfield, reference_method),
+                     by = rlang::set_names(rlang::quo_name(quo_obsfield),
+                                           rlang::quo_name(quo_obsfield))) %>%
     #add week, year fields
     epidemiar::add_datefields(week_type) %>%
     #trim dates to reduce processing (dates are rough, technically just need week prior to start. 8 is not magical)
-    filter(Date >= report_dates$full$min - 8 & Date <= report_dates$full$max + 8) %>%
+    dplyr::filter(Date >= report_dates$full$min - 8 & Date <= report_dates$full$max + 8) %>%
     #group by grouping, env var, and date week
-    group_by(!!quo_groupfield, !!quo_obsfield, year_epidemiar, week_epidemiar) %>%
+    dplyr::group_by(!!quo_groupfield, !!quo_obsfield, year_epidemiar, week_epidemiar) %>%
     #calculate with case_when at row level (fx is not vectorized, so can't be used inside summarize)
-    mutate(val_epidemiar = case_when(
+    dplyr::mutate(val_epidemiar = case_when(
       reference_method == "sum"  ~ sum(val_epidemiar, na.rm = TRUE),
       reference_method == "mean" ~ mean(val_epidemiar, na.rm = TRUE),
       #default is mean
       TRUE                       ~ mean(val_epidemiar, na.rm = TRUE))) %>%
     #now summarize
     #max Date of that week is how the weekly dates are set up
-    summarize(Date = max(Date),
-              #val_epi is the same for the whole grouped set, so just taking the first value
-              val_epidemiar = first(val_epidemiar),
-              #will be same throughout week
-              reference_method = first(reference_method),
-              #observed/interpolated/extended -- Mode, whatever source was most often that week.
-              data_source = epidemiaweb::Mode(data_source, na.rm = TRUE)) %>%
+    dplyr::summarize(Date = max(Date),
+                     #val_epi is the same for the whole grouped set, so just taking the first value
+                     val_epidemiar = first(val_epidemiar),
+                     #will be same throughout week
+                     reference_method = first(reference_method),
+                     #observed/interpolated/extended -- Mode, whatever source was most often that week.
+                     data_source = epidemiaweb::Mode(data_source, na.rm = TRUE)) %>%
     #ungroup to end
-    ungroup()
+    dplyr::ungroup()
 
   #filter exact dates
   environ_timeseries <- env_data_varused_sum %>%
-    filter(Date >= report_dates$full$min & Date <= report_dates$full$max) %>%
-    arrange(!!quo_groupfield, Date, !!quo_obsfield)
+    dplyr::filter(Date >= report_dates$full$min & Date <= report_dates$full$max) %>%
+    dplyr::arrange(!!quo_groupfield, Date, !!quo_obsfield)
 
   # add climatology data
   # climatology is based on week number
   #   (hopefully set up with the same type as was selected when ref data was created, will add checks)
   environ_timeseries <- environ_timeseries %>%
     #join
-    left_join(env_ref_varused %>%
-                select(!!quo_obsfield, !!quo_groupfield, week_epidemiar,
-                       ref_value, ref_sd, ref_median, ref_uq, ref_lq),
-              #NSE fun
-              by = set_names(c(quo_name(quo_groupfield),
-                               quo_name(quo_obsfield),
-                               "week_epidemiar"),
-                             c(quo_name(quo_groupfield),
-                               quo_name(quo_obsfield),
-                               "week_epidemiar")))
+    dplyr::left_join(env_ref_varused %>%
+                       dplyr::select(!!quo_obsfield, !!quo_groupfield, week_epidemiar,
+                                     ref_value, ref_sd, ref_median, ref_uq, ref_lq),
+                     #NSE fun
+                     by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                                             rlang::quo_name(quo_obsfield),
+                                             "week_epidemiar"),
+                                           c(rlang::quo_name(quo_groupfield),
+                                             rlang::quo_name(quo_obsfield),
+                                             "week_epidemiar")))
 }
 
 
@@ -119,48 +119,48 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
   #Early Detection
   ed_summary <- ed_res %>%
     #get the alert series
-    filter(series == "ed") %>%
+    dplyr::filter(series == "ed") %>%
     #filter to early detection period
-    filter(Date %in% report_dates$ed_sum$seq) %>%
+    dplyr::filter(Date %in% report_dates$ed_sum$seq) %>%
     #group (because need to look at period per group level)
-    group_by(!!quo_groupfield) %>%
+    dplyr::group_by(!!quo_groupfield) %>%
     #summarize to 1 obs per grouping
-    summarize(ed_alert_count = sum(value, na.rm = TRUE)) %>%
+    dplyr::summarize(ed_alert_count = sum(value, na.rm = TRUE)) %>%
     # create 3 levels (0, 1, 2 = >1)
-    mutate(warning_level = if_else(ed_alert_count > 1, 2, ed_alert_count),
-           #factor to label
-           ed_sum_level = factor(warning_level, levels = 0:2,
-                                 labels = alert_level, ordered = TRUE)) %>%
+    dplyr::mutate(warning_level = if_else(ed_alert_count > 1, 2, ed_alert_count),
+                  #factor to label
+                  ed_sum_level = factor(warning_level, levels = 0:2,
+                                        labels = alert_level, ordered = TRUE)) %>%
     #ungroup
-    ungroup() %>%
+    dplyr::ungroup() %>%
     #select minimal cols
-    select(!!quo_groupfield, ed_alert_count, ed_sum_level)
+    dplyr::select(!!quo_groupfield, ed_alert_count, ed_sum_level)
 
 
   #Early Warning: ED results on forecast
   ew_summary <- ed_res %>%
     #get the alert series
-    filter(series == "ew",
-           #get the forecast results ##not needed anymore b/c of new ew series, but just for completeness
-           Date %in% report_dates$forecast$seq) %>%
+    dplyr::filter(series == "ew",
+                  #get the forecast results ##not needed anymore b/c of new ew series, but just for completeness
+                  Date %in% report_dates$forecast$seq) %>%
     #group
-    group_by(!!quo_groupfield) %>%
+    dplyr::group_by(!!quo_groupfield) %>%
     #summarize to 1 obs per grouping
-    summarize(ew_alert_count = sum(value, na.rm = TRUE)) %>%
+    dplyr::summarize(ew_alert_count = sum(value, na.rm = TRUE)) %>%
     # create 3 levels (0, 1, 2 = >1)
-    mutate(warning_level = if_else(ew_alert_count > 1, 2, ew_alert_count),
-           #factor to label
-           ew_level = factor(warning_level, levels = 0:2,
-                             labels = alert_level, ordered = TRUE)) %>%
+    dplyr::mutate(warning_level = if_else(ew_alert_count > 1, 2, ew_alert_count),
+                  #factor to label
+                  ew_level = factor(warning_level, levels = 0:2,
+                                    labels = alert_level, ordered = TRUE)) %>%
     #ungroup
-    ungroup() %>%
+    dplyr::ungroup() %>%
     #select minimal cols
-    select(!!quo_groupfield, ew_alert_count, ew_level)
+    dplyr::select(!!quo_groupfield, ew_alert_count, ew_level)
 
   #join results
-  summary_data <- inner_join(ed_summary, ew_summary,
-                             by = set_names(quo_name(quo_groupfield),
-                                            quo_name(quo_groupfield)))
+  summary_data <- dplyr::inner_join(ed_summary, ew_summary,
+                                    by = rlang::set_names(rlang::quo_name(quo_groupfield),
+                                                          rlang::quo_name(quo_groupfield)))
 
   summary_data
 }
@@ -174,11 +174,11 @@ create_epi_summary <- function(obs_res, quo_groupfield, report_dates){
 
   epi <- obs_res %>%
     #epi data is weekly, get the data for the early detection summary period
-    filter(Date %in% report_dates$ed_sum$seq) %>%
+    dplyr::filter(Date %in% report_dates$ed_sum$seq) %>%
     #group by groupings
-    group_by(!!quo_groupfield) %>%
+    dplyr::group_by(!!quo_groupfield) %>%
     #get mean incidence
-    summarize(mean_inc = mean(value, na.rm = TRUE))
+    dplyr::summarize(mean_inc = mean(value, na.rm = TRUE))
 
 }
 
@@ -193,13 +193,13 @@ calc_env_anomalies <- function(env_ts, quo_groupfield, quo_obsfield, report_date
   # anomalies
   anom_env <- env_ts %>%
     # only mapping those in the early detection period
-    filter(Date %in% report_dates$ed_sum$seq) %>%
-    group_by(!!quo_groupfield, !!quo_obsfield) %>%
+    dplyr::filter(Date %in% report_dates$ed_sum$seq) %>%
+    dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
     # anomaly value is observed value minus the ref value from env_ref
-    mutate(anom = val_epidemiar - ref_value) %>%
+    dplyr::mutate(anom = val_epidemiar - ref_value) %>%
     # summarized over ED period
-    summarize(anom_ed_mean = mean(anom, na.rm = TRUE)) %>%
-    ungroup()
+    dplyr::summarize(anom_ed_mean = mean(anom, na.rm = TRUE)) %>%
+    dplyr::ungroup()
 }
 
 #Helper functions
@@ -223,6 +223,6 @@ create_named_list <- function(...){
     names_to_use[not_named_logical] <- named_chr[not_named_logical]
   }
   #set the names
-  setNames(list_to_name, names_to_use)
+  stats::setNames(list_to_name, names_to_use)
 }
 

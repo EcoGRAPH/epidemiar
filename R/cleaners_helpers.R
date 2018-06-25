@@ -80,7 +80,7 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
                      #will be same throughout week
                      reference_method = first(reference_method),
                      #observed/interpolated/extended -- Mode, whatever source was most often that week.
-                     data_source = epidemiaweb::Mode(data_source, na.rm = TRUE)) %>%
+                     data_source = Mode(data_source, na.rm = TRUE)) %>%
     #ungroup to end
     dplyr::ungroup()
 
@@ -224,5 +224,31 @@ create_named_list <- function(...){
   }
   #set the names
   stats::setNames(list_to_name, names_to_use)
+}
+
+#' Mode
+#'
+#' Calculate the mode of a set of values, for numeric or character/factor data. In ties, returns the first tied value.
+#'
+#' @param x A vector.
+#' @param na.rm Logical indicating whether \code{NA} values should be excluded.
+#'
+#' @return A vector of length 1 and the same class as \code{x}.
+#' @export
+#'
+#' @examples
+#' Mode(c(1,1,2,3))
+#' Mode(c(1,2,2,3))
+#' Mode(c(1,1,3,3))
+#' Mode(c(3,3,1,1))
+#' Mode(c(1,NA,NA))
+#' Mode(c(1,NA,NA), na.rm = TRUE)
+#'
+Mode <- function(x, na.rm = FALSE) {
+  if (!is.vector(x)) stop("x is not a vector, but is class ",
+                          paste(class(x), collapse = ", "))
+  ux <- unique(x)
+  if (na.rm) ux <- stats::na.exclude(ux)
+  ux[which.max(tabulate(match(x, ux)))]
 }
 

@@ -423,13 +423,12 @@ extend_epi_future <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 #' @export
 #'
 env_format_fc <- function(env_data_extd, quo_groupfield, quo_obsfield){
+  #turns long format into wide format - one entry per day per group
+  #1: groupfield, 2: Date, 3: numericdate, 4+: env var (column name is env name)
   env_spread <- env_data_extd %>%
     dplyr::mutate(numericdate = as.numeric(Date)) %>%
     dplyr::select(!!quo_groupfield, !!quo_obsfield, Date, numericdate, val_epidemiar) %>%
     tidyr::spread(key = !!quo_obsfield, value = val_epidemiar)
-
-  #no longer needed with updated extend_env_future()
-  #env_spread <- fill(env_spread, everything(), .direction = "down")
 
   env_spread
 }
@@ -543,7 +542,7 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
                                                          c(rlang::quo_name(quo_groupfield), "Date")))
   } #end pivot loop
 
-  # set up distributed lag basis functions
+  # set up distributed lag basis functions (creates 5 basis functions)
   lagframe <- data.frame(x = seq(from = 1, to = laglen, by = 1))
   alpha <- 1/4
   distlagfunc <- splines::ns(lagframe$x, intercept = TRUE,
@@ -571,6 +570,8 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
     # we used to do a submatrix here so that the regression formulae would
     # be more easily written, but this was incompatible with dplyr
     epi_lagged <- dplyr::bind_cols(epi_lagged, bandsum)
+
+    #created summary value for each basis function (5) per env variable per group per week (based on epidemiological data time unit)
 
   } #end distr lag summary loop
 

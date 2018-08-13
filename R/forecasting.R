@@ -43,33 +43,41 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   epi_lag <- lag_environ_to_epi(epi_fc, quo_groupfield, groupings,
                                 env_fc, env_variables_used, laglen = fc_control$lag_length)
 
-  # for each week of report, run forecast
-  # initialize: prediction returns 4 columns
-  preds_catch <- data.frame()
-  #loop by week
-  for (w in seq_along(report_dates$full$seq)){
-    message("Forecasting week ", w, " starting at ", Sys.time())
-    dt <- report_dates$full$seq[w]
-    dt_preds <- forecast_regression(epi_lag, quo_groupfield, groupings,
-                                    env_variables_used,
-                                    req_date = dt,
-                                    ncores)
-    preds_catch <- rbind(preds_catch, as.data.frame(dt_preds))
-  }
 
-  #create cases value from log
-  # preds_catch <- preds_catch %>%
-  #   mutate(fc_cases = exp(fit.fit) + 1,
-  #          fc_cases_upr = exp(fit.upr) + 1,
-  #          fc_cases_lwr = exp(fit.lwr) + 1)
+  #Split regression call depending on {once|week} model fit frequency
+  # default "once"
+  if (!is.null(fc_control$fit_freq)) {
+    fit_freq <- fc_control$fit_freq
+  } else fit_freq <- "once"
 
-  # Since we're not doing prediction intervals and since we're modeling untransformed data, this is
-  # just an identity transformation, but we retain the variables for compatibility and perhaps further
+  if (fit_freq == "once"){
+    #for single fit, call with last week (and subfunction has switch to return all)
+    preds_catch <- forecast_regression(epi_lag, quo_groupfield, groupings,
+                                       env_variables_used,
+                                       req_date = report_dates$forecast$max,
+                                       fit_freq,
+                                       ncores)
+  } else if (fit_freq == "week") {
+    # for each week of report, run forecast
+    # initialize: prediction returns 4 columns
+    preds_catch <- data.frame()
+    #loop by week
+    for (w in seq_along(report_dates$full$seq)){
+      message("Forecasting week ", w, " starting at ", Sys.time())
+      dt <- report_dates$full$seq[w]
+      dt_preds <- forecast_regression(epi_lag, quo_groupfield, groupings,
+                                      env_variables_used,
+                                      req_date = dt,
+                                      fit_freq,
+                                      ncores)
+      preds_catch <- rbind(preds_catch, as.data.frame(dt_preds))
+    }
 
-  # debugging
-  #print(head(preds_catch))
+  } else stop("Model fit frequency unknown") #shouldn't happen with default "once"
 
-  # expansion. This is just a guess at how it might work.
+
+
+  # Interval calculation - experimental
   preds_catch <- preds_catch %>%
     dplyr::mutate(fc_cases = fit,
                   fc_cases_upr = fit+1.96*sqrt(fit),
@@ -588,11 +596,15 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 #' @export
 #'
 forecast_regression <- function(epi_lag, quo_groupfield, groupings,
-                                env_variables_used, req_date, ncores){
+                                env_variables_used, req_date, fit_freq, ncores){
 
-  #forecasts are always done knowing up to just before that date
-  # <<>> need to test what happens with daily vs 8day to daily data
-  last_known_date <- req_date - lubridate::as.difftime(1, units = "days")
+  if (fit_freq == "once"){
+    #single fits use all the data available
+    last_known_date <- req_date
+  } else if (fit_freq == "week"){
+    # for "week" model fits, forecasts are done knowing up to just before that date
+    last_known_date <- req_date - lubridate::as.difftime(1, units = "days")
+  }
 
   #mark known or not
   epi_lag <- epi_lag %>%
@@ -679,9 +691,16 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   epi_preds <- cbind(epi_lag_trim %>% filter(Date <= req_date),
                      as.data.frame(cluster_preds))
 
-  #prediction of interest are last ones (equiv to req_date) per groupfield
-  date_preds <- epi_preds %>%
-    dplyr::group_by(!!quo_groupfield) %>%
-    dplyr::filter(Date == req_date)
+  if (fit_freq == "once"){
+    #for single model fit, this is all the data we need
+    date_preds <- epi_preds
+  } else if (fit_freq == "week"){
+    #prediction of interest are last ones (equiv to req_date) per groupfield
+    date_preds <- epi_preds %>%
+      dplyr::group_by(!!quo_groupfield) %>%
+      dplyr::filter(Date == req_date)
+  }
+
+  date_preds
 }
 

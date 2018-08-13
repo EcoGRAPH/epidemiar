@@ -668,16 +668,10 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   # shut down cluster
   parallel::stopCluster(cl)
 
-  #output prediction (through req_date now)
-  # cluster_preds <- predict(cluster_regress,
-  #                          newdata = epi_lag %>% filter(Date <= req_date),
-  #                          se.fit = TRUE,
-  #                          interval = "prediction",
-  #                          level = 0)
+  #output prediction (through req_date)
   cluster_preds <- mgcv::predict.bam(cluster_regress,
                                      newdata = epi_lag %>% dplyr::filter(Date <= req_date),
                                      se.fit = TRUE,                # included for backwards compatibility
-                                     # interval = "prediction",    # cannot include for backwards compatibility, will probably break something
                                      type="response")
 
   #remove distributed lag summaries and bspline basis, which are no longer helpful

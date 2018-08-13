@@ -55,8 +55,9 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
     preds_catch <- forecast_regression(epi_lag, quo_groupfield, groupings,
                                        env_variables_used,
                                        req_date = report_dates$full$max,
+                                       ncores,
                                        fit_freq,
-                                       ncores)
+                                       rpt_start <- report_dates$full$min)
   } else if (fit_freq == "week") {
     # for each week of report, run forecast
     # initialize: prediction returns 4 columns
@@ -68,8 +69,8 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
       dt_preds <- forecast_regression(epi_lag, quo_groupfield, groupings,
                                       env_variables_used,
                                       req_date = dt,
-                                      fit_freq,
-                                      ncores)
+                                      ncores,
+                                      fit_freq)
       preds_catch <- rbind(preds_catch, as.data.frame(dt_preds))
     }
 
@@ -596,7 +597,8 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 #' @export
 #'
 forecast_regression <- function(epi_lag, quo_groupfield, groupings,
-                                env_variables_used, req_date, fit_freq, ncores){
+                                env_variables_used, req_date, ncores,
+                                fit_freq, rpt_start){
 
   if (fit_freq == "once"){
     #single fits use all the data available
@@ -688,7 +690,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   if (fit_freq == "once"){
     #for single model fit, this has all the data we need, just trim to report dates
     date_preds <- epi_preds %>%
-      filter(Date >= report_dates$full$min)
+      filter(Date >= rpt_start)
   } else if (fit_freq == "week"){
     #prediction of interest are last ones (equiv to req_date) per groupfield
     date_preds <- epi_preds %>%

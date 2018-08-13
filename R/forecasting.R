@@ -54,7 +54,7 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
     #for single fit, call with last week (and subfunction has switch to return all)
     preds_catch <- forecast_regression(epi_lag, quo_groupfield, groupings,
                                        env_variables_used,
-                                       req_date = report_dates$forecast$max,
+                                       req_date = report_dates$full$max,
                                        fit_freq,
                                        ncores)
   } else if (fit_freq == "week") {
@@ -686,8 +686,9 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                      as.data.frame(cluster_preds))
 
   if (fit_freq == "once"){
-    #for single model fit, this is all the data we need
-    date_preds <- epi_preds
+    #for single model fit, this has all the data we need, just trim to report dates
+    date_preds <- epi_preds %>%
+      filter(Date >= report_dates$full$min)
   } else if (fit_freq == "week"){
     #prediction of interest are last ones (equiv to req_date) per groupfield
     date_preds <- epi_preds %>%

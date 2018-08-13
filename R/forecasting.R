@@ -13,8 +13,8 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   #set up default parallel processing number of cores to use number
   #if user-supplied, use that, otherwise create a default number
   #used in anomalize_env() and forecast_regression()
-  if (!is.null(fc_control[["ncores"]])){
-    ncores <- fc_control[["ncores"]]
+  if (!is.null(fc_control$ncores)) {
+    ncores <- fc_control$ncores
   } else ncores <- max(parallel::detectCores(logical=FALSE) - 1, 1)
 
   # create the modeling variable

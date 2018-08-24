@@ -58,7 +58,7 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
                                           req_date = report_dates$full$max,
                                           ncores,
                                           fit_freq,
-                                          rpt_start <- report_dates$full$min)
+                                          rpt_start = report_dates$full$min)
     preds_catch <- forereg_return$date_preds
     reg_obj <- forereg_return$cluster_regress
 

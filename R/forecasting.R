@@ -91,7 +91,7 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
                   lab = "Forecast Trend",
                   upper = fc_cases_upr / !!quo_popfield * 1000,
                   lower = fc_cases_lwr / !!quo_popfield * 1000) %>%
-    dplyr::select(!!quo_groupfield, Date, series, value, lab, upper, lower)
+    dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
 
   # return list with res and other needed items
   fc_res_full <- create_named_list(fc_epi = preds_catch, fc_res,
@@ -188,12 +188,12 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
   ## 1. Complete given env_data, as could have ragged env data
   min_known_in_known <- env_data %>%
     dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
-    dplyr::summarize(max_dates = max(Date, na.rm = TRUE)) %>%
+    dplyr::summarize(max_dates = max(obs_date, na.rm = TRUE)) %>%
     dplyr::pull(max_dates) %>% min()
   #if missing dates in epi "known" period, complete out
   if (report_dates$known$max > min_known_in_known){
     #potentially missing rows of env data in epi known period
-    env_completing <- tidyr::crossing(Date = seq.Date(min_known_in_known + 1, report_dates$known$max, 1),
+    env_completing <- tidyr::crossing(obs_date = seq.Date(min_known_in_known + 1, report_dates$known$max, 1),
                                       group_temp = groupings,
                                       obs_temp = env_variables_used)
     #and fix names with NSE
@@ -205,10 +205,10 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
     env_completing_missing <- env_completing %>%
       dplyr::anti_join(env_data, by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
                                                          rlang::quo_name(quo_obsfield),
-                                                         "Date"),
+                                                         "obs_date"),
                                                        c(rlang::quo_name(quo_groupfield),
                                                          rlang::quo_name(quo_obsfield),
-                                                         "Date")))
+                                                         "obs_date")))
 
     #bind with existing data (NAs for everything else in env_future)
     env_known_complete <- dplyr::bind_rows(env_data, env_completing_missing) %>%
@@ -226,18 +226,18 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
 
   #trim env var to end of forecast period, don't need data past forecast period if running historical.
   env_known_fill <- env_known_fill %>%
-    dplyr::filter(Date <= report_dates$forecast$max)
+    dplyr::filter(obs_date <= report_dates$forecast$max)
 
   ## 2. if need future data, now add value-empty future dataframe (to fill in)
   #the minimum date of the maximum dates for each env var data in each groupings
   min_known_env <- env_known_fill %>%
     dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
-    dplyr::summarize(max_dates = max(Date, na.rm = TRUE)) %>%
+    dplyr::summarize(max_dates = max(obs_date, na.rm = TRUE)) %>%
     dplyr::pull(max_dates) %>% min()
   #if missing at least some of the env data for the forecast period
   if (report_dates$forecast$max > min_known_env) {
     #create combination of all groups, env vars, and future dates (DAILY)
-    env_future <- tidyr::crossing(Date = seq.Date(min_known_env + 1, report_dates$forecast$max, 1),
+    env_future <- tidyr::crossing(obs_date = seq.Date(min_known_env + 1, report_dates$forecast$max, 1),
                                   group_temp = groupings,
                                   obs_temp = env_variables_used)
     #and fix names with NSE
@@ -249,10 +249,10 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
     env_future_missing <- env_future %>%
       dplyr::anti_join(env_known_fill, by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
                                                                rlang::quo_name(quo_obsfield),
-                                                               "Date"),
+                                                               "obs_date"),
                                                              c(rlang::quo_name(quo_groupfield),
                                                                rlang::quo_name(quo_obsfield),
-                                                               "Date")))
+                                                               "obs_date")))
 
     #bind with existing data (NAs for everything else in env_future)
     extended_env <- dplyr::bind_rows(env_known_fill, env_future_missing) %>%
@@ -319,21 +319,21 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
         g_data <- extended_env_join %>% dplyr::filter(!!quo_groupfield == g)
         for (e in env_variables_used){
           g_e_data <- g_data %>% dplyr::filter(!!quo_obsfield == e)
-          last_mean <- g_e_data[g_e_data$Date == report_dates$known$max + 1, "val_epidemiar"] %>% dplyr::pull()
+          last_mean <- g_e_data[g_e_data$obs_date == report_dates$known$max + 1, "val_epidemiar"] %>% dplyr::pull()
           for (w in seq_along(d1_wks)){
             #date value
             d <- d1_wks[w]
-            ref <- g_e_data[g_e_data$Date == d, "ref_value"] %>% dplyr::pull()
+            ref <- g_e_data[g_e_data$obs_date == d, "ref_value"] %>% dplyr::pull()
             persist_part <- ((nwks - w) / nwks) * last_mean
             #historical part also depends on env_ref summary method - if mean, then use ref as in. if sum, then ref/7.
-            r_meth <- g_e_data[g_e_data$Date == d, "reference_method"]
+            r_meth <- g_e_data[g_e_data$obs_date == d, "reference_method"]
             hx_part <- dplyr::case_when(
               r_meth == "mean" ~ (w / nwks) * ref,
               r_meth == "sum"  ~ (w / nwks) * ref/7,
               TRUE             ~ (w / nwks) * ref) #default as if mean
             #only fill NAs, i.e. don't fill any existing data
-            if (is.na(g_e_data[g_e_data$Date == d, "val_epidemiar"])){
-              g_e_data[g_e_data$Date == d, "val_epidemiar"] <- persist_part + hx_part
+            if (is.na(g_e_data[g_e_data$obs_date == d, "val_epidemiar"])){
+              g_e_data[g_e_data$obs_date == d, "val_epidemiar"] <- persist_part + hx_part
             } #end if NA
           } #end x loop
 
@@ -398,7 +398,7 @@ env_fill_down <- function(env_df, quo_groupfield, quo_obsfield, quo_valuefield){
   #to fill down values (except for original value field) for remaining length of dataset given
   env_filled <- env_df %>%
     #order very important for filling next step
-    dplyr::arrange(!!quo_groupfield, !!quo_obsfield, Date) %>%
+    dplyr::arrange(!!quo_groupfield, !!quo_obsfield, obs_date) %>%
     dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
     #fill everything except original value field
     tidyr::fill(dplyr::everything(), -!!quo_valuefield, .direction = "down") %>%
@@ -412,7 +412,7 @@ env_fill_down <- function(env_df, quo_groupfield, quo_obsfield, quo_valuefield){
 extend_epi_future <- function(epi_data, quo_popfield, quo_groupfield, groupings, report_dates){
   #extended epi data into future dates
   #for use in modeling later (results will be put elsewhere), this is for env and lags and modeling dataset
-  epi_future <- tidyr::crossing(Date = report_dates$forecast$seq,
+  epi_future <- tidyr::crossing(obs_date = report_dates$forecast$seq,
                                 group_temp = groupings)
   #and fix names with NSE
   epi_future <- epi_future %>%
@@ -420,7 +420,7 @@ extend_epi_future <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 
   #bind with exisiting data (NAs for everything else in epi_future)
   extended_epi <- dplyr::bind_rows(epi_data, epi_future) %>%
-    dplyr::arrange(!!quo_groupfield, Date)
+    dplyr::arrange(!!quo_groupfield, obs_date)
 
   #fill population down
   extended_epi <- tidyr::fill(extended_epi, !!quo_popfield, .direction = "down")
@@ -435,8 +435,8 @@ env_format_fc <- function(env_data_extd, quo_groupfield, quo_obsfield){
   #turns long format into wide format - one entry per day per group
   #1: groupfield, 2: Date, 3: numericdate, 4+: env var (column name is env name)
   env_spread <- env_data_extd %>%
-    dplyr::mutate(numericdate = as.numeric(Date)) %>%
-    dplyr::select(!!quo_groupfield, !!quo_obsfield, Date, numericdate, val_epidemiar) %>%
+    dplyr::mutate(numericdate = as.numeric(obs_date)) %>%
+    dplyr::select(!!quo_groupfield, !!quo_obsfield, obs_date, numericdate, val_epidemiar) %>%
     tidyr::spread(key = !!quo_obsfield, value = val_epidemiar)
 
   env_spread
@@ -461,7 +461,7 @@ epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
                   cluster_id = as.factor(cluster_id))
 
   epi_format <- epi_data_extd %>%
-    dplyr::mutate(numericdate = as.numeric(Date)) %>%
+    dplyr::mutate(numericdate = as.numeric(obs_date)) %>%
     #get group_id
     dplyr::left_join(fc_control$groupcodes,
                      #NSE
@@ -485,7 +485,7 @@ anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield, ncores) {
 
   # loop through environmental columns - sorry, can't figure out how to do this with NSE today
   regionfactor <- factor(env_fc[,1])
-  doy          <- as.numeric(format(env_fc$Date, "%j"))
+  doy          <- as.numeric(format(env_fc$obs_date, "%j"))
   for (curcol in 4:ncol(env_fc)) {
 
     cl <- parallel::makeCluster(ncores)
@@ -516,12 +516,12 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 
   #create lag frame
   datalagger <- tidyr::crossing(group_temp = groupings,
-                                Date = unique(epi_fc$Date),
+                                obs_date = unique(epi_fc$obs_date),
                                 lag = seq(from = 0, to = laglen - 1, by = 1)) %>%
     # #same order from originally written expand.grid
     # arrange(lag, Date, group_temp) %>%
     #add lagging date
-    dplyr::mutate(laggeddate = Date - as.difftime(lag, units = "days"))
+    dplyr::mutate(laggeddate = obs_date - as.difftime(lag, units = "days"))
 
   #and fix names with NSE
   datalagger <- datalagger %>%
@@ -530,7 +530,7 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
   #add env data
   datalagger <- dplyr::left_join(datalagger, env_fc,
                                  #because dplyr NSE, notice flip order
-                                 by = rlang::set_names(c(rlang::quo_name(quo_groupfield), "Date"),
+                                 by = rlang::set_names(c(rlang::quo_name(quo_groupfield), "obs_date"),
                                                        c(rlang::quo_name(quo_groupfield), "laggeddate")))
 
   # pivot lagged environmental data to epi data
@@ -539,7 +539,7 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
     valuevar <- colnames(env_fc)[curcol]
     #wide data for all lags of that env var
     meandat <- datalagger %>%
-      dplyr::select(!!quo_groupfield, Date, lag, valuevar) %>%
+      dplyr::select(!!quo_groupfield, obs_date, lag, valuevar) %>%
       tidyr::spread(key = lag, value = valuevar)
     #rename lag columns (but not groupfield or Date)
     names(meandat)[-(1:2)] <- paste0(valuevar, "_", names(meandat)[-(1:2)])
@@ -547,8 +547,8 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
     #join cur var wide data to epi data
     epi_lagged <- dplyr::left_join(epi_lagged, meandat,
                                    #dplyr NSE
-                                   by = rlang::set_names(c(rlang::quo_name(quo_groupfield), "Date"),
-                                                         c(rlang::quo_name(quo_groupfield), "Date")))
+                                   by = rlang::set_names(c(rlang::quo_name(quo_groupfield), "obs_date"),
+                                                         c(rlang::quo_name(quo_groupfield), "obs_date")))
   } #end pivot loop
 
   # set up distributed lag basis functions (creates 5 basis functions)
@@ -610,7 +610,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
 
   #mark known or not
   epi_lag <- epi_lag %>%
-    dplyr::mutate(known = ifelse(Date <= last_known_date, 1, 0))
+    dplyr::mutate(known = ifelse(obs_date <= last_known_date, 1, 0))
 
   #number of clusters (different function for lm() needed if <= 1)
   n_clusters <- nlevels(epi_lag$cluster_id)
@@ -628,12 +628,12 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   }
 
   # create a doy field so that we can use a cyclical spline
-  epi_lag <- dplyr::mutate(epi_lag, doy = as.numeric(format(Date, "%j")))
+  epi_lag <- dplyr::mutate(epi_lag, doy = as.numeric(format(obs_date, "%j")))
 
   # create modified bspline basis in epi_lag file to model longterm trends
-  epi_lag <- cbind(epi_lag, truncpoly(x=epi_lag$Date,
+  epi_lag <- cbind(epi_lag, truncpoly(x=epi_lag$obs_date,
                                       degree=6,
-                                      maxobs=max(epi_lag$Date[epi_lag$known==1], na.rm=TRUE)))
+                                      maxobs=max(epi_lag$obs_date[epi_lag$known==1], na.rm=TRUE)))
 
   # get list of modbspline reserved variables and format for inclusion into model
   modb_list <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)
@@ -672,7 +672,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
 
   #output prediction (through req_date)
   cluster_preds <- mgcv::predict.bam(cluster_regress,
-                                     newdata = epi_lag %>% dplyr::filter(Date <= req_date),
+                                     newdata = epi_lag %>% dplyr::filter(obs_date <= req_date),
                                      se.fit = TRUE,                # included for backwards compatibility
                                      type="response")
 
@@ -684,18 +684,18 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   epi_lag_trim <- dplyr::select(epi_lag_trim, -dplyr::one_of(bspl_names))
 
   #now cbind to get ready to return
-  epi_preds <- cbind(epi_lag_trim %>% filter(Date <= req_date),
+  epi_preds <- cbind(epi_lag_trim %>% filter(obs_date <= req_date),
                      as.data.frame(cluster_preds))
 
   if (fit_freq == "once"){
     #for single model fit, this has all the data we need, just trim to report dates
     date_preds <- epi_preds %>%
-      filter(Date >= rpt_start)
+      filter(obs_date >= rpt_start)
   } else if (fit_freq == "week"){
     #prediction of interest are last ones (equiv to req_date) per groupfield
     date_preds <- epi_preds %>%
       dplyr::group_by(!!quo_groupfield) %>%
-      dplyr::filter(Date == req_date)
+      dplyr::filter(obs_date == req_date)
   }
 
   date_preds

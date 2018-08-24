@@ -610,13 +610,19 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                                 env_variables_used, req_date, ncores,
                                 fit_freq, rpt_start){
 
-  if (fit_freq == "once"){
-    #single fits use all the data available
-    last_known_date <- req_date
-  } else if (fit_freq == "week"){
-    # for "week" model fits, forecasts are done knowing up to just before that date
-    last_known_date <- req_date - lubridate::as.difftime(1, units = "days")
-  }
+  # if (fit_freq == "once"){
+  #   #single fits use all the data available
+  #   last_known_date <- req_date
+  # } else if (fit_freq == "week"){
+  #   # for "week" model fits, forecasts are done knowing up to just before that date
+  #   last_known_date <- req_date - lubridate::as.difftime(1, units = "days")
+  # }
+
+  # for "week" model fits, forecasts are done knowing up to just before that date
+  # also for "once", this will use all avail data up to that point
+    #(must have 1 day else error in predict.gam)
+  last_known_date <- req_date - lubridate::as.difftime(1, units = "days")
+
 
   #mark known or not
   epi_lag <- epi_lag %>%

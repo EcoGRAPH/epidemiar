@@ -1,6 +1,6 @@
 #' Run EPIDEMIA forecast models and early detection algorithm
 #'
-#' @param epi_data Epidemiological data with case numbers per week, with date field "Date"
+#' @param epi_data Epidemiological data with case numbers per week, with date field "obs_date"
 #' @param casefield The field name for the case counts
 #' @param populationfield Population field to give population numbers over time. Used to calculated incidence. Also optionally used in Farrington method for populationOffset.
 #' @param groupfield The field name for districts or area divisions of epidemiological AND environmental data if no groupings (all one area), user should give a field with the same value throughout
@@ -36,7 +36,7 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
                          env_data, obsfield, valuefield, forecast_future = 4,
                          fc_control = NULL, env_ref_data, env_info){
   #temporary argument descriptions, until move into epidemiar and roxygenate appropriately
-  #epi_data: epidemiological data with case number of time, currently weekly only, with date field "Date"
+  #epi_data: epidemiological data with case number of time, currently weekly only, with date field "obs_date"
   #casefield: the field name for the case counts
   #populationfield: optional field to give population numbers over time
   #                 used in Farrington method for optional populationOffset
@@ -79,16 +79,16 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
   ## Create report date information - for passing to interval functions, and report output
   #REM: report_period is full # of weeks of report.  forecast_future is how many of those weeks should be in the future.
   #full report
-  report_dates <- list(full = list(min = max(epi_data$Date, na.rm = TRUE) -
+  report_dates <- list(full = list(min = max(epi_data$obs_date, na.rm = TRUE) -
                                      lubridate::as.difftime((report_period - forecast_future - 1),
                                                             unit = "weeks"),
-                                   max = max(epi_data$Date, na.rm = TRUE) +
+                                   max = max(epi_data$obs_date, na.rm = TRUE) +
                                      lubridate::as.difftime(forecast_future,
                                                             units = "weeks")))
   report_dates$full$seq <- report_dates$full %>% {seq.Date(.$min, .$max, "week")}
   #dates with known epidemological data
   report_dates$known <- list(min = report_dates$full$min,
-                             max = max(epi_data$Date, na.rm = TRUE))
+                             max = max(epi_data$obs_date, na.rm = TRUE))
   report_dates$known$seq <- report_dates$known %>% {seq.Date(.$min, .$max, "week")}
   #forecast period
   report_dates$forecast <- list(min = report_dates$known$max + lubridate::as.difftime(1, units = "weeks"),
@@ -106,24 +106,24 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
   #cases_epidemiar field name from data clearning (epi)
   epi_data <- epi_NA_interpolate(epi_data, quo_casefield, quo_groupfield) %>%
     #and sort by alphabetical groupfield
-    dplyr::arrange(!!quo_groupfield, Date)
+    dplyr::arrange(!!quo_groupfield, obs_date)
   #val_epidemiar field name from data cleaning (env)
   env_data <- env_NA_interpolate(env_data, quo_obsfield, quo_valuefield, quo_groupfield) %>%
     #and sort by alphabetical groupfield
-    dplyr::arrange(!!quo_groupfield, !!quo_obsfield, Date)
+    dplyr::arrange(!!quo_groupfield, !!quo_obsfield, obs_date)
 
   ## Set up output report data format
   #create observed data series
   obs_res <- epi_data %>%
     #include only observed data from requested start of report
-    dplyr::filter(Date >= report_dates$full$min) %>%
+    dplyr::filter(obs_date >= report_dates$full$min) %>%
     dplyr::mutate(series = "obs",
                   #INCIDENCE; also note use of original not interpolated cases
                   value = !!quo_casefield / !!quo_popfield * 1000,
                   lab = "Observed",
                   upper = NA,
                   lower = NA) %>%
-    dplyr::select(!!quo_groupfield, Date, series, value, lab, upper, lower)
+    dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
 
 
   ## Forecast
@@ -136,7 +136,7 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
   #need to calculate early detection on existing epi data & FUTURE FORECASTED results
   future_fc <- fc_res_all$fc_epi %>%
     #get future forecasted results ONLY
-    dplyr::filter(Date %in% report_dates$forecast$seq)
+    dplyr::filter(obs_date %in% report_dates$forecast$seq)
   #combine existing and future
   obs_fc_epi <- dplyr::bind_rows(epi_data, future_fc) %>%
     dplyr::mutate(cases_epidemiar = ifelse(!rlang::are_na(cases_epidemiar),
@@ -145,7 +145,7 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
     #will be lost by end, but need for early detection methods using surveillance::sts objects
     epidemiar::add_datefields() %>%
     #arrange (for viewing/checking)
-    dplyr::arrange(!!quo_groupfield, Date)
+    dplyr::arrange(!!quo_groupfield, obs_date)
 
   #run early detection on combined dataset
   ed_res <- run_early_detection(epi_fc_data = obs_fc_epi,

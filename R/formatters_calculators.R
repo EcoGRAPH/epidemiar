@@ -25,7 +25,7 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
     #add week, year fields
     epidemiar::add_datefields(week_type) %>%
     #trim dates to reduce processing (dates are rough, technically just need week prior to start. 8 is not magical)
-    dplyr::filter(Date >= report_dates$full$min - 8 & Date <= report_dates$full$max + 8) %>%
+    dplyr::filter(obs_date >= report_dates$full$min - 8 & obs_date <= report_dates$full$max + 8) %>%
     #group by grouping, env var, and date week
     dplyr::group_by(!!quo_groupfield, !!quo_obsfield, year_epidemiar, week_epidemiar) %>%
     #calculate with case_when at row level (fx is not vectorized, so can't be used inside summarize)
@@ -36,7 +36,7 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
       TRUE                       ~ mean(val_epidemiar, na.rm = TRUE))) %>%
     #now summarize
     #max Date of that week is how the weekly dates are set up
-    dplyr::summarize(Date = max(Date),
+    dplyr::summarize(obs_date = max(obs_date),
                      #val_epi is the same for the whole grouped set, so just taking the first value
                      val_epidemiar = first(val_epidemiar),
                      #will be same throughout week
@@ -48,8 +48,8 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
 
   #filter exact dates
   environ_timeseries <- env_data_varused_sum %>%
-    dplyr::filter(Date >= report_dates$full$min & Date <= report_dates$full$max) %>%
-    dplyr::arrange(!!quo_groupfield, Date, !!quo_obsfield)
+    dplyr::filter(obs_date >= report_dates$full$min & obs_date <= report_dates$full$max) %>%
+    dplyr::arrange(!!quo_groupfield, obs_date, !!quo_obsfield)
 
   # add climatology data
   # climatology is based on week number
@@ -83,7 +83,7 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
     #get the alert series
     dplyr::filter(series == "ed") %>%
     #filter to early detection period
-    dplyr::filter(Date %in% report_dates$ed_sum$seq) %>%
+    dplyr::filter(obs_date %in% report_dates$ed_sum$seq) %>%
     #group (because need to look at period per group level)
     dplyr::group_by(!!quo_groupfield) %>%
     #summarize to 1 obs per grouping
@@ -104,7 +104,7 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
     #get the alert series
     dplyr::filter(series == "ew",
                   #get the forecast results ##not needed anymore b/c of new ew series, but just for completeness
-                  Date %in% report_dates$forecast$seq) %>%
+                  obs_date %in% report_dates$forecast$seq) %>%
     #group
     dplyr::group_by(!!quo_groupfield) %>%
     #summarize to 1 obs per grouping
@@ -136,7 +136,7 @@ create_epi_summary <- function(obs_res, quo_groupfield, report_dates){
 
   epi <- obs_res %>%
     #epi data is weekly, get the data for the early detection summary period
-    dplyr::filter(Date %in% report_dates$ed_sum$seq) %>%
+    dplyr::filter(obs_date %in% report_dates$ed_sum$seq) %>%
     #group by groupings
     dplyr::group_by(!!quo_groupfield) %>%
     #get mean incidence
@@ -155,7 +155,7 @@ calc_env_anomalies <- function(env_ts, quo_groupfield, quo_obsfield, report_date
   # anomalies
   anom_env <- env_ts %>%
     # only mapping those in the early detection period
-    dplyr::filter(Date %in% report_dates$ed_sum$seq) %>%
+    dplyr::filter(obs_date %in% report_dates$ed_sum$seq) %>%
     dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
     # anomaly value is observed value minus the ref value from env_ref
     dplyr::mutate(anom = val_epidemiar - ref_value) %>%

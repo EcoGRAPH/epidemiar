@@ -8,7 +8,7 @@
 run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
                          env_data, quo_obsfield, quo_valuefield, env_variables,
                          fc_control, env_ref_data, env_info, report_dates, week_type){
-  message("Running forecasts")
+  message("Preparing for forecasting")
 
   #set up default parallel processing number of cores to use number
   #if user-supplied, use that, otherwise create a default number
@@ -51,6 +51,7 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   } else fit_freq <- "once"
 
   if (fit_freq == "once"){
+    message("Generating forecasts.")
     #for single fit, call with last week (and subfunction has switch to return all)
     forereg_return <- forecast_regression(epi_lag, quo_groupfield, groupings,
                                           env_variables_used,

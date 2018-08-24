@@ -186,14 +186,17 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
   params_meta <- create_named_list(fieldnames, week_type, ed_method, groupings,
                                    env_variables_used = fc_res_all$env_variables_used,
                                    report_dates, env_info)
+  #regression object for future other use or troubleshooting
+  regression_object <- fc_res_all$reg_obj
 
-  #for now
+  #collect results
   all_results <- create_named_list(summary_data,
                                    epi_summary,
                                    modeling_results_data,
                                    environ_timeseries,
                                    environ_anomalies,
-                                   params_meta)
+                                   params_meta,
+                                   regression_object)
   return(all_results)
 
 }

@@ -52,12 +52,15 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 
   if (fit_freq == "once"){
     #for single fit, call with last week (and subfunction has switch to return all)
-    preds_catch <- forecast_regression(epi_lag, quo_groupfield, groupings,
-                                       env_variables_used,
-                                       req_date = report_dates$full$max,
-                                       ncores,
-                                       fit_freq,
-                                       rpt_start <- report_dates$full$min)
+    forereg_return <- forecast_regression(epi_lag, quo_groupfield, groupings,
+                                          env_variables_used,
+                                          req_date = report_dates$full$max,
+                                          ncores,
+                                          fit_freq,
+                                          rpt_start <- report_dates$full$min)
+    preds_catch <- forereg_return$date_preds
+    reg_obj <- forereg_return$cluster_regress
+
   } else if (fit_freq == "week") {
     # for each week of report, run forecast
     # initialize: prediction returns 4 columns
@@ -66,12 +69,17 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
     for (w in seq_along(report_dates$full$seq)){
       message("Forecasting week ", w, " starting at ", Sys.time())
       dt <- report_dates$full$seq[w]
-      dt_preds <- forecast_regression(epi_lag, quo_groupfield, groupings,
-                                      env_variables_used,
-                                      req_date = dt,
-                                      ncores,
-                                      fit_freq)
+      forereg_return <- forecast_regression(epi_lag, quo_groupfield, groupings,
+                                            env_variables_used,
+                                            req_date = dt,
+                                            ncores,
+                                            fit_freq)
+
+      dt_preds <- forereg_return$date_preds
       preds_catch <- rbind(preds_catch, as.data.frame(dt_preds))
+
+      #taking advantage that only result will be of the last loop through
+      reg_obj <- forereg_return$cluster_regress
     }
 
   } else stop("Model fit frequency unknown") #shouldn't happen with default "once"
@@ -95,7 +103,8 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 
   # return list with res and other needed items
   fc_res_full <- create_named_list(fc_epi = preds_catch, fc_res,
-                                   env_data_extd, env_variables_used)
+                                   env_data_extd, env_variables_used,
+                                   reg_obj)
 }
 
 #forecasting helper functions
@@ -698,6 +707,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
       dplyr::filter(obs_date == req_date)
   }
 
-  date_preds
+  forecast_reg_results <- create_named_list(date_preds,
+                                            cluster_regress)
 }
 

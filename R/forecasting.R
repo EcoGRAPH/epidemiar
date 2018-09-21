@@ -693,8 +693,11 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   epi_lag_trim <- dplyr::select(epi_lag_trim, -dplyr::one_of(bspl_names))
 
   #now cbind to get ready to return
-  epi_preds <- cbind(epi_lag_trim %>% filter(obs_date <= req_date),
-                     as.data.frame(cluster_preds))
+  epi_preds <- cbind(epi_lag_trim %>%
+                       filter(obs_date <= req_date),
+                     as.data.frame(cluster_preds)) %>%
+    #and convert factor back to character for the groupings (originally converted b/c of bam/gam requirements)
+    dplyr::mutate(!!rlang::quo_name(quo_groupfield) := as.character(!!quo_groupfield))
 
   if (fit_freq == "once"){
     #for single model fit, this has all the data we need, just trim to report dates

@@ -629,12 +629,11 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   #  e.g. 'bandsummaries_{var1} * cluster_id' for however many env var bandsummaries there are
   bandsums_list <- grep("bandsum_*", colnames(epi_lag), value = TRUE)
   bandsums_cl_list <- paste0(bandsums_list, "*cluster_id")
-  #note, glue:: to distinguish b/t very different dplyr::collapse
   #need variant without known multiplication if <= 1 clusters
   if (n_clusters > 1) {
-    bandsums_eq <- glue::collapse(bandsums_cl_list, sep =" + ")
+    bandsums_eq <- glue::glue_collapse(bandsums_cl_list, sep =" + ")
   } else {
-    bandsums_eq <- glue::collapse(bandsums_list, sep = " + ")
+    bandsums_eq <- glue::glue_collapse(bandsums_list, sep = " + ")
   }
 
   # create a doy field so that we can use a cyclical spline
@@ -648,7 +647,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   # get list of modbspline reserved variables and format for inclusion into model
   modb_list <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)
   modb_list <- paste(modb_list, "*", rlang::quo_name(quo_groupfield))
-  modb_eq <- glue::collapse(modb_list, sep = " + ")
+  modb_eq <- glue::glue_collapse(modb_list, sep = " + ")
 
   # ensure that quo_name(quo_groupfield) is a factor - gam/bam will fail if given a character,
   # which is unusual among regression functions, which typically just coerce into factors.

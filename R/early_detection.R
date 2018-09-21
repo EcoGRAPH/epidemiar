@@ -161,7 +161,9 @@ stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
   #flatten out of list (now that we have the grouping labels)
   stss_res_flat <- do.call(rbind, stss_res_grp) %>%
     #fix group name field with dplyr programming
-    dplyr::rename(!!quo_name(quo_groupfield) := group_temp)
+    dplyr::rename(!!quo_name(quo_groupfield) := group_temp) %>%
+    #and convert to character for joining
+    dplyr::mutate(!!rlang::quo_name(quo_groupfield) := as.character(!!quo_groupfield))
 
   #recover population (for incidence calculations), not present if popoffset was FALSE
   stss_res_flat <- stss_res_flat %>%

@@ -3,7 +3,7 @@ Type: Package
 Title: Create EPIDEMIA Forecasts and Reports
 Version: 0.1.0
 Author: Dawn M. Nekorchuk
-Maintainer: Dawn M. Nekorchuk <Dawn.Nekorchuk@sdstate.edu>
+Maintainer: Dawn Nekorchuk <Dawn.Nekorchuk@ou.edu>
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
 License: What license is it under?

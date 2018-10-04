@@ -21,3 +21,6 @@ Imports: dplyr,
     tibble,
     tidyr,
     zoo
+Suggests: knitr,
+    rmarkdown
+VignetteBuilder: knitr

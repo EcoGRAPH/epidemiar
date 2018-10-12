@@ -5,13 +5,13 @@
 \title{Run EPIDEMIA forecast models and early detection algorithm}
 \usage{
 run_epidemia(epi_data, casefield, populationfield, groupfield,
-  week_type = c("ISO", "CDC"), report_period = 26, ed_summary_period = 4,
-  ed_method = c("Farrington", "EARS"), ed_control = NULL, env_data,
-  obsfield, valuefield, forecast_future = 4, fc_control = NULL,
-  env_ref_data, env_info)
+  week_type = c("ISO", "CDC"), report_period = 26,
+  ed_summary_period = 4, ed_method = c("Farrington", "EARS"),
+  ed_control = NULL, env_data, obsfield, valuefield,
+  forecast_future = 4, fc_control = NULL, env_ref_data, env_info)
 }
 \arguments{
-\item{epi_data}{Epidemiological data with case numbers per week, with date field "Date"}
+\item{epi_data}{Epidemiological data with case numbers per week, with date field "obs_date"}
 
 \item{casefield}{The field name for the case counts}
 

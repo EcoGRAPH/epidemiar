@@ -2,7 +2,7 @@
 % Please edit documentation in R/add_datefields.R
 \name{add_datefields}
 \alias{add_datefields}
-\title{Adds ISO or CDC datefields to a data set with a "Date" (Date) field}
+\title{Adds ISO or CDC datefields to a data set with a "obs_date" (Date) field}
 \usage{
 add_datefields(df, type = "ISO")
 }
@@ -10,5 +10,5 @@ add_datefields(df, type = "ISO")
 dataframe (or tibble) with week and year fields added
 }
 \description{
-Adds ISO or CDC datefields to a data set with a "Date" (Date) field
+Adds ISO or CDC datefields to a data set with a "obs_date" (Date) field
 }

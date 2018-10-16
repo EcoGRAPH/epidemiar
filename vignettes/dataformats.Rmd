@@ -33,7 +33,7 @@ When calling the epidemiar function:
 
 ### Missing Data
 
-There should be a line for each week & and geographic grouping, even for missing data (i.e. explicit missing data). 
+There should be a line for each week and geographic grouping, even for missing data (i.e. explicit missing data). 
 Any missing data will be filled in by linear interpolation inside of the epidemiar modeling functions. 
 
 ## Environmental Data
@@ -70,7 +70,7 @@ This file lists the environmental variables and their aggregation method for the
 This file gives the list of environmental variables to use, and any geographic clustering to be used in the model calculations (e.g. cluster is a variable in the modeling regression). 
 
 * 'vars.1' through 'vars.x' fields, where x is the number of environmental variables to be used in the modeling. The value should correspond to the 'environ_var_id' field in the environmental info reference file. 
-* 'cluster.1' through 'cluster.n', where n is the number of geographic units (groupfield values) in the epi/env data. The numeric value of the field name (e.g. 1 of cluster.1) is the 'group_id', or the id value for that geographic unit. The value of the field is the cluster id value, e.g. which cluster the geographic unit belongs to. The 'group_id' crosswalk should be given in the geographic gorup code file. 
+* 'cluster.1' through 'cluster.n', where n is the number of geographic units (groupfield values) in the epi/env data. The numeric value of the field name (e.g. 1 of cluster.1) is the 'group_id', or the id value for that geographic unit. The value of the field is the cluster id value, e.g. which cluster the geographic unit belongs to. The 'group_id' crosswalk should be given in the geographic group code file. 
 
 3. Geographic group codes
 This file contains a crosswalk of the geographic unit IDs/descriptions. 

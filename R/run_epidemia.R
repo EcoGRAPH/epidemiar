@@ -14,7 +14,6 @@
 #' @param valuefield Field name of the value of the environmental data observations
 #' @param forecast_future Number of weeks from the end of the epi_data to extend the forecast out
 #' @param fc_control Parameters for forecasting, including model and clusters
-# <<>><<>> More documentation here!
 #' @param env_ref_data Historical averages by week of year for environmental variables. Used in extended environmental data into the future for long forecast time, to calculate anomalies in early detection period, and to display on timeseries in reports
 #' @param env_info Lookup table for environmental data - reference creation method, report label, GA ID, etc.
 #'
@@ -38,7 +37,7 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
   #temporary argument descriptions, until move into epidemiar and roxygenate appropriately
   #epi_data: epidemiological data with case number of time, currently weekly only, with date field "obs_date"
   #casefield: the field name for the case counts
-  #populationfield: optional field to give population numbers over time
+  #populationfield: population numbers over time
   #                 used in Farrington method for optional populationOffset
   #                 Planned use in report generation function to allow for case or incidence to be displayed
   #groupfield: the field name for districts or area divisions of epidemiological AND environmental data
@@ -54,12 +53,11 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
   #ed_control: all parameters for early detection algorithm, passed through to that subroutine
   #env_data: daily environmental data for same groupfields and Date range
   #           must be in long format
-  #           must start <<>> days before epi_data: check??
-  #           <<>>?separate data prep function (to be run first) to be written to take {8|X}-day to daily?
+  #           must start 180 days before first day in epi_data
   #obsfield: field name of the environmental data observation types
   #valuefield: field name of the value of the environmental data observations
   #forecast_future: number of timesteps (weeks) from the end of the epi_data to extend the forecast out for
-  #fc_control: <<stuff for modeling, tbd, Justin's code>>
+  #fc_control: control options for forecasting
   #env_ref_data: historical averages (by week), for anomalies, and report display on timeseries
   #env_info: lookup table for environmental data - reference creation method, future extension method, report label, GA ID, etc.
 
@@ -103,7 +101,7 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
 
   ## Data checks and cleaning
   #check for NAs and interpolate as necessary
-  #cases_epidemiar field name from data clearning (epi)
+  #cases_epidemiar field name from data cleaning (epi)
   epi_data <- epi_NA_interpolate(epi_data, quo_casefield, quo_groupfield) %>%
     #and sort by alphabetical groupfield
     dplyr::arrange(!!quo_groupfield, obs_date)

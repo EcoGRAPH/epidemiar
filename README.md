@@ -1,4 +1,4 @@
 ## epidemiar
 
-Epidemia R library  for potential future public consumption
+R package for infectious disease modeling, forecasting, and early detection. Based on the EPIDEMIA project. 
 

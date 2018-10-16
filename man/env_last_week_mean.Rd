@@ -4,8 +4,8 @@
 \alias{env_last_week_mean}
 \title{Calculate mean of last week env values}
 \usage{
-env_last_week_mean(env_df, env_variables_used, quo_groupfield, quo_obsfield,
-  groupings)
+env_last_week_mean(env_df, env_variables_used, quo_groupfield,
+  quo_obsfield, groupings)
 }
 \description{
 Calculate mean of last week env values

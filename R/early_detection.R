@@ -13,7 +13,9 @@ run_early_detection <- function(epi_fc_data, quo_popfield, inc_per,
   #only supporting Farrington Improved method from Surveillance right now,
   #leaving option open for expanding later
   if (ed_method == "Farrington") {
-    ed_far_res <- run_farrington(epi_fc_data, quo_popfield, quo_groupfield, groupings, ed_control, report_dates)
+    ed_far_res <- run_farrington(epi_fc_data, quo_popfield, inc_per,
+                                 quo_groupfield, groupings,
+                                 ed_control, report_dates)
     return(ed_far_res)
   } else stop("Early Detection method not supported")
 }
@@ -21,7 +23,8 @@ run_early_detection <- function(epi_fc_data, quo_popfield, inc_per,
 #' Run the Farrington early detection algorithm
 #' @export
 #'
-run_farrington <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings,
+run_farrington <- function(epi_fc_data, quo_popfield, inc_per,
+                           quo_groupfield, groupings,
                            ed_control, report_dates){
   ## Make sts objects
   #check about population offset

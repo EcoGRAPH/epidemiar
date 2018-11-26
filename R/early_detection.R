@@ -5,7 +5,8 @@
 #' @export
 #'
 #'
-run_early_detection <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings,
+run_early_detection <- function(epi_fc_data, quo_popfield, inc_per,
+                                quo_groupfield, groupings,
                                 ed_method, ed_control, report_dates){
   message("Running early detection")
 
@@ -101,7 +102,8 @@ run_farrington <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings,
 
   #results into output report data form
   far_res <- stss_res_to_output_data(stss_res_list = far_res_list, epi_fc_data,
-                                     quo_popfield, quo_groupfield, groupings, report_dates)
+                                     quo_popfield, inc_per,
+                                     quo_groupfield, groupings, report_dates)
 
   far_res
 }
@@ -150,7 +152,8 @@ make_stss <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings){
 #' @export
 #'
 stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
-                                    quo_popfield, quo_groupfield, groupings, report_dates){
+                                    quo_popfield, inc_per,
+                                    quo_groupfield, groupings, report_dates){
   #take results of a surveillance event detection and reshape to output data format
   #stss to dfs
   stss_res_dfs <- lapply(stss_res_list, surveillance::as.data.frame)

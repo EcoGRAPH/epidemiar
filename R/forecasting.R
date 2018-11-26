@@ -5,7 +5,7 @@
 #' Runs the forecast modeling
 #' @export
 #'
-run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
+run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupings,
                          env_data, quo_obsfield, quo_valuefield, env_variables,
                          fc_control, env_ref_data, env_info, report_dates, week_type){
   message("Preparing for forecasting")

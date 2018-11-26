@@ -1,11 +1,11 @@
 Package: epidemiar
 Type: Package
 Title: Create EPIDEMIA Forecasts and Reports
-Version: 0.1.0
+Version: 1.0.0
 Author: Dawn M. Nekorchuk
 Maintainer: Dawn Nekorchuk <Dawn.Nekorchuk@ou.edu>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Description: Creates EPIDEMIA Forecasting Reports
+    with Early Warning & Early Detection Alerts
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true

@@ -29,7 +29,8 @@
 
 
 ## Main Modeling (Early Detection, Forecasting) Function
-run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_type = c("ISO", "CDC"),
+run_epidemia <- function(epi_data, casefield, populationfield, inc_per = 1000,
+                         groupfield, week_type = c("ISO", "CDC"),
                          report_period = 26,
                          ed_summary_period = 4, ed_method = c("Farrington", "EARS"), ed_control = NULL,
                          env_data, obsfield, valuefield, forecast_future = 4,
@@ -117,7 +118,7 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
     dplyr::filter(obs_date >= report_dates$full$min) %>%
     dplyr::mutate(series = "obs",
                   #INCIDENCE; also note use of original not interpolated cases
-                  value = !!quo_casefield / !!quo_popfield * 1000,
+                  value = !!quo_casefield / !!quo_popfield * inc_per,
                   lab = "Observed",
                   upper = NA,
                   lower = NA) %>%
@@ -125,7 +126,7 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
 
 
   ## Forecast
-  fc_res_all <- run_forecast(epi_data, quo_popfield, quo_groupfield, groupings,
+  fc_res_all <- run_forecast(epi_data, quo_popfield, inc_per, quo_groupfield, groupings,
                              env_data, quo_obsfield, quo_valuefield, env_variables,
                              fc_control, env_ref_data, env_info, report_dates, week_type)
 
@@ -147,8 +148,9 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
 
   #run early detection on combined dataset
   ed_res <- run_early_detection(epi_fc_data = obs_fc_epi,
-                                quo_popfield, quo_groupfield,
-                                groupings, ed_method, ed_control, report_dates)
+                                quo_popfield, inc_per,
+                                quo_groupfield, groupings,
+                                ed_method, ed_control, report_dates)
 
 
   ## Combine epi datasets

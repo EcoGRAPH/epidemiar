@@ -5,7 +5,7 @@
 #' Runs the forecast modeling
 #' @export
 #'
-run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
+run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupings,
                          env_data, quo_obsfield, quo_valuefield, env_variables,
                          fc_control, env_ref_data, env_info, report_dates, week_type){
   message("Preparing for forecasting")
@@ -51,7 +51,7 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   } else fit_freq <- "once"
 
   if (fit_freq == "once"){
-    message("Generating forecasts.")
+    message("Generating forecasts")
     #for single fit, call with last week (and subfunction has switch to return all)
     forereg_return <- forecast_regression(epi_lag, quo_groupfield, groupings,
                                           env_variables_used,
@@ -96,10 +96,10 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   # extract fc series into report format
   fc_res <- preds_catch %>%
     dplyr::mutate(series = "fc",
-                  value = fc_cases / !!quo_popfield * 1000, #Incidence per 1000
+                  value = fc_cases / !!quo_popfield * inc_per,
                   lab = "Forecast Trend",
-                  upper = fc_cases_upr / !!quo_popfield * 1000,
-                  lower = fc_cases_lwr / !!quo_popfield * 1000) %>%
+                  upper = fc_cases_upr / !!quo_popfield * inc_per,
+                  lower = fc_cases_lwr / !!quo_popfield * inc_per) %>%
     dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
 
   # return list with res and other needed items

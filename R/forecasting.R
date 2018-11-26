@@ -51,7 +51,7 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
   } else fit_freq <- "once"
 
   if (fit_freq == "once"){
-    message("Generating forecasts.")
+    message("Generating forecasts")
     #for single fit, call with last week (and subfunction has switch to return all)
     forereg_return <- forecast_regression(epi_lag, quo_groupfield, groupings,
                                           env_variables_used,

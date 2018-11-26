@@ -200,7 +200,7 @@ stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
   ed_thresh_res <- stss_res_flat %>%
     dplyr::mutate(series = "thresh",
                   obs_date = epoch,
-                  value = upperbound / !!quo_popfield * 1000, #Incidence, from stss & epi_fc_data
+                  value = upperbound / !!quo_popfield * inc_per, #Incidence, from stss & epi_fc_data
                   lab = "Alert Threshold",
                   upper = NA,
                   lower = NA) %>%

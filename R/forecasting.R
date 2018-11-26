@@ -96,10 +96,10 @@ run_forecast <- function(epi_data, quo_popfield, quo_groupfield, groupings,
   # extract fc series into report format
   fc_res <- preds_catch %>%
     dplyr::mutate(series = "fc",
-                  value = fc_cases / !!quo_popfield * 1000, #Incidence per 1000
+                  value = fc_cases / !!quo_popfield * inc_per,
                   lab = "Forecast Trend",
-                  upper = fc_cases_upr / !!quo_popfield * 1000,
-                  lower = fc_cases_lwr / !!quo_popfield * 1000) %>%
+                  upper = fc_cases_upr / !!quo_popfield * inc_per,
+                  lower = fc_cases_lwr / !!quo_popfield * inc_per) %>%
     dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
 
   # return list with res and other needed items

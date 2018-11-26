@@ -29,7 +29,8 @@
 
 
 ## Main Modeling (Early Detection, Forecasting) Function
-run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_type = c("ISO", "CDC"),
+run_epidemia <- function(epi_data, casefield, populationfield, inc_per = 1000,
+                         groupfield, week_type = c("ISO", "CDC"),
                          report_period = 26,
                          ed_summary_period = 4, ed_method = c("Farrington", "EARS"), ed_control = NULL,
                          env_data, obsfield, valuefield, forecast_future = 4,
@@ -117,7 +118,7 @@ run_epidemia <- function(epi_data, casefield, populationfield, groupfield, week_
     dplyr::filter(obs_date >= report_dates$full$min) %>%
     dplyr::mutate(series = "obs",
                   #INCIDENCE; also note use of original not interpolated cases
-                  value = !!quo_casefield / !!quo_popfield * 1000,
+                  value = !!quo_casefield / !!quo_popfield * inc_per,
                   lab = "Observed",
                   upper = NA,
                   lower = NA) %>%

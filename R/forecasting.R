@@ -171,14 +171,18 @@ truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
 #' @export
 #'
 pull_model_envvars <- function(env_data, quo_obsfield, fc_control){
-  #extract values (environment ids) of vars.1 to vars.x from GA output
-  model_var_ids <- fc_control$model[, which(grepl("vars.", names(fc_control$model)))] %>%
-    t() %>% as.data.frame()
 
-  #lookup ids against envcodes and get environmental names as in obsfield (will need to add checks) <<>>
-  model_vars <- model_var_ids %>%
-    dplyr::left_join(fc_control$envcodes, by = c("V1" = "environ_var_id")) %>%
-    dplyr::pull(!!quo_obsfield)
+  #pull variables from model info input
+  model_vars <- fc_control$env_vars %>% dplyr::pull(!!quo_obsfield)
+
+  # #extract values (environment ids) of vars.1 to vars.x from GA output
+  # model_var_ids <- fc_control$model[, which(grepl("vars.", names(fc_control$model)))] %>%
+  #   t() %>% as.data.frame()
+  #
+  # #lookup ids against envcodes and get environmental names as in obsfield (will need to add checks) <<>>
+  # model_vars <- model_var_ids %>%
+  #   dplyr::left_join(fc_control$envcodes, by = c("V1" = "environ_var_id")) %>%
+  #   dplyr::pull(!!quo_obsfield)
 
   #filter env_data for those model_vars
   env_data <- env_data %>%
@@ -456,29 +460,42 @@ env_format_fc <- function(env_data_extd, quo_groupfield, quo_obsfield){
 #' @export
 #'
 epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
-  #cluster information from model
-  cluster_groups <- fc_control$model[, which(grepl("clusters.", names(fc_control$model)))] %>%
-    t() %>% as.data.frame()
-  #finangle to get group id values
-  cluster_groups <- cbind(rownames(cluster_groups), data.frame(cluster_groups, row.names = NULL))
-  colnames(cluster_groups) <- c("cl_string", "cluster_id")
-  cluster_groups <- cluster_groups %>%
-    dplyr::mutate(cl_string = as.character(cl_string)) %>%
-    tidyr::separate(cl_string, c("cl_text", "group_id"), sep = "[.]") %>%
-    dplyr::select(-cl_text) %>%
-    dplyr::mutate(group_id = as.numeric(group_id),
-                  #must be factor for regression later
-                  cluster_id = as.factor(cluster_id))
 
+  #Get cluster information from model
   epi_format <- epi_data_extd %>%
-    dplyr::mutate(numericdate = as.numeric(obs_date)) %>%
-    #get group_id
-    dplyr::left_join(fc_control$groupcodes,
+    #join with cluster info
+    dplyr::left_join(fc_control$clusters,
                      #NSE
                      by = rlang::set_names(rlang::quo_name(quo_groupfield),
                                            rlang::quo_name(quo_groupfield))) %>%
-    #get cluster_id
-    dplyr::left_join(cluster_groups, by = "group_id")
+    #set cluster id as factor, must be for regression later
+    dplyr::mutate(cluster_id = as.factor(cluster_id),
+                  #need numeric date for regression
+                  numericdate = as.numeric(obs_date))
+
+  # #cluster information from model
+  # cluster_groups <- fc_control$model[, which(grepl("clusters.", names(fc_control$model)))] %>%
+  #   t() %>% as.data.frame()
+  # #finangle to get group id values
+  # cluster_groups <- cbind(rownames(cluster_groups), data.frame(cluster_groups, row.names = NULL))
+  # colnames(cluster_groups) <- c("cl_string", "cluster_id")
+  # cluster_groups <- cluster_groups %>%
+  #   dplyr::mutate(cl_string = as.character(cl_string)) %>%
+  #   tidyr::separate(cl_string, c("cl_text", "group_id"), sep = "[.]") %>%
+  #   dplyr::select(-cl_text) %>%
+  #   dplyr::mutate(group_id = as.numeric(group_id),
+  #                 #must be factor for regression later
+  #                 cluster_id = as.factor(cluster_id))
+  #
+  # epi_format <- epi_data_extd %>%
+  #   dplyr::mutate(numericdate = as.numeric(obs_date)) %>%
+  #   #get group_id
+  #   dplyr::left_join(fc_control$groupcodes,
+  #                    #NSE
+  #                    by = rlang::set_names(rlang::quo_name(quo_groupfield),
+  #                                          rlang::quo_name(quo_groupfield))) %>%
+  #   #get cluster_id
+  #   dplyr::left_join(cluster_groups, by = "group_id")
 
   epi_format
 }

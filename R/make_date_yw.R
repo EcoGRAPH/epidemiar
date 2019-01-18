@@ -30,10 +30,8 @@ make_date_yw <- function(year = 1970L, week = 1L, weekday = 1L, system = "who") 
 
   match.arg(system, c("who", "cdc"))
 
-  origin <- as.Date("1970-01-01 UTC")
-
   lengths <- vapply(list(year, week, weekday), length, 1, USE.NAMES = FALSE)
-  if (min(lengths) == 0L) as.Date(integer(), origin)
+  if (min(lengths) == 0L) as.Date(integer(), lubridate::origin)
 
   # recycle arguments
   N <- max(lengths)

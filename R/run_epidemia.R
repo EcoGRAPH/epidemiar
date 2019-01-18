@@ -185,6 +185,7 @@ run_epidemia <- function(epi_data, casefield, populationfield, inc_per = 1000,
                      valuefield = quo_name(quo_valuefield))
   params_meta <- create_named_list(fieldnames, week_type, ed_method, groupings,
                                    env_variables_used = fc_res_all$env_variables_used,
+                                   env_dt_ranges = fc_res_all$env_dt_ranges,
                                    report_dates, env_info)
   #regression object for future other use or troubleshooting
   regression_object <- fc_res_all$reg_obj

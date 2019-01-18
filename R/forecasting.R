@@ -26,6 +26,10 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
   #create alphabetical list of ONLY USED unique environmental variables
   env_variables_used <- dplyr::pull(env_data, !!quo_obsfield) %>% unique() %>% sort()
 
+  # extract start & end dates for each variable for log file
+  env_dt_ranges <- dplyr::group_by(env_data, !!quo_obsfield) %>%
+    dplyr::summarize(start_dt = min(obs_date), end_dt = max(obs_date))
+
   # extend data into future, for future forecast portion
   env_data_extd <- extend_env_future(env_data, quo_groupfield, groupings, quo_obsfield, quo_valuefield,
                                      env_ref_data, env_info, env_variables_used, report_dates, week_type)
@@ -105,7 +109,7 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
   # return list with res and other needed items
   fc_res_full <- create_named_list(fc_epi = preds_catch, fc_res,
                                    env_data_extd, env_variables_used,
-                                   reg_obj)
+                                   env_dt_ranges, reg_obj)
 }
 
 #forecasting helper functions

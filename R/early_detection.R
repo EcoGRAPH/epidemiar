@@ -2,7 +2,6 @@
 
 ## Early Detection
 #' Run early detection algorithm
-#' @export
 #'
 #'
 run_early_detection <- function(epi_fc_data, quo_popfield, inc_per,
@@ -21,7 +20,6 @@ run_early_detection <- function(epi_fc_data, quo_popfield, inc_per,
 }
 
 #' Run the Farrington early detection algorithm
-#' @export
 #'
 run_farrington <- function(epi_fc_data, quo_popfield, inc_per,
                            quo_groupfield, groupings,
@@ -112,7 +110,6 @@ run_farrington <- function(epi_fc_data, quo_popfield, inc_per,
 }
 
 #' Make the list of sts objects
-#' @export
 #'
 make_stss <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings){
   #create a list of surveillance::sts objects, one for each group
@@ -152,7 +149,6 @@ make_stss <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings){
 }
 
 #' Formats output data from sts result objects
-#' @export
 #'
 stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
                                     quo_popfield, inc_per,

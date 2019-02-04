@@ -2,7 +2,6 @@
 #'
 #' @return dataframe (or tibble) with week and year fields added
 #'
-#' @export
 #'
 
 add_datefields <- function(df, type = "ISO"){

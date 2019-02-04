@@ -2,7 +2,6 @@
 
 ## Environmental Data for report
 #' Formats env data for report
-#' @export
 #'
 environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
                                   quo_obsfield, env_used, env_info,
@@ -71,7 +70,6 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
 
 ## Setting up summary data
 #' Creates summary data
-#' @export
 #'
 create_summary_data <- function(ed_res, quo_groupfield, report_dates){
 
@@ -128,7 +126,6 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
 }
 
 #' Creates summary of incidence in ED period
-#' @export
 #'
 create_epi_summary <- function(obs_res, quo_groupfield, report_dates){
   #using obs_res - if cases/incidence becomes a user set choice, this might make it easier (value is already what it needs to be)
@@ -149,7 +146,6 @@ create_epi_summary <- function(obs_res, quo_groupfield, report_dates){
 
 ## Calculate anomalies
 #' Calculates anomalies
-#' @export
 #'
 calc_env_anomalies <- function(env_ts, quo_groupfield, quo_obsfield, report_dates){
   # anomalies

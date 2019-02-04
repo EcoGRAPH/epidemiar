@@ -3,7 +3,6 @@
 
 ## Forecasting
 #' Runs the forecast modeling
-#' @export
 #'
 run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupings,
                          env_data, quo_obsfield, quo_valuefield, env_variables,
@@ -116,7 +115,6 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
 # this creates a modified b-spline basis, which is still (piecewise) polynomial, so
 # we will keep this name
 #' Truncates poly
-#' @export
 #'
 truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
 
@@ -172,7 +170,6 @@ truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
 }
 
 #' Pull only model env variables
-#' @export
 #'
 pull_model_envvars <- function(env_data, quo_obsfield, fc_control){
 
@@ -368,7 +365,6 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
 }
 
 #' Calculate mean of last week env values
-#' @export
 #'
 env_last_week_mean <- function(env_df, env_variables_used, quo_groupfield, quo_obsfield, groupings){
   #gets mean of previous week of daily env data, puts in first NA slot
@@ -401,7 +397,6 @@ env_last_week_mean <- function(env_df, env_variables_used, quo_groupfield, quo_o
 }
 
 #' Fill env data down
-#' @export
 #'
 env_fill_down <- function(env_df, quo_groupfield, quo_obsfield, quo_valuefield){
   #to fill down values (except for original value field) for remaining length of dataset given
@@ -416,7 +411,6 @@ env_fill_down <- function(env_df, quo_groupfield, quo_obsfield, quo_valuefield){
 }
 
 #' Extend epidemiology dataframe into future
-#' @export
 #'
 extend_epi_future <- function(epi_data, quo_popfield, quo_groupfield, groupings, report_dates){
   #extended epi data into future dates
@@ -438,7 +432,6 @@ extend_epi_future <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 }
 
 #' Format env data for modeling
-#' @export
 #'
 env_format_fc <- function(env_data_extd, quo_groupfield, quo_obsfield){
   #turns long format into wide format - one entry per day per group
@@ -452,7 +445,6 @@ env_format_fc <- function(env_data_extd, quo_groupfield, quo_obsfield){
 }
 
 #' Format epi data for modeling
-#' @export
 #'
 epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
 
@@ -472,7 +464,6 @@ epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
 }
 
 #' Convert environmental data into anomalies
-#' @export
 #'
 anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield, ncores) {
 
@@ -507,7 +498,6 @@ anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield, ncores) {
 }
 
 #' Lag the env data
-#' @export
 #'
 lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
                                env_fc, env_variables_used, laglen){
@@ -592,7 +582,6 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 }
 
 #' Run forecast regression
-#' @export
 #'
 forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                                 env_variables_used, req_date, ncores,

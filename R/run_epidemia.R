@@ -7,7 +7,7 @@
 #' @param week_type The standard (WHO ISO-8601 or CDC epi weeks) that the weeks of the year in epidemiological and environmental reference data use (required: dates listed are LAST day of week).
 #' @param report_period The number of timesteps (weeks) that the whole report will cover. report_period - forecast_future is the number of weeks of past (known) data that will be included.
 #' @param detection_period The number of timesteps (weeks) that the early detection will run over
-#' @param ed_method Which method for early detection should be used ("Farrington" is only current) option.
+#' @param ed_method Which method for early detection should be used ("Farrington" is only current option).
 #' @param ed_control All parameters for early detection algorithm, passed through to that subroutine
 #' @param env_data Daily environmental data for same groupfields and Date range. Must be in long format, and must start laglen (in fc_control) days before epi_data for forecasting.
 #' @param obsfield Field name of the environmental data observation types
@@ -15,7 +15,7 @@
 #' @param forecast_future Number of weeks from the end of the epi_data to extend the forecast out
 #' @param fc_control Parameters for forecasting, including model and clusters
 #' @param env_ref_data Historical averages by week of year for environmental variables. Used in extended environmental data into the future for long forecast time, to calculate anomalies in early detection period, and to display on timeseries in reports
-#' @param env_info Lookup table for environmental data - reference creation method, report label, GA ID, etc.
+#' @param env_info Lookup table for environmental data - reference creation method, report label, etc.
 #'
 #'
 #' @return Returns a suite of summary and report data.

@@ -8,11 +8,12 @@
 #' while in the CDC system weeks start on Sunday.
 #'
 #' @inheritParams lubridate::isoweek
-#' @inheritParams epiweek
+#' @inheritParams lubridate::epiweek
 #'
 #' @return The weekday number (1--7) as an integer vector.
 #'
 #' @inherit lubridate::isoweek references
+#' @inherit lubridate::epiweek references
 #'
 #' @examples
 #' #' epiwday(as.Date("2005-01-01")) # 6
@@ -22,10 +23,14 @@
 #' @export
 #'
 epiwday <- function(x, system = "ISO") {
-  match.arg(system, c("ISO", "CDC"))
-  if (system == "ISO") {
+
+  week_type <- match.arg(system, c("ISO", "CDC"))
+
+  if (week_type == "ISO") {
     as.integer(lubridate::wday(x - 1))
-  } else if (system == "CDC") {
+
+  } else if (week_type == "CDC") {
     as.integer(lubridate::wday(x))
   }
+
 }

@@ -4,22 +4,18 @@
 \alias{epiwday}
 \title{Get epidemiological weekday number of a date-time}
 \usage{
-epiwday(x, system = "who")
+epiwday(x, system = "ISO")
 }
 \arguments{
 \item{x}{a date-time object. Must be a POSIXct, POSIXlt, Date, chron,
 yearmon, yearqtr, zoo, zooreg, timeDate, xts, its, ti, jul, timeSeries, or
 fts object.}
-
-\item{system}{Either "who" or "cdc". WHO epidemiological weeks start on
-Monday. CDC epidemiological weeks (MMWR weeks) start on Sunday. The default
-is "who".}
 }
 \value{
 The weekday number (1--7) as an integer vector.
 }
 \description{
-Returns the epidemiological weekday number using either the WHO or CDC
+Returns the epidemiological weekday number using either ISO or CDC
 system.
 }
 \details{
@@ -27,8 +23,9 @@ The WHO system uses the ISO 8601 standard in which weeks start on Monday,
 while in the CDC system weeks start on Sunday.
 }
 \examples{
-epiwday(as.Date("2005-01-01")) # 6
-epiwday(as.Date("2005-01-01"), system = "cdc") # 7
+#' epiwday(as.Date("2005-01-01")) # 6
+epiwday(as.Date("2005-01-01"), system = "ISO") # 6
+epiwday(as.Date("2005-01-01"), system = "CDC") # 7
 
 }
 \references{

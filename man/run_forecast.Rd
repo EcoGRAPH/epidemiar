@@ -4,9 +4,9 @@
 \alias{run_forecast}
 \title{Runs the forecast modeling}
 \usage{
-run_forecast(epi_data, quo_popfield, quo_groupfield, groupings, env_data,
-  quo_obsfield, quo_valuefield, env_variables, fc_control, env_ref_data,
-  env_info, report_dates, week_type)
+run_forecast(epi_data, quo_popfield, inc_per, quo_groupfield, groupings,
+  env_data, quo_obsfield, quo_valuefield, env_variables, fc_control,
+  env_ref_data, env_info, report_dates, week_type)
 }
 \description{
 Runs the forecast modeling

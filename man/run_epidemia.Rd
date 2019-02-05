@@ -4,8 +4,8 @@
 \alias{run_epidemia}
 \title{Run EPIDEMIA forecast models and early detection algorithm}
 \usage{
-run_epidemia(epi_data, casefield, populationfield, groupfield,
-  week_type = c("ISO", "CDC"), report_period = 26,
+run_epidemia(epi_data, casefield, populationfield, inc_per = 1000,
+  groupfield, week_type = c("ISO", "CDC"), report_period = 26,
   ed_summary_period = 4, ed_method = c("Farrington", "EARS"),
   ed_control = NULL, env_data, obsfield, valuefield,
   forecast_future = 4, fc_control = NULL, env_ref_data, env_info)
@@ -23,7 +23,7 @@ run_epidemia(epi_data, casefield, populationfield, groupfield,
 
 \item{report_period}{The number of timesteps (weeks) that the whole report will cover. report_period - forecast_future is the number of weeks of past (known) data that will be included.}
 
-\item{ed_method}{Which method for early detection should be used ("Farrington" is only current) option.}
+\item{ed_method}{Which method for early detection should be used ("Farrington" is only current option).}
 
 \item{ed_control}{All parameters for early detection algorithm, passed through to that subroutine}
 
@@ -39,7 +39,7 @@ run_epidemia(epi_data, casefield, populationfield, groupfield,
 
 \item{env_ref_data}{Historical averages by week of year for environmental variables. Used in extended environmental data into the future for long forecast time, to calculate anomalies in early detection period, and to display on timeseries in reports}
 
-\item{env_info}{Lookup table for environmental data - reference creation method, report label, GA ID, etc.}
+\item{env_info}{Lookup table for environmental data - reference creation method, report label, etc.}
 
 \item{detection_period}{The number of timesteps (weeks) that the early detection will run over}
 }

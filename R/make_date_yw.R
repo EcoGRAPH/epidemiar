@@ -9,7 +9,7 @@
 #' @param year epidemiological year
 #' @param week eidemiological week number (1--53).
 #' @param weekday epidemiological weekday number (1--7). Day 1 is a Monday in
-#'   the WHO system  and a Sunday in the CDC system.
+#'   the ISO-8601 WHO system and a Sunday in the CDC system.
 #' @inheritParams epiweek
 #'
 #' @return A vector of class `Date`.
@@ -18,17 +18,18 @@
 #' @examples
 #' make_date_yw(2017, 1)
 #' make_date_yw(2017, 1, 2)
-#' make_date_yw(2017, 1, system = "cdc")
-#' make_date_yw(2017, 1, 2, system = "cdc")
+#' make_date_yw(2017, 1, system = "CDC")
+#' make_date_yw(2017, 1, system = "ISO")
+#' make_date_yw(2017, 1, 2, system = "ISO")
 #'
 #' # arguments are recycled
 #' make_date_yw(2017, 1:10)
 #' make_date_yw(2017, 1, 1:7)
 #' make_date_yw(2010:2017, 1)
 #'
-make_date_yw <- function(year = 1970L, week = 1L, weekday = 1L, system = "who") {
+make_date_yw <- function(year = 1970L, week = 1L, weekday = 1L, system = "ISO") {
 
-  match.arg(system, c("who", "cdc"))
+  match.arg(system, c("ISO", "CDC"))
 
   lengths <- vapply(list(year, week, weekday), length, 1, USE.NAMES = FALSE)
   if (min(lengths) == 0L) as.Date(integer(), lubridate::origin)
@@ -53,12 +54,4 @@ make_date_yw <- function(year = 1970L, week = 1L, weekday = 1L, system = "who") 
     )
   as.Date(out, origin)
 
-}
-
-#' @export
-#' @rdname make_date_yw
-#' @usage NULL
-parse_epiweek <- function(...) {
-  .Deprecated("make_date_yw")
-  make_date_yw(...)
 }

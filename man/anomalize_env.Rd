@@ -4,7 +4,7 @@
 \alias{anomalize_env}
 \title{Convert environmental data into anomalies}
 \usage{
-anomalize_env(env_fc, quo_groupfield, quo_obsfield, ncores)
+anomalize_env(env_fc, quo_groupfield, env_variables_used, ncores)
 }
 \description{
 Convert environmental data into anomalies

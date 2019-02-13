@@ -40,7 +40,7 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
   epi_fc <- epi_format_fc(epi_data_extd, quo_groupfield, fc_control)
 
   # anomalizing the environ data
-  env_fc <- anomalize_env(env_fc, quo_groupfield, quo_obsfield, ncores)
+  env_fc <- anomalize_env(env_fc, quo_groupfield, env_variables_used, ncores)
 
   # create the lags
   epi_lag <- lag_environ_to_epi(epi_fc, quo_groupfield, groupings,
@@ -465,24 +465,43 @@ epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
 
 #' Convert environmental data into anomalies
 #'
-anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield, ncores) {
+anomalize_env <- function(env_fc, quo_groupfield, env_variables_used, ncores) {
 
-  # the following code only works on dataframes (e.g. env_fc[,curcol] instead of env_fc[[curcol]])
-  # but I believe there's no use fixing it into tibble format since we're probably going to do it all with NSE,
-  # and this conversion won't be necessary anyway
+  # Loop through each environmental variable replacing non-NA observations
+  # with residuals from a gam with only geographic area (group) and day of year
+
+  #Originally written with dataframes. Tibble/NSE/dplyr conversion not yet fully done.
+  # #new tibble
+  # env_fc_anom <- env_fc %>%
+  #   mutate(group_factor = factor(!!quo_groupfield),
+  #          doy = format(obs_date, "%j")) %>% as.numeric()
+
+  # needed data for gam
+  group_factor <- env_fc %>% pull(!!quo_groupfield) %>% factor()
+  doy <- env_fc %>% pull(obs_date) %>% format("%j") %>% as.numeric()
+
   env_fc <- as.data.frame(env_fc)
 
-  # loop through environmental columns - sorry, can't figure out how to do this with NSE today
-  regionfactor <- factor(env_fc[,1])
-  doy          <- as.numeric(format(env_fc$obs_date, "%j"))
+  # loop through environmental columns
+  # note: brittle on column position until rewrite
   for (curcol in 4:ncol(env_fc)) {
 
     cl <- parallel::makeCluster(ncores)
 
-    tempbam <- mgcv::bam(env_fc[,curcol] ~ regionfactor + s(doy, bs="cc", by=regionfactor),
-                         data=env_fc,
-                         chunk.size=1000,
-                         cluster=cl)
+    #if more than one geographic area
+    if (nlevels(group_factor) > 1){
+      tempbam <- mgcv::bam(env_fc[,curcol] ~ group_factor + s(doy, bs="cc", by=group_factor),
+                           data=env_fc,
+                           chunk.size=1000,
+                           cluster=cl)
+    } else {
+      #if only 1 geographic area, then run without group_factor
+      tempbam <- mgcv::bam(env_fc[,curcol] ~ s(doy, bs="cc"),
+                           data=env_fc,
+                           chunk.size=1000,
+                           cluster=cl)
+
+    }
 
     # could perhaps more cleverly be figured out by understanding the na.options of bam,
     # but for the moment just replace non-NA observations with their residuals

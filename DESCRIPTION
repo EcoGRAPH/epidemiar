@@ -6,7 +6,7 @@ Author: Dawn M. Nekorchuk
 Maintainer: Dawn Nekorchuk <Dawn.Nekorchuk@ou.edu>
 Description: Creates EPIDEMIA Forecasting Reports
     with Early Warning & Early Detection Alerts
-License: What license is it under?
+License: AGPL-3.0-or-later
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1

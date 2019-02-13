@@ -57,6 +57,6 @@ make_date_yw <- function(year = 1970L, week = 1L, weekday = 1L, system = "ISO") 
         day1 + d - 1
       }
     )
-  as.Date(out, origin)
+  as.Date(out, lubridate::origin)
 
 }

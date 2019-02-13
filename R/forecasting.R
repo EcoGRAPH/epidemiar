@@ -618,8 +618,14 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   epi_lag <- epi_lag %>%
     dplyr::mutate(known = ifelse(obs_date <= last_known_date, 1, 0))
 
-  #number of clusters (different function for lm() needed if <= 1)
+  # ensure that quo_name(quo_groupfield) is a factor - gam/bam will fail if given a character,
+  # which is unusual among regression functions, which typically just coerce into factors.
+  epi_lag <- epi_lag %>% dplyr::mutate(!!rlang::quo_name(quo_groupfield) := factor(!!quo_groupfield))
+
+  #number of clusters
   n_clusters <- nlevels(epi_lag$cluster_id)
+  #number of geographic area groupings
+  n_groupings <- epi_lag %>% pull(!!quo_groupfield) %>% nlevels()
 
   #create variable bandsummaries equation piece
   #  e.g. 'bandsummaries_{var1} * cluster_id' for however many env var bandsummaries there are
@@ -642,24 +648,32 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
 
   # get list of modbspline reserved variables and format for inclusion into model
   modb_list <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)
-  modb_list <- paste(modb_list, "*", rlang::quo_name(quo_groupfield))
-  modb_eq <- glue::glue_collapse(modb_list, sep = " + ")
-
-  # ensure that quo_name(quo_groupfield) is a factor - gam/bam will fail if given a character,
-  # which is unusual among regression functions, which typically just coerce into factors.
-  epi_lag <- epi_lag %>% dplyr::mutate(!!rlang::quo_name(quo_groupfield) := factor(!!quo_groupfield))
+  # variant depending on >1 geographic area groupings
+  if (n_groupings > 1){
+    modb_list_grp <- paste(modb_list, "*", rlang::quo_name(quo_groupfield))
+    modb_eq <- glue::glue_collapse(modb_list_grp, sep = " + ")
+  } else {
+    modb_eq <- glue::glue_collapse(modb_list, sep = " + ")
+  }
 
   #filter to known
   epi_known <- epi_lag %>%
     dplyr::filter(known == 1)
 
-  #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create expression to give to lm()
-  reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
-                                    "+s(doy, bs=\"cc\", by=",
-                                    rlang::quo_name(quo_groupfield),
-                                    ") + ",
-                                    rlang::quo_name(quo_groupfield), "+",
-                                    bandsums_eq))
+  #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create expression to give to modeling function
+  #different versions if multiple geographic area groupings or not
+  if (n_groupings > 1){
+    reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
+                                      "+s(doy, bs=\"cc\", by=",
+                                      rlang::quo_name(quo_groupfield),
+                                      ") + ",
+                                      rlang::quo_name(quo_groupfield), "+",
+                                      bandsums_eq))
+  } else {
+    reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
+                                      "+s(doy, bs=\"cc\") + ",
+                                      bandsums_eq))
+  }
 
   # set up clusters for parallel gam
   cl <- parallel::makeCluster(ncores)

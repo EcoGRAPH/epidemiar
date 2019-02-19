@@ -29,12 +29,23 @@
 
 
 ## Main Modeling (Early Detection, Forecasting) Function
-run_epidemia <- function(epi_data, casefield, populationfield, inc_per = 1000,
-                         groupfield, week_type = c("ISO", "CDC"),
+run_epidemia <- function(epi_data,
+                         casefield,
+                         populationfield,
+                         inc_per = 1000,
+                         groupfield,
+                         week_type = c("ISO", "CDC"),
                          report_period = 26,
-                         ed_summary_period = 4, ed_method = c("Farrington", "EARS"), ed_control = NULL,
-                         env_data, obsfield, valuefield, forecast_future = 4,
-                         fc_control = NULL, env_ref_data, env_info){
+                         ed_summary_period = 4,
+                         ed_method = c("Farrington", "None"),
+                         ed_control = NULL,
+                         env_data,
+                         obsfield,
+                         valuefield,
+                         forecast_future = 4,
+                         fc_control = NULL,
+                         env_ref_data,
+                         env_info){
   #temporary argument descriptions, until move into epidemiar and roxygenate appropriately
   #epi_data: epidemiological data with case number of time, currently weekly only, with date field "obs_date"
   #casefield: the field name for the case counts
@@ -63,11 +74,32 @@ run_epidemia <- function(epi_data, casefield, populationfield, inc_per = 1000,
   #env_info: lookup table for environmental data - reference creation method, future extension method, report label, GA ID, etc.
 
   #dplyr programming steps for passing of field names
+  # note: will return quo_name of "" if field argument was not given, so this can happen before input checks
   quo_casefield <- rlang::enquo(casefield)
   quo_popfield <- rlang::enquo(populationfield)
   quo_groupfield <- rlang::enquo(groupfield)
   quo_obsfield <- rlang::enquo(obsfield)
   quo_valuefield <- rlang::enquo(valuefield)
+
+  #perform checks of all input data
+  # input_check(epi_data,
+  #             quo_casefield,
+  #             quo_populationfield,
+  #             inc_per,
+  #             quo_groupfield,
+  #             week_type,
+  #             report_period,
+  #             ed_summary_period,
+  #             ed_method,
+  #             ed_control,
+  #             env_data,
+  #             quo_obsfield,
+  #             quo_valuefield,
+  #             forecast_future,
+  #             fc_control,
+  #             env_ref_data,
+  #             env_info)
+  #
 
   #create alphabetical list of unique groups
   #must remain in alpha order for early detection using surveillance package to capture results properly

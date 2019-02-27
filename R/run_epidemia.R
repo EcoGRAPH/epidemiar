@@ -1,31 +1,86 @@
-#' Run EPIDEMIA forecast models and early detection algorithm
+#'Run EPIDEMIA forecast models and early detection algorithm
 #'
-#' @param epi_data Epidemiological data with case numbers per week, with date field "obs_date"
-#' @param casefield The field name for the case counts
-#' @param populationfield Population field to give population numbers over time. Used to calculated incidence. Also optionally used in Farrington method for populationOffset.
-#' @param groupfield The field name for districts or area divisions of epidemiological AND environmental data if no groupings (all one area), user should give a field with the same value throughout
-#' @param week_type The standard (WHO ISO-8601 or CDC epi weeks) that the weeks of the year in epidemiological and environmental reference data use (required: dates listed are LAST day of week).
-#' @param report_period The number of timesteps (weeks) that the whole report will cover. report_period - forecast_future is the number of weeks of past (known) data that will be included.
-#' @param detection_period The number of timesteps (weeks) that the early detection will run over
-#' @param ed_method Which method for early detection should be used ("Farrington" is only current option).
-#' @param ed_control All parameters for early detection algorithm, passed through to that subroutine
-#' @param env_data Daily environmental data for same groupfields and Date range. Must be in long format, and must start laglen (in fc_control) days before epi_data for forecasting.
-#' @param obsfield Field name of the environmental data observation types
-#' @param valuefield Field name of the value of the environmental data observations
-#' @param forecast_future Number of weeks from the end of the epi_data to extend the forecast out
-#' @param fc_control Parameters for forecasting, including model and clusters
-#' @param env_ref_data Historical averages by week of year for environmental variables. Used in extended environmental data into the future for long forecast time, to calculate anomalies in early detection period, and to display on timeseries in reports
-#' @param env_info Lookup table for environmental data - reference creation method, report label, etc.
+#'@param epi_data Epidemiological data with case numbers per week, with date
+#'  field "obs_date".
+#'@param casefield The column name of the field that contains disease case
+#'  counts.
+#'@param populationfield Column name of the population field to give population
+#'  numbers over time. Used to calculated incidence. Also optionally used in
+#'  Farrington method for populationOffset.
+#'@param groupfield The column name of the field for district or geographic area
+#'  unit division names of epidemiological AND environmental data. If there are
+#'  no groupings (all one area), user should give a field that contains the same
+#'  value throughout.
+#'@param week_type The standard (WHO ISO-8601 or CDC epi weeks) that the weeks
+#'  of the year in epidemiological and environmental reference data use
+#'  (required: dates listed are LAST day of week).
+#'@param report_period The number of weeks that the entire report will cover.
+#'  The \code{report_period} minus \code{forecast_future} is the number of weeks
+#'  of past (known) data that will be included.
+#'@param detection_period The number of weeks that will be considered the "early
+#'  detection period". It will count back from the week of last known
+#'  epidemiological data.
+#'@param ed_method Which method for early detection should be used ("Farrington"
+#'  is only current option, or "None").
+#'@param ed_control All parameters for early detection algorithm, passed through
+#'  to that subroutine.
+#'@param env_data Daily environmental data for the same groupfields and date
+#'  range as the epidemiological data. It may contain extra data (other
+#'  districts or date ranges). The data must be in long format (one row for each
+#'  date and environmental variable combination), and must start \code{laglen}
+#'  (in \code{fc_control}) days before epi_data for forecasting.
+#'@param obsfield Field name of the environmental data variables.
+#'@param valuefield Field name of the value of the environmental data variable
+#'  observations.
+#'@param forecast_future Number of futre weeks from the end of the
+#'  \code{epi_data} to produce forecasts.
+#'@param fc_control Parameters for forecasting, including which environmental
+#'  variable to include and any geographic clusters.
+#'@param env_ref_data Historical averages by week of year for environmental
+#'  variables. Used in extended environmental data into the future for long
+#'  forecast time, to calculate anomalies in early detection period, and to
+#'  display on timeseries in reports.
+#'@param env_info Lookup table for environmental data - reference creation
+#'  method (e.g. sum or mean), report labels, etc.
 #'
 #'
-#' @return Returns a suite of summary and report data.
-#'#'
-#' @examples
+#'@return Returns a suite of summary and report data.
 #'
-#' @export
+#'  1. \code{summary_data}: Early detection and early warning alerts levels for
+#'  each woreda. Early detection alerts (ed_alert_count) are alerts that are
+#'  triggered during the early detection period, which is defined as the 4 most
+#'  recent weeks of known epidemiology data. Similarly, early warning alerts
+#'  (ew_alert_count) are alerts in the future forecast estimates. “High” level
+#'  indicates two or more weeks in this period had incidences greater than the
+#'  alert threshold, “Medium” means that one week was in alert status, and “Low”
+#'  means no weeks had alerts (ed_sum_level and ew_level, respectively).
 #'
-#' @importFrom magrittr %>%
-#' @importFrom rlang !!
+#'  2. \code{modeling_results_data}:These are multiple timeseries values for
+#'  observed, forecast, and alert thresholds of disease incidence, over the
+#'  report period, for each geographic unit. These data can be used in creating
+#'  the individual geographic unit control charts.
+#'
+#'  3. \code{environ_timeseries}: These are multiple timeseries for the
+#'  environmental variables during the report period for each geographic unit.
+#'
+#'  4. \code{environ_anomalies}: These data are the recent (during the early
+#'  detection period) differences (anomalies) of the environmental variable
+#'  values from the climatology/reference mean.
+#'
+#'  5. \code{params_meta}: This lists dates, settings, and parameters that
+#'  \code{run_epidemiar()} was called with.
+#'
+#'  6. \code{regression_object}: This is the regression object from the general
+#'  additive model (GAM, parallelized with BAM) regression. This is only for
+#'  statistical investigation of the model, and is usually not saved (very large
+#'  object).
+#'
+#'@examples See model_forecast_script.R in epidemiar-demo for full example: https://github.com/EcoGRAPH/epidemiar-demo
+#'
+#'@export
+#'
+#'@importFrom magrittr %>%
+#'@importFrom rlang !!
 
 
 ## Main Modeling (Early Detection, Forecasting) Function

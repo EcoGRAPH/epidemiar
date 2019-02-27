@@ -2,7 +2,9 @@
 title: "Overview of epidemiar package"
 author: "Dawn Nekorchuk"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output: 
+  rmarkdown::html_vignette:
+   fig_caption: yes
 vignette: >
   %\VignetteIndexEntry{Overview of epidemiar package}
   %\VignetteEngine{knitr::rmarkdown}
@@ -19,16 +21,41 @@ knitr::opts_chunk$set(
 
 # Introduction
 
+The Epidemic Prognosis Incorporating Disease and Environmental Monitoring for Integrated Assessment (EPIDEMIA) Forecasting System is a set of tools coded in free, open-access software, that integrate surveillance and environmental data to model and create short-term forecasts for environmentally-mediated diseases. 
+
+## Issues/Background
+1. Public health monitoring of environmentally-mediated diseases can benefit from incorporating information on related environmental factors. This melding of data can improve the ability to detect early indication of outbreaks, allowing for more efficient and proactive public health interventions.
+2. The EPIDEMIA project integrated local malaria surveillance data and remotely-sensed environmental predictors to produce operational malaria forecasts for the Amhara region of Ethiopia. Our local public health partners expressed interest in being self-sufficient in creating the weekly reports themselves.
+
+## Our Solution
+The EPIDEMIA modeling of disease transmission for early detection and early warning evaluation was done in R, a free software for statistical computing. We developed the “epidemiar” R package to provide a generalized set of functions for disease forecasting. In addition, we designed workflows and wrote customized code for our Ethiopian colleagues, including a Google Earth Engine script to capture the necessary summaries of the environmental variables. The output of the modeling and forecasting is fed into formatting documents to create distributable reports with maps and graphs of the results.
+
+## System Components
+The full system can be thought of have 3 (three) main parts:
+
+```{r echo = FALSE, out.width = "75%", `fig.cap = "System diagram of the EPIDEMIA Forecasting System."`}
+knitr::include_graphics("EPIDEMIA_overview.png")
+```
+
+1.	R package epidemiar: Library of flexible functions for modeling and forecasting
+2.	Google Earth Engine script: Script to gather the environmental data summaries
+3.	Custom R Project: Contains the surveillance and environmental data, user parameters on the model and outbreak detection algorithm, and script to produce a finalized report. 
+
+This is the first component, the R package `epidemiar`. For example GEE scripts and R project, see the `epidemiar-demo` repository at https://github.com/EcoGRAPH/epidemiar-demo.
 
 ## Modeling Overview
 
-### Modeling Description
+
 
 bam/gam
 
 Each geographic unit (group) and week is associated with environmental on the day the week began, up to the user-selected number of days in the past (lag length, _l_), so that each group-week has a _l_-day history of weather data. A distributed lag basis is created with the natural cubic splines function (ns, splines library), including intercept, with knots at 25%, 50%, and 75% of the lag length. The 5 basis functions that result are multiplied by each group's history, so that there are just 5 summary statistics, instead of _l_, for every combination of group, week, and environmental covariate. 
 
 ## Event Detection Overview
+
+
+
+
 
 # Data Requirements
 
@@ -40,9 +67,9 @@ Each geographic unit (group) and week is associated with environmental on the da
 
 ## Reference Tables
 1. Environmental variables
-1. Model variables and geographic group clusters
-1. Population
-1. Shapefiles
+2. Model variables and geographic group clusters
+3. Population
+4. Shapefiles
 
 
 # Setting up the Model
@@ -59,6 +86,10 @@ Each geographic unit (group) and week is associated with environmental on the da
 
 # Creating the Report
 
+Steps to Run Report: In brief, after user parameters and model specifications have been set, users follow these steps to create reports:
+1.	update their surveillance data, 
+2.	update environmental data,
+3.	open the Custom R Project and run a script that will read in the data, run the model, produce the forecasts, and format the finalized report. 
 
 
 

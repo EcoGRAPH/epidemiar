@@ -233,7 +233,7 @@ run_no_detection <- function(epi_fc_data, quo_groupfield, report_dates){
   ed_alert_res <- epi_fc_data %>%
     dplyr::filter(obs_date %in% report_dates$known$seq) %>%
     dplyr::mutate(series = "ed",
-                  value = NA_real_,
+                  value = NA_integer_,
                   lab = "Early Detection Alert",
                   upper = NA,
                   lower = NA) %>%
@@ -243,7 +243,7 @@ run_no_detection <- function(epi_fc_data, quo_groupfield, report_dates){
   ew_alert_res <- epi_fc_data %>%
     dplyr::filter(obs_date %in% report_dates$forecast$seq) %>%
     dplyr::mutate(series = "ew",
-                  value = NA_real_,
+                  value = NA_integer_,
                   lab = "Early Warning Alert",
                   upper = NA,
                   lower = NA) %>%

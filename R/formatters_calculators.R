@@ -85,7 +85,7 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
     #group (because need to look at period per group level)
     dplyr::group_by(!!quo_groupfield) %>%
     #summarize to 1 obs per grouping
-    dplyr::summarize(ed_alert_count = sum(value, na.rm = TRUE)) %>%
+    dplyr::summarize(ed_alert_count = if_else(all(is.na(value)), NA_integer_, sum(value, na.rm = TRUE))) %>%
     # create 3 levels (0, 1, 2 = >1)
     dplyr::mutate(warning_level = if_else(ed_alert_count > 1, 2, ed_alert_count),
                   #factor to label
@@ -106,7 +106,7 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
     #group
     dplyr::group_by(!!quo_groupfield) %>%
     #summarize to 1 obs per grouping
-    dplyr::summarize(ew_alert_count = sum(value, na.rm = TRUE)) %>%
+    dplyr::summarize(ew_alert_count = if_else(all(is.na(value)), NA_integer_, sum(value, na.rm = TRUE))) %>%
     # create 3 levels (0, 1, 2 = >1)
     dplyr::mutate(warning_level = if_else(ew_alert_count > 1, 2, ew_alert_count),
                   #factor to label

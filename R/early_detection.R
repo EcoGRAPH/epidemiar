@@ -7,7 +7,7 @@
 #' "ew" : early warning alerts (forecast/future portion)
 #' "thresh" : threshold values per week
 #'
-run_early_detection <- function(epi_fc_data, quo_popfield, inc_per,
+run_event_detection <- function(epi_fc_data, quo_popfield, inc_per,
                                 quo_groupfield, groupings,
                                 ed_method, ed_control, report_dates){
   message("Running early detection")

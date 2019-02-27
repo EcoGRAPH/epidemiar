@@ -146,8 +146,8 @@ run_epidemia <- function(epi_data, casefield, populationfield, inc_per = 1000,
     #arrange (for viewing/checking)
     dplyr::arrange(!!quo_groupfield, obs_date)
 
-  #run early detection on combined dataset
-  ed_res <- run_early_detection(epi_fc_data = obs_fc_epi,
+  #run event detection on combined dataset
+  ed_res <- run_event_detection(epi_fc_data = obs_fc_epi,
                                 quo_popfield, inc_per,
                                 quo_groupfield, groupings,
                                 ed_method, ed_control, report_dates)

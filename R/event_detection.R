@@ -225,7 +225,7 @@ stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
 
 #' Run No outbreak detection algorithm
 #'
-run_no_detection() <- function(){
+run_no_detection <- function(){
 
   #DECIDE!  NA for series "ed","ew", and "thresh", or simply not there???
 

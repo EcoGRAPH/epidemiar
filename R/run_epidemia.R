@@ -32,7 +32,7 @@
 run_epidemia <- function(epi_data, casefield, populationfield, inc_per = 1000,
                          groupfield, week_type = c("ISO", "CDC"),
                          report_period = 26,
-                         ed_summary_period = 4, ed_method = c("Farrington", "EARS"), ed_control = NULL,
+                         ed_summary_period = 4, ed_method = c("Farrington", "None"), ed_control = NULL,
                          env_data, obsfield, valuefield, forecast_future = 4,
                          fc_control = NULL, env_ref_data, env_info){
   #temporary argument descriptions, until move into epidemiar and roxygenate appropriately

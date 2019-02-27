@@ -227,15 +227,13 @@ stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
 #'
 run_no_detection <- function(epi_fc_data, quo_groupfield, report_dates){
 
-  #DECIDE!  NA for series "ed","ew", and "thresh", or simply not there???
-
   #return(NULL) #ugly downstream. Maybe easier if all NA
 
   #early detection (KNOWN - pre-forecast) event detection alert series
   ed_alert_res <- epi_fc_data %>%
     dplyr::filter(obs_date %in% report_dates$known$seq) %>%
     dplyr::mutate(series = "ed",
-                  value = NA,
+                  value = as.integer(NA),
                   lab = "Early Detection Alert",
                   upper = NA,
                   lower = NA) %>%
@@ -245,7 +243,7 @@ run_no_detection <- function(epi_fc_data, quo_groupfield, report_dates){
   ew_alert_res <- epi_fc_data %>%
     dplyr::filter(obs_date %in% report_dates$forecast$seq) %>%
     dplyr::mutate(series = "ew",
-                  value = NA,
+                  value = as.integer(NA),
                   lab = "Early Warning Alert",
                   upper = NA,
                   lower = NA) %>%
@@ -254,7 +252,7 @@ run_no_detection <- function(epi_fc_data, quo_groupfield, report_dates){
   #gather event detection threshold series
   ed_thresh_res <- epi_fc_data %>%
     dplyr::mutate(series = "thresh",
-                  value = NA,
+                  value = as.integer(NA),
                   lab = "Alert Threshold",
                   upper = NA,
                   lower = NA) %>%

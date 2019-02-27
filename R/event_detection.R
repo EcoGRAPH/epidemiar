@@ -23,7 +23,7 @@ run_event_detection <- function(epi_fc_data, quo_popfield, inc_per,
 
   } else if (ed_method == "None") {
 
-    ed_far_res <- run_no_detection()
+    ed_far_res <- run_no_detection(epi_fc_data, quo_groupfield, report_dates)
 
   } else stop("Early Detection/Warning method not supported")
 }
@@ -225,10 +225,45 @@ stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
 
 #' Run No outbreak detection algorithm
 #'
-run_no_detection <- function(){
+run_no_detection <- function(epi_fc_data, quo_groupfield, report_dates){
 
   #DECIDE!  NA for series "ed","ew", and "thresh", or simply not there???
 
-  return(NULL)
+  #return(NULL) #ugly downstream. Maybe easier if all NA
+
+  #early detection (KNOWN - pre-forecast) event detection alert series
+  ed_alert_res <- epi_fc_data %>%
+    dplyr::filter(obs_date %in% report_dates$known$seq) %>%
+    dplyr::mutate(series = "ed",
+                  value = NA,
+                  lab = "Early Detection Alert",
+                  upper = NA,
+                  lower = NA) %>%
+    dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
+
+  #gather early WARNING event detection alert series
+  ew_alert_res <- epi_fc_data %>%
+    dplyr::filter(obs_date %in% report_dates$forecast$seq) %>%
+    dplyr::mutate(series = "ew",
+                  value = NA,
+                  lab = "Early Warning Alert",
+                  upper = NA,
+                  lower = NA) %>%
+    dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
+
+  #gather event detection threshold series
+  ed_thresh_res <- epi_fc_data %>%
+    dplyr::mutate(series = "thresh",
+                  value = NA,
+                  lab = "Alert Threshold",
+                  upper = NA,
+                  lower = NA) %>%
+    dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
+
+  #combine ed results
+  ed <- rbind(ed_alert_res, ew_alert_res, ed_thresh_res)
+
+  ed
+
 
 }

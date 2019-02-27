@@ -1,8 +1,11 @@
 # All run_epidemiar() subfunctions related to early detection
 
 ## Early Detection
-#' Run early detection algorithm
-#'
+#' Run event detection algorithm.
+#' Generates three series:
+#' "ed" : early detection alerts (ed period of most recent epi data)
+#' "ew" : early warning alerts (forecast/future portion)
+#' "thresh" : threshold values per week
 #'
 run_early_detection <- function(epi_fc_data, quo_popfield, inc_per,
                                 quo_groupfield, groupings,
@@ -12,11 +15,17 @@ run_early_detection <- function(epi_fc_data, quo_popfield, inc_per,
   #only supporting Farrington Improved method from Surveillance right now,
   #leaving option open for expanding later
   if (ed_method == "Farrington") {
+
     ed_far_res <- run_farrington(epi_fc_data, quo_popfield, inc_per,
                                  quo_groupfield, groupings,
                                  ed_control, report_dates)
     return(ed_far_res)
-  } else stop("Early Detection method not supported")
+
+  } else if (ed_method == "None") {
+
+    ed_far_res <- run_no_detection()
+
+  } else stop("Early Detection/Warning method not supported")
 }
 
 #' Run the Farrington early detection algorithm
@@ -212,4 +221,14 @@ stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
   ed <- rbind(ed_alert_res, ew_alert_res, ed_thresh_res)
 
   ed
+}
+
+#' Run No outbreak detection algorithm
+#'
+run_no_detection() <- function(){
+
+  #DECIDE!  NA for series "ed","ew", and "thresh", or simply not there???
+
+  return(NULL)
+
 }

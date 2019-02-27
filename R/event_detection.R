@@ -251,6 +251,7 @@ run_no_detection <- function(epi_fc_data, quo_groupfield, report_dates){
 
   #gather event detection threshold series
   ed_thresh_res <- epi_fc_data %>%
+    dplyr::filter(obs_date %in% report_dates$full$seq) %>%
     dplyr::mutate(series = "thresh",
                   value = NA_real_,
                   lab = "Alert Threshold",

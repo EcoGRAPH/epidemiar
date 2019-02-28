@@ -45,11 +45,72 @@ This is the first component, the R package `epidemiar`. For example GEE scripts 
 
 ## Modeling Overview
 
+The model is based on a general additive model (GAM) regression of multiple factors, including the geographic group, long terms trends, seasonality, lagged environmental drivers,and clustering of geographic groups. 
+
+$casecount ~ geo + 
+    bs_1 * geo + 
+    bs_2 * geo + 
+    bs_3 * geo + 
+    bs_4 * geo + 
+    bs_5 * geo + \\
+    ~~~s(doy, bs = "cc", by = geo) + \\
+    ~~~env_1 summary_1 * cluster + 
+    env_1 summary_2 * cluster +  
+    env_1 summary_3 * cluster + \\ 
+    ~~~~~~var_1 summary_4 * cluster + 
+    env_1 summary_5 * cluster + \\ ...
+    ~~~env_n summary_1 * cluster + 
+    env_n summary_2 * cluster + 
+    env_n summary_3 * cluster + \\ 
+    ~~~~~~env_n summary_4 * cluster + 
+    env_n summary_5 * cluster$
+
+where _geo_ is the geographic group, bs_1 ... bs_5 are modified basis functions, _doy_ is the day of the year, _env_ are the environmental variables (1, 2 ... n) and the 5 summary statistics from the lagged basis functions, and _cluster_ is the cluster identification of that geographic group. See the following sections for more details. 
+
+# Geographic group, long term trends and seasonality
+
+Geographic group: $geo$ 
+
+Long term trends:
+$bs_1 * geo + bs_2 * geo + bs_3 * geo + bs_4 * geo + bs_5 * geo$ 
+
+Seasonality:
+
+$s(doy, bs = "cc", by = geo)$
 
 
-bam/gam
+# Environmental Variables
 
-Each geographic unit (group) and week is associated with environmental on the day the week began, up to the user-selected number of days in the past (lag length, _l_), so that each group-week has a _l_-day history of weather data. A distributed lag basis is created with the natural cubic splines function (ns, splines library), including intercept, with knots at 25%, 50%, and 75% of the lag length. The 5 basis functions that result are multiplied by each group's history, so that there are just 5 summary statistics, instead of _l_, for every combination of group, week, and environmental covariate. 
+The rates of environmentally-mediated infectious diseases can be influenced by the environmental factors via a range of potential mechanisms, e.g. affecting the abundance and life cycle of disease vectors. The influences on disease generally lags behind the changes in the environmental covariates. 
+
+<<>><<>> Anomalies
+
+
+In the modeling controls, the user selects the maximum number of days in the past (lag length, _l_) to consider interactions.  Each geographic unit (group) and week is associated with environmental values on the day the week began, up to the lag length, _l_, so that each group-week has a _l_-day history of weather data. A distributed lag basis is created with the natural cubic splines function (ns, splines library), including intercept, with knots at 25%, 50%, and 75% of the lag length. The 5 basis functions that result are multiplied by each group's history, so that there are just 5 summary statistics, instead of _l_, for every combination of group, week, and environmental covariate. 
+
+
+
+
+
+
+
+
+# Clusters
+
+"However, malaria-environment relationships can vary with ecological and social context. We
+20 used a genetic algorithm to optimize a spatiotemporal malaria model by grouping locations into
+21 geographic strata with similar environmental sensitivities" --from paper
+
+spatial non-stationarity
+relationship between env var and disease vary gegraphically
+global model - not capture spatial variation of environmental influenes, poorer model fit
+each geographic unit own model - can lead to overfitting noisy data or short timeseries
+Determination of clustering of geographic units can be done in any way the user prefers. 
+Some ecological zones, similar temporal disease patterns. 
+For the malaria EPIDEMIA project, selection of  which environmental variabls and clustering based on responses to those environmental variables was performed at the same time using a genetic algorithm [CITE DAVIS pre?]
+
+
+
 
 ## Event Detection Overview
 

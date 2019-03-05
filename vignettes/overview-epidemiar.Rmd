@@ -19,132 +19,173 @@ knitr::opts_chunk$set(
 ```
 
 
-# Introduction
+## Introduction
 
 The Epidemic Prognosis Incorporating Disease and Environmental Monitoring for Integrated Assessment (EPIDEMIA) Forecasting System is a set of tools coded in free, open-access software, that integrate surveillance and environmental data to model and create short-term forecasts for environmentally-mediated diseases. 
 
-## Issues/Background
+This R package, `epidemiar`, is the cornerstone of the forecasting system, and is designed to be used to model and forecast a wide range of environmentally-mediated diseases. 
+
+### Issues/Background
 1. Public health monitoring of environmentally-mediated diseases can benefit from incorporating information on related environmental factors. This melding of data can improve the ability to detect early indication of outbreaks, allowing for more efficient and proactive public health interventions.
-2. The EPIDEMIA project integrated local malaria surveillance data and remotely-sensed environmental predictors to produce operational malaria forecasts for the Amhara region of Ethiopia. Our local public health partners expressed interest in being self-sufficient in creating the weekly reports themselves.
+2. Originally, the EPIDEMIA project integrated local malaria surveillance data and remotely-sensed environmental predictors to produce operational malaria forecasts for the Amhara region of Ethiopia. Our local public health partners expressed interest in being self-sufficient in creating the weekly reports themselves.
 
-## Our Solution
-The EPIDEMIA modeling of disease transmission for early detection and early warning evaluation was done in R, a free software for statistical computing. We developed the “epidemiar” R package to provide a generalized set of functions for disease forecasting. In addition, we designed workflows and wrote customized code for our Ethiopian colleagues, including a Google Earth Engine script to capture the necessary summaries of the environmental variables. The output of the modeling and forecasting is fed into formatting documents to create distributable reports with maps and graphs of the results.
+### Our Solution
+The EPIDEMIA modeling of disease transmission for early detection and early warning evaluation had been done in R. We developed the “epidemiar” R package to provide a generalized set of functions for disease forecasting. 
 
-## System Components
+In addition, we designed workflows and wrote customized code for our Ethiopian colleagues, including a Google Earth Engine script to capture the necessary summaries of the environmental variables. The output of the modeling and forecasting is fed into formatting documents to create distributable reports with maps and graphs of the results. A version of this code is being released as `epidemiar-demo`: https://github.com/EcoGRAPH/epidemiar-demo.
+
+### System Components
 The full system can be thought of have 3 (three) main parts:
 
 ```{r echo = FALSE, out.width = "75%", `fig.cap = "System diagram of the EPIDEMIA Forecasting System."`}
 knitr::include_graphics("EPIDEMIA_overview.png")
 ```
 
-1.	R package epidemiar: Library of flexible functions for modeling and forecasting
+1.	R package `epidemiar`: This package - a library of flexible functions for modeling and forecasting
 2.	Google Earth Engine script: Script to gather the environmental data summaries
 3.	Custom R Project: Contains the surveillance and environmental data, user parameters on the model and outbreak detection algorithm, and script to produce a finalized report. 
 
-This is the first component, the R package `epidemiar`. For example GEE scripts and R project, see the `epidemiar-demo` repository at https://github.com/EcoGRAPH/epidemiar-demo.
+This package can be used for modelling and forecasting for a variety of environmentally-mediated disease. 
+For example GEE scripts and R project, see the `epidemiar-demo` repository at https://github.com/EcoGRAPH/epidemiar-demo.
+
+The main requirements for using this package are:
+
+* surveillance / disease case counts per week per geographic group
+* daily environmental data per geographic group with enough lead time for lagged effects (user set)
+* pre-identified model: which environmental covariates to include, any clustering of geographic groups. 
 
 ## Modeling Overview
 
-The model is based on a general additive model (GAM) regression of multiple factors, including the geographic group, long terms trends, seasonality, lagged environmental drivers,and clustering of geographic groups. 
+The model is based on a general additive model (GAM) regression of multiple factors, including the geographic group, long terms trends, seasonality, lagged environmental drivers and clustering of geographic groups. 
 
-$casecount ~ geo + 
-    bs_1 * geo + 
-    bs_2 * geo + 
-    bs_3 * geo + 
-    bs_4 * geo + 
-    bs_5 * geo + \\
-    ~~~s(doy, bs = "cc", by = geo) + \\
-    ~~~env_1 summary_1 * cluster + 
-    env_1 summary_2 * cluster +  
-    env_1 summary_3 * cluster + \\ 
-    ~~~~~~var_1 summary_4 * cluster + 
-    env_1 summary_5 * cluster + \\ ...
-    ~~~env_n summary_1 * cluster + 
-    env_n summary_2 * cluster + 
-    env_n summary_3 * cluster + \\ 
-    ~~~~~~env_n summary_4 * cluster + 
-    env_n summary_5 * cluster$
+<!-- equation attempts
+\begin{align} 
+log(cases) \sim &~geo + bs_1 * geo + bs_2 * geo + bs_3 * geo + bs_4 * geo + bs_5 * geo + \\
+&s(doy, bs = 'cc', by = geo) + \\
+&(env_1 summary_1 * cluster + env_1 summary_2 * cluster +  env_1 summary_3 * cluster + \\ 
+~~~env_1 summary_4 * cluster + env_1 summary_5 * cluster)~ + \\ 
+&\dots (env_n summary_1 * cluster + env_n summary_2 * cluster + env_n summary_3 * cluster + \\ 
+~~~env_n summary_4 * cluster + env_n summary_5 * cluster) 
+\end{align}
 
-where _geo_ is the geographic group, bs_1 ... bs_5 are modified basis functions, _doy_ is the day of the year, _env_ are the environmental variables (1, 2 ... n) and the 5 summary statistics from the lagged basis functions, and _cluster_ is the cluster identification of that geographic group. See the following sections for more details. 
+\[ 
+log(cases) \sim ~geo + bs_1 * geo + bs_2 * geo + bs_3 * geo + bs_4 * geo + bs_5 * geo + \\
+s(doy, bs = "cc", by = geo) + \\
+(env_1 summary_1 * cluster + env_1 summary_2 * cluster +  env_1 summary_3 * cluster + \\ 
+~~~env_1 summary_4 * cluster + env_1 summary_5 * cluster)~ + \\ 
+\dots (env_n summary_1 * cluster + env_n summary_2 * cluster + env_n summary_3 * cluster + \\ 
+~~~env_n summary_4 * cluster + env_n summary_5 * cluster) 
+\]
+-->
 
-# Geographic group, long term trends and seasonality
-
-Geographic group: $geo$ 
-
-Long term trends:
-$bs_1 * geo + bs_2 * geo + bs_3 * geo + bs_4 * geo + bs_5 * geo$ 
-
-Seasonality:
-
-$s(doy, bs = "cc", by = geo)$
+$log(cases) \sim ~geo + bs_1 * geo + bs_2 * geo + bs_3 * geo + bs_4 * geo + bs_5 * geo + \\
+~~~~~~~~~~~~~~~~~~~~s(doy, bs = "cc", by = geo) + \\
+~~~~~~~~~~~~~~~~~~~~(env_1 sum_1 * cl + env_1 sum_2 * cl +  env_1 sum_3 * cl + \\ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~env_1 sum_4 * cl + env_1 sum_5 * cl)~ + \cdots \\ 
+~~~~~~~~~~~~~~~~~~~~(env_n sum_1 * cl + env_n sum_2 * cl + env_n sum_3 * cl + \\ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~env_n sum_4 * cl + env_n sum_5 * cl)$ 
 
 
-# Environmental Variables
+where $geo$ is the geographic group, $bs_1$ ... $bs_5$ are modified basis functions, $doy$ is the day of the year, $env$ are the environmental variables (1, 2 ... n) and the 5 summary ($sum$) statistics from the lagged basis functions, and $cl$ is the cluster identification of that geographic group. The regression is done with `family=poisson()` for a log link function to the case count. See the following sections for more details. 
+
+### Geographic group, long term trends, and seasonality
+
+Each geographic group, $geo$, identified in the `groupfield` column is included as a factor. 
+
+To capture any long term trends per geographic group, $geo$ is multipled by each of 5 modified basis splines: $bs_1 * geo + bs_2 * geo + bs_3 * geo + bs_4 * geo + bs_5 * geo$. 
+The modified basis splines are created within the function as follows:
+
+1. First, `splines::bs()` is used to create basis splines over the range of observations with degree 6. 
+2. To reduce the edge effects of using splines, the following modifications are performed:
+    - the last basis spline function is reverse, and
+    - the second to last basis spline function is removed. 
+
+To account for seasonality in each geographic group, a cyclical cubic regression spline smooth is added based on day of year per geographic group: $s(doy, bs = "cc", by = geo)$
+
+
+### Environmental Variables
 
 The rates of environmentally-mediated infectious diseases can be influenced by the environmental factors via a range of potential mechanisms, e.g. affecting the abundance and life cycle of disease vectors. The influences on disease generally lags behind the changes in the environmental covariates. 
 
-<<>><<>> Anomalies
+In our modeling, the **anomalies** of the environmental covariates are used as factors. We are looking at the influence of deviation from normal in the environmental factors to help explain deviations from normal in the human cases. The variables were transformed by taking the residuals from a GAM with geographic unit and cyclical cubic regression spline on day of year per geographic group: $geo + s(doy, bs="cc", by=geo)$
+
+In the modeling controls, the user selects the maximum number of days in the past (lag length, _l_) to consider interactions.  Each geographic group and week is associated with environmental anomaly values on the day the week began, up to the lag length, _l_, so that each group-week has a _l_-day history. A distributed lag basis is created with the natural cubic splines function (ns, splines library), including intercept, with knots at 25%, 50%, and 75% of the lag length. The 5 basis functions that result are multiplied by each group's history, so that there are just 5 summary statistics, instead of _l_, for every combination of group, week, and environmental anomaly covariate. 
 
 
-In the modeling controls, the user selects the maximum number of days in the past (lag length, _l_) to consider interactions.  Each geographic unit (group) and week is associated with environmental values on the day the week began, up to the lag length, _l_, so that each group-week has a _l_-day history of weather data. A distributed lag basis is created with the natural cubic splines function (ns, splines library), including intercept, with knots at 25%, 50%, and 75% of the lag length. The 5 basis functions that result are multiplied by each group's history, so that there are just 5 summary statistics, instead of _l_, for every combination of group, week, and environmental covariate. 
+### Clusters
 
+The relationship between environmental drivers and the case burden of the environmentally-mediated disease can vary with geographically, due to ecological, social or other geographic factors. This potential spatial non-stationarity could be handled in a number of ways.  
 
+If you were working with areas not likely or shown not to have spatial non-stationarity between environmental covariates and disease rates, you could use a global model (all geographic groups in one cluster). However, if there are spatial variations in environmental influence, this could yield a poorer model fit. 
 
+On the other extreme, you could run separate models for each geographic group (each geographic group as its own cluster). However, especially with noisy data or short time-series, this could lead to overfitting.
 
-
-
-
-
-# Clusters
-
-"However, malaria-environment relationships can vary with ecological and social context. We
-20 used a genetic algorithm to optimize a spatiotemporal malaria model by grouping locations into
-21 geographic strata with similar environmental sensitivities" --from paper
-
-spatial non-stationarity
-relationship between env var and disease vary gegraphically
-global model - not capture spatial variation of environmental influenes, poorer model fit
-each geographic unit own model - can lead to overfitting noisy data or short timeseries
-Determination of clustering of geographic units can be done in any way the user prefers. 
-Some ecological zones, similar temporal disease patterns. 
-For the malaria EPIDEMIA project, selection of  which environmental variabls and clustering based on responses to those environmental variables was performed at the same time using a genetic algorithm [CITE DAVIS pre?]
-
-
+We allow the user to identify their own clusters of geographic units. The clustering determination can be done prior however the user chooses - for example, global model, individual models, clustering by ecological zones, or by identifying similar temporal disease patterns.
 
 
 ## Event Detection Overview
 
+The central idea behind outbreak detection is to identify when the case volume exceeds a baseline threshold, and to use this information in a prospective (not retrospective) manner to identify epidemics in their early stages.
+
+Currently, epidemiar supports the Farrington improved algorithm for event detection, using `surveillance::Farringtonflexible()`.
+
+This family of methods developed by Farrington and later, Noufaily, have been implemented at several European infectious disease control centers. Farrington methods are based on quasi-Poisson regression and can take advantage of historical information while accounting for seasonality, long-term trends, and previous outbreaks. 
+
+The Farrington improved method offer parameters to control various model settings, such as the number of time points to include in the historical window through a specified number of years, the number of knots in the splines to account for seasonality, and the number of weeks to exclude at the beginning of the evaluation period (for events that may already be in progress).  However, this method does generally require several years of historical data.
+
+Alerts are generated by the Farrington algorithm run over the entire time length of the report on the number of cases, observed or future forecast (optionally adjusted for population).  
+
+**Early Detection** alerts are alerts that are triggered during the early detection period, a user set number of week of the most recently known epidemiological data (case counts).
+
+**Early Warning** alerts are alerts that are triggered in the future forecast estimates (early warning period). These early warning alerts indicate that the environmental conditions are favorable (or unfavorable) for abnormally high case counts, based on past trends.
+
+Alerts per week per geographic group are recorded. As the algorithm runs over the entire length of the report, historical alerts (weeks included in the report that are prior to the early detection period) are also marked. 
+
+
+Alert summaries are also created for the early detection and early warning periods (separately). "High" level indicates two or more weeks in this period had incidences greater than the alert threshold, "Medium" means that one week was in alert status, and "Low" means no weeks had alerts.
 
 
 
+## References
 
-# Data Requirements
+Farrington CP, Andrews NJ, Beale AD, Catchpole MA. A Statistical Algorithm for the Early Detection of Outbreaks of Infectious Disease. J R Stat Soc Ser A Stat Soc. 1996;159:547–63. 
 
-## Epidemiology Data
+Höhle M. surveillance: An R package for the monitoring of infectious diseases. Comput Stat. 2007;22:571–82.
 
-## Environmental Data
+Hulth A, Andrews N, Ethelberg S, Dreesman J, Faensen D, van Pelt W, et al. Practical usage of computer-supported outbreak detection in five European countries. Eurosurveillance. 2010;15:19658. 
 
-## Environmental Reference / Weekly Climate Data
+Merkord CL, Liu Y, Mihretie A, Gebrehiwot T, Awoke W, Bayabil E, et al. Integrating malaria surveillance with climate data for outbreak detection and forecasting: the EPIDEMIA system. Malar J. 2017;16.
 
-## Reference Tables
-1. Environmental variables
-2. Model variables and geographic group clusters
-3. Population
-4. Shapefiles
+Noufaily A, Enki DG, Farrington P, Garthwaite P, Andrews N, Charlett A. An improved algorithm for outbreak detection in multiple surveillance systems. Stat Med. 2013;32:1206–22.
 
+<!-- # References
 
-# Setting up the Model
+generic env var -- disease??.  malaria 5-8 davis
+ecozones 9?
 
-## Environmental variables
-## Geographic grouping clusters
+[5] G. Stresman, "Beyond temperature and precipitation: ecological risk factors that modify malaria
+transmission," Acta Tropica, vol. 116, no. 3, pp. 167-172, 2010.
 
-# Setting up for Event Detection
-1. Picking the algorithm
-1. Settings .... 
+[6] A. Midekisa, G. Senay, G. Henebry, P. Semuniguse and M. Wimberly, "Remote sensing-based time
+series models for malaria early warning in the highlands of Ethiopia," Malaria Journal, vol. 11, no.
+165, 2012.
+
+[7] R. Lowe, J. Chirombo and A. Tompkins, "Relative importance of climatic, geographic and socioeconomic
+determinants of malaria in Malawi," Malaria Journal, vol. 12, no. 416, 2013.
+
+[8] K. Zinszer, R. Kigozi, K. Charland, G. Dorsey, T. Brewer, J. Brownstein, M. Kamya and D. Buckeridge,
+"Forecasting malaria in a highly endemic country using environmental and clinical predictors,"
+Malaria Journal, vol. 14, no. 245, 2015.
+
+[9] A. Midekisa, B. Beyene, A. Mihretie, E. Bayabil and M. Wimberly, "Seasonal associations of climatic
+drivers and malaria in the highlands of Ethiopia," Parasites & Vectors, vol. 8, no. 339, 2015.
+<<>>
+
+--> 
+
+<!-- Separate Doc 
 
 # Running epidemiar
-
-
 # Creating the Report
 
 Steps to Run Report: In brief, after user parameters and model specifications have been set, users follow these steps to create reports:
@@ -152,52 +193,4 @@ Steps to Run Report: In brief, after user parameters and model specifications ha
 2.	update environmental data,
 3.	open the Custom R Project and run a script that will read in the data, run the model, produce the forecasts, and format the finalized report. 
 
-
-
-Vignettes are long form documentation commonly included in packages. Because they are part of the distribution of the package, they need to be as compact as possible. The `html_vignette` output type provides a custom style sheet (and tweaks some options) to ensure that the resulting html is as small as possible. The `html_vignette` format:
-
-- Never uses retina figures
-- Has a smaller default figure size
-- Uses a custom CSS stylesheet instead of the default Twitter Bootstrap style
-
-## Vignette Info
-
-Note the various macros within the `vignette` section of the metadata block above. These are required in order to instruct R how to build the vignette. Note that you should change the `title` field and the `\VignetteIndexEntry` to match the title of your vignette.
-
-## Styles
-
-The `html_vignette` template includes a basic CSS theme. To override this theme you can specify your own CSS in the document metadata as follows:
-
-    output: 
-      rmarkdown::html_vignette:
-        css: mystyles.css
-
-## Figures
-
-The figure sizes have been customised so that you can easily put two images side-by-side. 
-
-```{r, fig.show='hold'}
-plot(1:10)
-plot(10:1)
-```
-
-You can enable figure captions by `fig_caption: yes` in YAML:
-
-    output:
-      rmarkdown::html_vignette:
-        fig_caption: yes
-
-Then you can use the chunk option `fig.cap = "Your figure caption."` in **knitr**.
-
-## More Examples
-
-You can write math expressions, e.g. $Y = X\beta + \epsilon$, footnotes^[A footnote here.], and tables, e.g. using `knitr::kable()`.
-
-```{r, echo=FALSE, results='asis'}
-knitr::kable(head(mtcars, 10))
-```
-
-Also a quote using `>`:
-
-> "He who gives up [code] safety for [code] speed deserves neither."
-([via](https://twitter.com/hadleywickham/status/504368538874703872))
+-->

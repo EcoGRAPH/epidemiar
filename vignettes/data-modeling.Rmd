@@ -1,5 +1,5 @@
 ---
-title: "Modeling Data and Data Formats"
+title: "Modeling Data Formats, Modeling and Event Detection Parameters"
 author: "Dawn Nekorchuk"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -15,6 +15,11 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
+
+
+# Data, Model and Event Detection Parameters
+
+
 
 # Data & Data Formats
 
@@ -78,4 +83,30 @@ This file contains a crosswalk of the geographic unit IDs/descriptions.
 * groupfield: is the same given field name for the geographic unit groups when 'run_epidemia()' was called. 
 
 
+
 <!-- Population table, shapefiles, woreda reference table, for Ethiopia --> 
+
+# Data Requirements
+
+## Epidemiology Data
+
+## Environmental Data
+
+## Environmental Reference / Weekly Climate Data
+
+## Reference Tables
+1. Environmental variables
+2. Model variables and geographic group clusters
+3. Population
+4. Shapefiles
+
+
+# Setting up the Model
+
+
+## Environmental variables
+## Geographic grouping clusters
+
+# Setting up for Event Detection
+1. Picking the algorithm
+1. Settings .... 

@@ -282,7 +282,6 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
       ## For forceast of daily values per week
       #are a blend of that 'last week mean' in report_dates$known$max+1 & historical ref during that week
       #rem: env data is DAILY, env ref is WEEKLY
-      #rem: In the env_ref, some var may be mean, some may be sum, etc. for the week
       #Plan: get value for that week (week_epidemiar last date of week, +1 to start of next week), then use fill down for rest of daily values in week
 
       #set up first week kick off value (mean last week of known data)

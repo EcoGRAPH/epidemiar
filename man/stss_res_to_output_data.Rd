@@ -4,7 +4,7 @@
 \alias{stss_res_to_output_data}
 \title{Formats output data from sts result objects}
 \usage{
-stss_res_to_output_data(stss_res_list, epi_fc_data, quo_popfield,
+stss_res_to_output_data(stss_res_list, epi_fc_data, quo_popfield, inc_per,
   quo_groupfield, groupings, report_dates)
 }
 \description{

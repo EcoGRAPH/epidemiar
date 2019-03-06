@@ -4,8 +4,8 @@
 \alias{run_early_detection}
 \title{Run early detection algorithm}
 \usage{
-run_early_detection(epi_fc_data, quo_popfield, quo_groupfield, groupings,
-  ed_method, ed_control, report_dates)
+run_early_detection(epi_fc_data, quo_popfield, inc_per, quo_groupfield,
+  groupings, ed_method, ed_control, report_dates)
 }
 \description{
 Run early detection algorithm

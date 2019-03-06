@@ -4,8 +4,8 @@
 \alias{run_epidemia}
 \title{Run EPIDEMIA forecast models and early detection algorithm}
 \usage{
-run_epidemia(epi_data, casefield, populationfield, groupfield,
-  week_type = c("ISO", "CDC"), report_period = 26,
+run_epidemia(epi_data, casefield, populationfield, inc_per = 1000,
+  groupfield, week_type = c("ISO", "CDC"), report_period = 26,
   ed_summary_period = 4, ed_method = c("Farrington", "EARS"),
   ed_control = NULL, env_data, obsfield, valuefield,
   forecast_future = 4, fc_control = NULL, env_ref_data, env_info)

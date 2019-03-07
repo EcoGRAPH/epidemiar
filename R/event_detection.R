@@ -53,15 +53,6 @@ run_farrington <- function(epi_fc_data, quo_popfield, inc_per,
   #get evaluation period (range of row numbers)
   far_control[["range"]] <- seq(nrow(epi_stss[[1]]) - length(report_dates$full$seq) + 1, nrow(epi_stss[[1]]))
 
-  #set number of years to go back in time
-  # allow user set b, else calculate maximum number of years previous data available
-  if (is.null(ed_control[["b"]])){
-    #probably more properly done with isoyears and isoweeks, honestly.  <<>>
-    daydiff <- difftime(report_dates$full$min, min(epi_fc_data$obs_date), "days") %>% as.numeric()
-    far_control[["b"]] <- floor(daydiff / 365.242)
-
-  } else far_control[["b"]] <- ed_control[["b"]]
-
   #test for all other parameters that can be passed onto Farrington flexible method
   # if not null, use user parameter, otherwise leave as null to use its defaults
   if (!is.null(ed_control[["w"]])){
@@ -103,6 +94,26 @@ run_farrington <- function(epi_fc_data, quo_popfield, inc_per,
   if (!is.null(ed_control[["thresholdMethod"]])){
     far_control[["thresholdMethod"]] <- ed_control[["thresholdMethod"]]
   }
+
+  #set number of years to go back in time
+  # allow user set b, else calculate maximum number of years previous data available
+  # includes allowance for window value, w # of weeks
+  if (is.null(ed_control[["b"]])){
+
+    #subtract one side of window to earliest report date
+    #    this will appropriately increase the amount of time needed without altering the actual available data date
+    adjdt <- report_dates$full$min - lubridate::weeks(floor(w/2))
+
+    #calculate number of years difference between earliest available data date and adjusted report date "start"
+    #    using interval(), because this allows time_lenth() to deal with leap years, etc.
+    yrdiff <- lubridate::interval(min(epi_fc_data$obs_date), adjdt) %>%
+      lubridate::time_length(unit = "years")
+
+    #get the minimum integer year value to feed to Farrington control (cannot round up, must only request data that exists)
+    far_control[["b"]] <- floor(yrdiff)
+
+  } else far_control[["b"]] <- ed_control[["b"]]
+
 
   #run Farringtons
   far_res_list <- vector('list', length(epi_stss))

@@ -97,28 +97,43 @@ If you are creating a formatted report later and wish to have maps of the result
 
 * `report_period`: Total number of weeks for the report to include, including the number of future forecast weeks, `forecast_future`. 
 * `ed_summary_period`: The last n weeks of known epidemiological data that will be considered the early detection period for alert summaries.
-* `forecast_future`: The number of weeks to forecast into the future. It is not recommended to extend the forecast 
+* `forecast_future`: The number of weeks to forecast into the future. As the future values of the environmental variables are being imputed based on recent and historical values, it is not recommended to extend the forecast very far into the future, probably no longer than 12 weeks. 
 
 
 ### Environmental variables
 
+This tells the modeling system which environmental variables to actually use. (You can therefore have extra variables or data in the environmental dataset.) This is just a simple 1 column tibble with the variable names to use. 
+
+* `obsfield`: Same field name as in the environmental data and environmental reference datasets, with entries for which variables to use in the modeling. 
+
 ### Geographic grouping clusters
 
+This is a two-column list matching the geographic group to its cluster number. There must be an entry for each geographic group included in the epidemiological data. 
 
-<<>><<<>>>
-2. Model variables and geographic group clusters
-This file gives the list of environmental variables to use, and any geographic clustering to be used in the model calculations (e.g. cluster is a variable in the modeling regression). 
+* `groupfield`: The geographic group field.
+* "cluster_id": The numeric ID number for each geographic group. 
 
-* 'vars.1' through 'vars.x' fields, where x is the number of environmental variables to be used in the modeling. The value should correspond to the 'environ_var_id' field in the environmental info reference file. 
-* 'cluster.1' through 'cluster.n', where n is the number of geographic units (groupfield values) in the epi/env data. The numeric value of the field name (e.g. 1 of cluster.1) is the 'group_id', or the id value for that geographic unit. The value of the field is the cluster id value, e.g. which cluster the geographic unit belongs to. The 'group_id' crosswalk should be given in the geographic group code file. 
+If you only have 1 cluster, each entry for the geographic group should contain the same "cluster_id" value. If you only have one geographic group, this should contain one row for that geographic group with a "cluster_id" (1, for example).
 
-3. Geographic group codes
-This file contains a crosswalk of the geographic unit IDs/descriptions. 
-* 'group_id' is the ID value corresponding to the cluster information in the model variables and geographic group cluster file. 
-* groupfield: is the same given field name for the geographic unit groups when 'run_epidemia()' was called. 
-
-<<>><<<>>
 
 
 ## Setting up for Event Detection
+
+<<>><<>>
+
 1. Settings .... 
+
+ed_summary_period = am_ed_summary_period,
+                                 ed_method = "Farrington", 
+                                 ed_control = am_pfm_ed_control,
+
+#settings for Farrington event detection algorithm
+am_pfm_ed_control <- list(
+  w = 3, reweight = TRUE, weightsThreshold = 2.58,
+  trend = TRUE, pThresholdTrend = 0,
+  populationOffset = TRUE,
+  noPeriods = 12, pastWeeksNotIncluded = 4,
+  thresholdMethod = "nbPlugin")
+
+
+

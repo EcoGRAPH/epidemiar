@@ -1,6 +1,6 @@
 ---
 title: "Overview of epidemiar package"
-author: "Dawn Nekorchuk"
+author: "Dawn M. Nekorchuk"
 date: "`r Sys.Date()`"
 output: 
   rmarkdown::html_vignette:

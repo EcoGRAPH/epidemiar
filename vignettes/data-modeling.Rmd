@@ -61,7 +61,7 @@ When calling the epidemiar function:
 
 #### Non-daily or Missing Data
 
-If you do not have daily data (e.g. weekly, or irregular data), or have implicit missing data, you can use the 'data_to_daily()' function to add any missing rows. This function will also use linear interpolation to fill in values if possible (default 'interpolate = TRUE').  It is not recommended if you have a lot of missing/non-daily data. It will group on every field in the dataset that is not `obs_date`, or the user-given `valuefield`. Note: this will not fill out ragged data (different end dates of environmental variable data), but that will be handled inside of epidemiar. 
+If you do not have daily data (e.g. weekly, or irregular data), or have implicit missing data, you can use the `data_to_daily()` function to add any missing rows. This function will also use linear interpolation to fill in values if possible (default 'interpolate = TRUE').  It is not recommended if you have a lot of missing/non-daily data. It will group on every field in the dataset that is not `obs_date`, or the user-given `valuefield`. Note: this will not fill out ragged data (different end dates of environmental variable data), but that will be handled inside of epidemiar. 
 
 
 ### Environmental Reference / Weekly Climate Data, `env_ref_data`

@@ -8,7 +8,10 @@
 #' to model and forecast a wide range of environmentally-mediated diseases.
 #'
 #' For more a longer description of the package, see the overview vignette:
-#' \code{vignette("Overview", package = "epidemiar")}
+#' \code{vignette("overview-epidemiar", package = "epidemiar")}
+#'
+#' For more details see the vignette on input data and modeling parameters:
+#' \code{vignette("data-modeling", package = "epidemiar")}
 #'
 #'@param epi_data Epidemiological data with case numbers per week, with date
 #'  field "obs_date".
@@ -53,8 +56,6 @@
 #'@param env_info Lookup table for environmental data - reference creation
 #'  method (e.g. sum or mean), report labels, etc.
 #'
-#' For more details see the vignette on input data and modeling parameters:
-#' \code{vignette("Modeling Data and Parameters", package = "epidemiar")}
 #'
 #'
 #'@return Returns a suite of summary and report data.
@@ -92,7 +93,7 @@
 #'  object).
 #'
 #' For more details see the vignette on the output data:
-#' \code{vignette("Output Data", package = "epidemiar")}
+#' \code{vignette("output-report-data", package = "epidemiar")}
 #'
 #'@examples See model_forecast_script.R in epidemiar-demo for full example: https://github.com/EcoGRAPH/epidemiar-demo
 #'

@@ -2,7 +2,7 @@
 % Please edit documentation in R/run_epidemia.R
 \name{run_epidemia}
 \alias{run_epidemia}
-\title{Run EPIDEMIA forecast models and early detection algorithm}
+\title{Run EPIDEMIA forecast models and early detection algorithm.}
 \usage{
 run_epidemia(epi_data, casefield, populationfield, inc_per = 1000,
   groupfield, week_type = c("ISO", "CDC"), report_period = 26,
@@ -63,7 +63,10 @@ forecast time, to calculate anomalies in early detection period, and to
 display on timeseries in reports.}
 
 \item{env_info}{Lookup table for environmental data - reference creation
-method (e.g. sum or mean), report labels, etc.}
+ method (e.g. sum or mean), report labels, etc.
+
+For more details see the vignette on input data and modeling parameters:
+\code{vignette("Modeling Data and Parameters", package = "epidemiar")}}
 
 \item{detection_period}{The number of weeks that will be considered the "early
 detection period". It will count back from the week of last known
@@ -81,28 +84,43 @@ Returns a suite of summary and report data.
  alert threshold, “Medium” means that one week was in alert status, and “Low”
  means no weeks had alerts (ed_sum_level and ew_level, respectively).
 
- 2. \code{modeling_results_data}:These are multiple timeseries values for
+ 2. \code{epi_summary}: Mean disease incidence per geographic group during
+ the early detection period.
+
+ 3. \code{modeling_results_data}:These are multiple timeseries values for
  observed, forecast, and alert thresholds of disease incidence, over the
  report period, for each geographic unit. These data can be used in creating
  the individual geographic unit control charts.
 
- 3. \code{environ_timeseries}: These are multiple timeseries for the
+ 4. \code{environ_timeseries}: These are multiple timeseries for the
  environmental variables during the report period for each geographic unit.
 
- 4. \code{environ_anomalies}: These data are the recent (during the early
+ 5. \code{environ_anomalies}: These data are the recent (during the early
  detection period) differences (anomalies) of the environmental variable
  values from the climatology/reference mean.
 
- 5. \code{params_meta}: This lists dates, settings, and parameters that
+ 6. \code{params_meta}: This lists dates, settings, and parameters that
  \code{run_epidemiar()} was called with.
 
- 6. \code{regression_object}: This is the regression object from the general
+ 7. \code{regression_object}: This is the regression object from the general
  additive model (GAM, parallelized with BAM) regression. This is only for
  statistical investigation of the model, and is usually not saved (very large
  object).
+
+For more details see the vignette on the output data:
+\code{vignette("Output Data", package = "epidemiar")}
 }
 \description{
-Run EPIDEMIA forecast models and early detection algorithm
+The Epidemic Prognosis Incorporating Disease and Environmental Monitoring for
+Integrated Assessment (EPIDEMIA) Forecasting System is a set of tools coded
+in free, open-access software, that integrate surveillance and environmental
+data to model and create short-term forecasts for environmentally-mediated
+diseases. This function, `epidemiar::run_epidemia()` is the central function
+to model and forecast a wide range of environmentally-mediated diseases.
+}
+\details{
+For more a longer description of the package, see the overview vignette:
+\code{vignette("Overview", package = "epidemiar")}
 }
 \examples{
 See model_forecast_script.R in epidemiar-demo for full example: https://github.com/EcoGRAPH/epidemiar-demo

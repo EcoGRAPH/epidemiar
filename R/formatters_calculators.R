@@ -52,12 +52,12 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
 
   # add climatology data
   # climatology is based on week number
-  #   (hopefully set up with the same type as was selected when ref data was created, will add checks)
+  #   (should have been set up with the same week type as was selected when ref data was created)
   environ_timeseries <- environ_timeseries %>%
     #join
     dplyr::left_join(env_ref_varused %>%
                        dplyr::select(!!quo_obsfield, !!quo_groupfield, week_epidemiar,
-                                     ref_value, ref_sd, ref_median, ref_uq, ref_lq),
+                                     ref_value, starts_with("ref_")),
                      #NSE fun
                      by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
                                              rlang::quo_name(quo_obsfield),

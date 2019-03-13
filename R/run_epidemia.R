@@ -55,22 +55,25 @@
 #'  alert threshold, “Medium” means that one week was in alert status, and “Low”
 #'  means no weeks had alerts (ed_sum_level and ew_level, respectively).
 #'
-#'  2. \code{modeling_results_data}:These are multiple timeseries values for
+#'  2. \code{epi_summary}: Mean disease incidence per geographic group during
+#'  the early detection period.
+#'
+#'  3. \code{modeling_results_data}:These are multiple timeseries values for
 #'  observed, forecast, and alert thresholds of disease incidence, over the
 #'  report period, for each geographic unit. These data can be used in creating
 #'  the individual geographic unit control charts.
 #'
-#'  3. \code{environ_timeseries}: These are multiple timeseries for the
+#'  4. \code{environ_timeseries}: These are multiple timeseries for the
 #'  environmental variables during the report period for each geographic unit.
 #'
-#'  4. \code{environ_anomalies}: These data are the recent (during the early
+#'  5. \code{environ_anomalies}: These data are the recent (during the early
 #'  detection period) differences (anomalies) of the environmental variable
 #'  values from the climatology/reference mean.
 #'
-#'  5. \code{params_meta}: This lists dates, settings, and parameters that
+#'  6. \code{params_meta}: This lists dates, settings, and parameters that
 #'  \code{run_epidemiar()} was called with.
 #'
-#'  6. \code{regression_object}: This is the regression object from the general
+#'  7. \code{regression_object}: This is the regression object from the general
 #'  additive model (GAM, parallelized with BAM) regression. This is only for
 #'  statistical investigation of the model, and is usually not saved (very large
 #'  object).

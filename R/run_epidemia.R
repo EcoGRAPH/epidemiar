@@ -1,4 +1,14 @@
-#'Run EPIDEMIA forecast models and early detection algorithm
+#' Run EPIDEMIA forecast models and early detection algorithm.
+#'
+#' The Epidemic Prognosis Incorporating Disease and Environmental Monitoring for
+#' Integrated Assessment (EPIDEMIA) Forecasting System is a set of tools coded
+#' in free, open-access software, that integrate surveillance and environmental
+#' data to model and create short-term forecasts for environmentally-mediated
+#' diseases. This function, `epidemiar::run_epidemia()` is the central function
+#' to model and forecast a wide range of environmentally-mediated diseases.
+#'
+#' For more a longer description of the package, see the overview vignette:
+#' \code{vignette("Overview", package = "epidemiar")}
 #'
 #'@param epi_data Epidemiological data with case numbers per week, with date
 #'  field "obs_date".
@@ -43,6 +53,9 @@
 #'@param env_info Lookup table for environmental data - reference creation
 #'  method (e.g. sum or mean), report labels, etc.
 #'
+#' For more details see the vignette on input data and modeling parameters:
+#' \code{vignette("Modeling Data and Parameters", package = "epidemiar")}
+#'
 #'
 #'@return Returns a suite of summary and report data.
 #'
@@ -78,6 +91,9 @@
 #'  statistical investigation of the model, and is usually not saved (very large
 #'  object).
 #'
+#' For more details see the vignette on the output data:
+#' \code{vignette("Output Data", package = "epidemiar")}
+#'
 #'@examples See model_forecast_script.R in epidemiar-demo for full example: https://github.com/EcoGRAPH/epidemiar-demo
 #'
 #'@export
@@ -93,32 +109,6 @@ run_epidemia <- function(epi_data, casefield, populationfield, inc_per = 1000,
                          ed_summary_period = 4, ed_method = c("Farrington", "None"), ed_control = NULL,
                          env_data, obsfield, valuefield, forecast_future = 4,
                          fc_control = NULL, env_ref_data, env_info){
-  #temporary argument descriptions, until move into epidemiar and roxygenate appropriately
-  #epi_data: epidemiological data with case number of time, currently weekly only, with date field "obs_date"
-  #casefield: the field name for the case counts
-  #populationfield: population numbers over time
-  #                 used in Farrington method for optional populationOffset
-  #                 Planned use in report generation function to allow for case or incidence to be displayed
-  #groupfield: the field name for districts or area divisions of epidemiological AND environmental data
-  #             if no groupings (all one area), user should give a field with the same value throughout
-  #week_type: for epidemiological data, whether the user wants to mark weeks of the year via WHO ISO-8601 or CDC epi weeks standards
-  #           used internally in Farrington methods (not seen by user)
-  #           planned to use in report generation function for display of week values on report
-  #report_period: the number of timesteps (weeks) that the whole report will cover
-  #               report_period - forecast_period will be the length of time early detection will run over
-  #detection_period: the number of timesteps (weeks) that the early detection will run over
-  #                   Evaluation range: Last detection_period weeks in epi data
-  #ed_method: which method for early detection should be used
-  #ed_control: all parameters for early detection algorithm, passed through to that subroutine
-  #env_data: daily environmental data for same groupfields and Date range
-  #           must be in long format
-  #           must start 180 days before first day in epi_data
-  #obsfield: field name of the environmental data observation types
-  #valuefield: field name of the value of the environmental data observations
-  #forecast_future: number of timesteps (weeks) from the end of the epi_data to extend the forecast out for
-  #fc_control: control options for forecasting
-  #env_ref_data: historical averages (by week), for anomalies, and report display on timeseries
-  #env_info: lookup table for environmental data - reference creation method, future extension method, report label, GA ID, etc.
 
   #dplyr programming steps for passing of field names
   quo_casefield <- rlang::enquo(casefield)

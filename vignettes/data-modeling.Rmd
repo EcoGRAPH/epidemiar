@@ -36,12 +36,12 @@ For the epidemiology data, you will need weekly case counts of the disease/illne
 
 When calling the epidemiar function:
 
-* `epi_data`:  Data table/tibble of epidemiological data with case numbers per week, with date field labeled as "obs_date". The date should be the _last_ day of the epidemiological week. Must contain columns for `casefield`, `populationfield`, and `groupfield`. It may contain other variables/columns, but these are ignored. 
+* `epi_data`:  Data table/tibble of epidemiological data with case numbers per week, with date field labeled as `obs_date`. The date should be the _last_ day of the epidemiological week. Must contain columns for `{casefield}`, `{populationfield}`, and `{groupfield}`. It may contain other variables/columns, but these are ignored. 
 * `casefield`: Give the field name for the case counts.
 * `populationfield`:  Give the population field to give population numbers over time. It is used to calculated incidence, and also optionally used in Farrington method for populationOffset.
 * `groupfield`:  Give the field name for districts or area divisions of epidemiological AND environmental data. If there are no groupings (all one area), user should give a field with the same value throughout the entire datasets. 
 * `inc_per`: At what rate should incidence be calculated for? Default is "1000", meaning x cases per 1000 population. 
-* `week_type`: For the "obs_date" in `epi_data`, you need to specify if you are using "CDC" epiweeks, or ISO-8601 ("ISO") standard weeks of the year (what WHO uses), the default assumption is ISO. The date should be the _last_ day of the epidemiological week.
+* `week_type`: For the `obs_date` in `epi_data`, you need to specify if you are using "CDC" epiweeks, or ISO-8601 ("ISO") standard weeks of the year (what WHO uses), the default assumption is ISO. The date should be the _last_ day of the epidemiological week.
 
 #### Missing Data
 
@@ -61,17 +61,18 @@ When calling the epidemiar function:
 
 #### Non-daily or Missing Data
 
-If you do not have daily data (e.g. weekly, or irregular data), or have implicit missing data, you can use the `data_to_daily()` function to add any missing rows. This function will also use linear interpolation to fill in values if possible (default 'interpolate = TRUE').  It is not recommended if you have a lot of missing/non-daily data. It will group on every field in the dataset that is not `obs_date`, or the user-given `valuefield`. Note: this will not fill out ragged data (different end dates of environmental variable data), but that will be handled inside of epidemiar. 
+If you do not have daily data (e.g. weekly, or irregular data), or have implicit missing data, you can use the `data_to_daily()` function to add any missing rows. This function will also use linear interpolation to fill in values if possible (default 'interpolate = TRUE').  It is not recommended if you have a lot of missing/non-daily data. It will group on every field in the dataset that is not `obs_date`, or the user-given `{valuefield}`. Note: this will not fill out ragged data (different end dates of environmental variable data), but that will be handled inside of epidemiar. 
 
 
 ### Environmental Reference / Weekly Climate Data, `env_ref_data`
 
 The environmental reference / climate data should contain a reference value (column "ref_value") of the environmental variable per geographic group for each week of the year. For example, this could be the historical mean for that week of the year. 
 
-* `groupfield`: Geographic grouping field, and must match the field names in the environmental & epidemiological datasets.
-* `obsfield`: Environmental variable field, and must match the field names in the environmental dataset.
-* "week_epidemiar": Week of the year (1 to 52 for CDC, or 1 to 52 or 53 for WHO/ISO).
-* "ref_value": Historical mean, or other reference value, for that week of the year for that `groupfield` for that `obsfield`. 
+* `{groupfield}`: Geographic grouping field, and must match the field names in the environmental & epidemiological datasets.
+* `{obsfield}`: Environmental variable field, and must match the field names in the environmental dataset.
+* `week_epidemiar`: Week of the year (1 to 52 for CDC, or 1 to 52 or 53 for WHO/ISO).
+* `ref_value`: Historical mean, or other reference value, for that week of the year for that `groupfield` for that `obsfield`. 
+* `ref_*`: You can have other field(s) in here that begin with `ref_`. These fields will propogate through to the `environ_timeseries` dataset in the ouput, which you can then use for plotting or other uses. 
 
 
 ### Reference Data
@@ -79,9 +80,9 @@ The environmental reference / climate data should contain a reference value (col
 1. Environmental variables, `env_info`
 This file lists the environmental variables and their aggregation method for to create weekly environmental data from daily data, e.g. rainfall could be the 'sum' of the daily values while LST would be the 'mean' value.
 
-* `obsfield`: Give the field name of the environmental data variables, should match the environmental and environmental reference data
-* "reference_method": 'sum' or 'mean'
-* "report_label": Label to be used in creating the formatted report graphs. This column is not used until the formatting Rnw script, so depending on your setup and how you are have formatting reports after the report data is generated, you may not need this column. 
+* `{obsfield}`: Give the field name of the environmental data variables, should match the environmental and environmental reference data.
+* `reference_method`: 'sum' or 'mean', the aggregation method for to create weekly environmental data from daily data.
+* `report_label`: Label to be used in creating the formatted report graphs. This column is not used until the formatting Rnw script, so depending on your setup and how you are have formatting reports after the report data is generated, you may not need this column. 
 
 2. Shapefiles
 In order to create summaries from Google Earth Engine, you will need to upload assets of the shapefile of your study area. If you are not using GEE and have some other way of obtaining environmental data, you may not need this. 

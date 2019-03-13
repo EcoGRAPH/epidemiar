@@ -1,12 +1,12 @@
 ---
-title: "Overview of epidemiar package"
+title: "Overview of epidemiar Package"
 author: "Dawn M. Nekorchuk"
 date: "`r Sys.Date()`"
 output: 
   rmarkdown::html_vignette:
    fig_caption: yes
 vignette: >
-  %\VignetteIndexEntry{Overview of epidemiar package}
+  %\VignetteIndexEntry{Overview}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

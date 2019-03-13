@@ -15,16 +15,16 @@ run_epidemia(epi_data, casefield, populationfield, inc_per = 1000,
 field "obs_date".}
 
 \item{casefield}{The column name of the field that contains disease case
-counts.}
+counts (unquoted field name).}
 
 \item{populationfield}{Column name of the population field to give population
-numbers over time. Used to calculated incidence. Also optionally used in
-Farrington method for populationOffset.}
+numbers over time (unquoted field name). Used to calculated incidence. Also
+optionally used in Farrington method for populationOffset.}
 
 \item{groupfield}{The column name of the field for district or geographic area
-unit division names of epidemiological AND environmental data. If there are
-no groupings (all one area), user should give a field that contains the same
-value throughout.}
+unit division names of epidemiological AND environmental data (unquoted
+field name). If there are no groupings (all one area), user should give a
+field that contains the same value throughout.}
 
 \item{week_type}{The standard (WHO ISO-8601 or CDC epi weeks) that the weeks
 of the year in epidemiological and environmental reference data use
@@ -46,10 +46,11 @@ districts or date ranges). The data must be in long format (one row for each
 date and environmental variable combination), and must start \code{laglen}
 (in \code{fc_control}) days before epi_data for forecasting.}
 
-\item{obsfield}{Field name of the environmental data variables.}
+\item{obsfield}{Field name of the environmental data variables (unquoted field
+name).}
 
 \item{valuefield}{Field name of the value of the environmental data variable
-observations.}
+observations (unquoted field name).}
 
 \item{forecast_future}{Number of futre weeks from the end of the
 \code{epi_data} to produce forecasts.}
@@ -63,10 +64,7 @@ forecast time, to calculate anomalies in early detection period, and to
 display on timeseries in reports.}
 
 \item{env_info}{Lookup table for environmental data - reference creation
- method (e.g. sum or mean), report labels, etc.
-
-For more details see the vignette on input data and modeling parameters:
-\code{vignette("Modeling Data and Parameters", package = "epidemiar")}}
+method (e.g. sum or mean), report labels, etc.}
 
 \item{detection_period}{The number of weeks that will be considered the "early
 detection period". It will count back from the week of last known
@@ -108,19 +106,22 @@ Returns a suite of summary and report data.
  object).
 
 For more details see the vignette on the output data:
-\code{vignette("Output Data", package = "epidemiar")}
+\code{vignette("output-report-data", package = "epidemiar")}
 }
 \description{
 The Epidemic Prognosis Incorporating Disease and Environmental Monitoring for
-Integrated Assessment (EPIDEMIA) Forecasting System is a set of tools coded
-in free, open-access software, that integrate surveillance and environmental
-data to model and create short-term forecasts for environmentally-mediated
+Integrated Assessment (EPIDEMIA) Forecasting System is a set of tools coded in
+free, open-access software, that integrate surveillance and environmental data
+to model and create short-term forecasts for environmentally-mediated
 diseases. This function, `epidemiar::run_epidemia()` is the central function
 to model and forecast a wide range of environmentally-mediated diseases.
 }
 \details{
 For more a longer description of the package, see the overview vignette:
-\code{vignette("Overview", package = "epidemiar")}
+\code{vignette("overview-epidemiar", package = "epidemiar")}
+
+For more details see the vignette on input data and modeling parameters:
+\code{vignette("data-modeling", package = "epidemiar")}
 }
 \examples{
 See model_forecast_script.R in epidemiar-demo for full example: https://github.com/EcoGRAPH/epidemiar-demo

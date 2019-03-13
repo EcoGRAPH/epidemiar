@@ -1,29 +1,29 @@
-#' Run EPIDEMIA forecast models and early detection algorithm.
+#'Run EPIDEMIA forecast models and early detection algorithm.
 #'
-#' The Epidemic Prognosis Incorporating Disease and Environmental Monitoring for
-#' Integrated Assessment (EPIDEMIA) Forecasting System is a set of tools coded
-#' in free, open-access software, that integrate surveillance and environmental
-#' data to model and create short-term forecasts for environmentally-mediated
-#' diseases. This function, `epidemiar::run_epidemia()` is the central function
-#' to model and forecast a wide range of environmentally-mediated diseases.
+#'The Epidemic Prognosis Incorporating Disease and Environmental Monitoring for
+#'Integrated Assessment (EPIDEMIA) Forecasting System is a set of tools coded in
+#'free, open-access software, that integrate surveillance and environmental data
+#'to model and create short-term forecasts for environmentally-mediated
+#'diseases. This function, `epidemiar::run_epidemia()` is the central function
+#'to model and forecast a wide range of environmentally-mediated diseases.
 #'
-#' For more a longer description of the package, see the overview vignette:
-#' \code{vignette("overview-epidemiar", package = "epidemiar")}
+#'For more a longer description of the package, see the overview vignette:
+#'\code{vignette("overview-epidemiar", package = "epidemiar")}
 #'
-#' For more details see the vignette on input data and modeling parameters:
-#' \code{vignette("data-modeling", package = "epidemiar")}
+#'For more details see the vignette on input data and modeling parameters:
+#'\code{vignette("data-modeling", package = "epidemiar")}
 #'
 #'@param epi_data Epidemiological data with case numbers per week, with date
 #'  field "obs_date".
 #'@param casefield The column name of the field that contains disease case
-#'  counts.
+#'  counts (unquoted field name).
 #'@param populationfield Column name of the population field to give population
-#'  numbers over time. Used to calculated incidence. Also optionally used in
-#'  Farrington method for populationOffset.
+#'  numbers over time (unquoted field name). Used to calculated incidence. Also
+#'  optionally used in Farrington method for populationOffset.
 #'@param groupfield The column name of the field for district or geographic area
-#'  unit division names of epidemiological AND environmental data. If there are
-#'  no groupings (all one area), user should give a field that contains the same
-#'  value throughout.
+#'  unit division names of epidemiological AND environmental data (unquoted
+#'  field name). If there are no groupings (all one area), user should give a
+#'  field that contains the same value throughout.
 #'@param week_type The standard (WHO ISO-8601 or CDC epi weeks) that the weeks
 #'  of the year in epidemiological and environmental reference data use
 #'  (required: dates listed are LAST day of week).
@@ -42,9 +42,10 @@
 #'  districts or date ranges). The data must be in long format (one row for each
 #'  date and environmental variable combination), and must start \code{laglen}
 #'  (in \code{fc_control}) days before epi_data for forecasting.
-#'@param obsfield Field name of the environmental data variables.
+#'@param obsfield Field name of the environmental data variables (unquoted field
+#'  name).
 #'@param valuefield Field name of the value of the environmental data variable
-#'  observations.
+#'  observations (unquoted field name).
 #'@param forecast_future Number of futre weeks from the end of the
 #'  \code{epi_data} to produce forecasts.
 #'@param fc_control Parameters for forecasting, including which environmental

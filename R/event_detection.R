@@ -100,12 +100,12 @@ run_farrington <- function(epi_fc_data, quo_popfield, inc_per,
   # includes allowance for window value, w # of weeks
   if (is.null(ed_control[["b"]])){
 
-    #subtract one side of window to earliest report date
+    #subtract window to earliest report date
     #    this will appropriately increase the amount of time needed without altering the actual available data date
     #    allow default w=3
     if (!is.null(ed_control[["w"]])){
-      adjdt <- report_dates$full$min - lubridate::weeks(floor(ed_control[["w"]]/2))
-    } else adjdt <- report_dates$full$min - lubridate::weeks(3/2)
+      adjdt <- report_dates$full$min - lubridate::weeks(ed_control[["w"]])
+    } else adjdt <- report_dates$full$min - lubridate::weeks(3)
 
     #calculate number of years difference between earliest available data date and adjusted report date "start"
     #    using interval(), because this allows time_lenth() to deal with leap years, etc.

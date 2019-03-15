@@ -3,7 +3,7 @@ Type: Package
 Title: epidemiar: Create EPIDEMIA Environmentally-Mediated Disease Forecasts
 Version: 1.0.0
 Author@R: c(
-  person("Dawn", "Nekorchuk", "M.", email = "28901045+michdn@users.noreply.github.com",
+  person("Dawn", "Nekorchuk", "M.", email = "dawn.nekorchuk@ou.edu",
   role = c("aut", "cre"), 
   person("Michael", "Wimberly", "C.", email = "mcwimberly@ou.edu", role = "rth"), 
   person("Justin", "Davis", "K.", email = "justinkdavis@ou.edu", role = "ctb"))

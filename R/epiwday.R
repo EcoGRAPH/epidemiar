@@ -1,30 +1,36 @@
 
 #' Get epidemiological weekday number of a date-time
 #'
-#' Returns the epidemiological weekday number using either the WHO or CDC
+#' Returns the epidemiological weekday number using either ISO or CDC
 #' system.
 #'
 #' The WHO system uses the ISO 8601 standard in which weeks start on Monday,
 #' while in the CDC system weeks start on Sunday.
 #'
 #' @inheritParams lubridate::isoweek
-#' @inheritParams epiweek
+#' @inheritParams lubridate::epiweek
 #'
 #' @return The weekday number (1--7) as an integer vector.
 #'
 #' @inherit lubridate::isoweek references
+#' @inherit lubridate::epiweek references
 #'
 #' @examples
-#' epiwday(as.Date("2005-01-01")) # 6
-#' epiwday(as.Date("2005-01-01"), system = "cdc") # 7
+#' #' epiwday(as.Date("2005-01-01")) # 6
+#' epiwday(as.Date("2005-01-01"), system = "ISO") # 6
+#' epiwday(as.Date("2005-01-01"), system = "CDC") # 7
 #'
 #' @export
 #'
-epiwday <- function(x, system = "who") {
-  match.arg(system, c("who", "cdc"))
-  if (system == "who") {
+epiwday <- function(x, system = "ISO") {
+
+  week_type <- match.arg(system, c("ISO", "CDC"))
+
+  if (week_type == "ISO") {
     as.integer(lubridate::wday(x - 1))
-  } else if (system == "cdc") {
+
+  } else if (week_type == "CDC") {
     as.integer(lubridate::wday(x))
   }
+
 }

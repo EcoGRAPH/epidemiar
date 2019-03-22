@@ -2,10 +2,9 @@
 % Please edit documentation in R/make_date_yw.R
 \name{make_date_yw}
 \alias{make_date_yw}
-\alias{parse_epiweek}
 \title{Create dates from epidemiological weeks and years}
 \usage{
-make_date_yw(year = 1970L, week = 1L, weekday = 1L, system = "who")
+make_date_yw(year = 1970L, week = 1L, weekday = 1L, system = "ISO")
 }
 \arguments{
 \item{year}{epidemiological year}
@@ -13,11 +12,7 @@ make_date_yw(year = 1970L, week = 1L, weekday = 1L, system = "who")
 \item{week}{eidemiological week number (1--53).}
 
 \item{weekday}{epidemiological weekday number (1--7). Day 1 is a Monday in
-the WHO system  and a Sunday in the CDC system.}
-
-\item{system}{Either "who" or "cdc". WHO epidemiological weeks start on
-Monday. CDC epidemiological weeks (MMWR weeks) start on Sunday. The default
-is "who".}
+the ISO-8601 WHO system and a Sunday in the CDC system.}
 }
 \value{
 A vector of class `Date`.
@@ -32,12 +27,17 @@ Arguments `year`, `week`, and `weekday` are recycled as necessary.
 \examples{
 make_date_yw(2017, 1)
 make_date_yw(2017, 1, 2)
-make_date_yw(2017, 1, system = "cdc")
-make_date_yw(2017, 1, 2, system = "cdc")
+make_date_yw(2017, 1, system = "CDC")
+make_date_yw(2017, 1, system = "ISO")
+make_date_yw(2017, 1, 2, system = "ISO")
 
 # arguments are recycled
 make_date_yw(2017, 1:10)
 make_date_yw(2017, 1, 1:7)
 make_date_yw(2010:2017, 1)
 
+}
+\references{
+\url{http://en.wikipedia.org/wiki/ISO_week_date}
+\url{http://www.cmmcp.org/epiweek.htm}
 }

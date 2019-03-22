@@ -2,7 +2,6 @@
 
 ## Environmental Data for report
 #' Formats env data for report
-#' @export
 #'
 environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
                                   quo_obsfield, env_used, env_info,
@@ -53,12 +52,12 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
 
   # add climatology data
   # climatology is based on week number
-  #   (hopefully set up with the same type as was selected when ref data was created, will add checks)
+  #   (should have been set up with the same week type as was selected when ref data was created)
   environ_timeseries <- environ_timeseries %>%
     #join
     dplyr::left_join(env_ref_varused %>%
                        dplyr::select(!!quo_obsfield, !!quo_groupfield, week_epidemiar,
-                                     ref_value, ref_sd, ref_median, ref_uq, ref_lq),
+                                     ref_value, starts_with("ref_")),
                      #NSE fun
                      by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
                                              rlang::quo_name(quo_obsfield),
@@ -71,7 +70,6 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
 
 ## Setting up summary data
 #' Creates summary data
-#' @export
 #'
 create_summary_data <- function(ed_res, quo_groupfield, report_dates){
 
@@ -87,7 +85,7 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
     #group (because need to look at period per group level)
     dplyr::group_by(!!quo_groupfield) %>%
     #summarize to 1 obs per grouping
-    dplyr::summarize(ed_alert_count = sum(value, na.rm = TRUE)) %>%
+    dplyr::summarize(ed_alert_count = if_else(all(is.na(value)), NA_real_, sum(value, na.rm = TRUE))) %>%
     # create 3 levels (0, 1, 2 = >1)
     dplyr::mutate(warning_level = if_else(ed_alert_count > 1, 2, ed_alert_count),
                   #factor to label
@@ -108,7 +106,7 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
     #group
     dplyr::group_by(!!quo_groupfield) %>%
     #summarize to 1 obs per grouping
-    dplyr::summarize(ew_alert_count = sum(value, na.rm = TRUE)) %>%
+    dplyr::summarize(ew_alert_count = if_else(all(is.na(value)), NA_real_, sum(value, na.rm = TRUE))) %>%
     # create 3 levels (0, 1, 2 = >1)
     dplyr::mutate(warning_level = if_else(ew_alert_count > 1, 2, ew_alert_count),
                   #factor to label
@@ -128,7 +126,6 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
 }
 
 #' Creates summary of incidence in ED period
-#' @export
 #'
 create_epi_summary <- function(obs_res, quo_groupfield, report_dates){
   #using obs_res - if cases/incidence becomes a user set choice, this might make it easier (value is already what it needs to be)
@@ -149,7 +146,6 @@ create_epi_summary <- function(obs_res, quo_groupfield, report_dates){
 
 ## Calculate anomalies
 #' Calculates anomalies
-#' @export
 #'
 calc_env_anomalies <- function(env_ts, quo_groupfield, quo_obsfield, report_dates){
   # anomalies

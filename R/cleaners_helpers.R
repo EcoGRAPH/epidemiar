@@ -6,7 +6,6 @@
 #'
 #' @return To fill in
 #'
-#' @export
 #'
 epi_NA_interpolate <- function(epi_data, quo_casefield, quo_groupfield){
   epi_data %>%
@@ -20,7 +19,6 @@ epi_NA_interpolate <- function(epi_data, quo_casefield, quo_groupfield){
 }
 
 #' Interpolates missing env data
-#' @export
 #'
 env_NA_interpolate <- function(env_data, quo_obsfield, quo_valuefield, quo_groupfield){
   env_data %>%

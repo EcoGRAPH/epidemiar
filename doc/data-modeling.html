@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="Dawn M. Nekorchuk" />
+
+<meta name="date" content="2019-03-13" />
+
+<title>Modeling Data and Parameters</title>
+
+
+
+
+
+
+<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%20code%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Modeling Data and Parameters</h1>
+<h4 class="author"><em>Dawn M. Nekorchuk</em></h4>
+<h4 class="date"><em>2019-03-13</em></h4>
+
+
+
+<div id="input-data-formats-model-specifications-and-event-detection-parameters" class="section level1">
+<h1>Input Data Formats, Model Specifications, and Event Detection Parameters</h1>
+<div id="data-data-formats" class="section level2">
+<h2>Data &amp; Data Formats</h2>
+<p>The epidemiar modeling and code requires 3 main sets of data:</p>
+<ul>
+<li>epidemiological data,</li>
+<li>daily environmental data, and</li>
+<li>historical environmental reference data,</li>
+</ul>
+<p>plus several information/reference/specification inputs.</p>
+<div id="epidemiology-data-epi_data" class="section level3">
+<h3>Epidemiology Data, <code>epi_data</code></h3>
+<p>For the epidemiology data, you will need weekly case counts of the disease/illness per the geographic unit (group) with population values (to calculate incidence).</p>
+<p>When calling the epidemiar function:</p>
+<ul>
+<li><code>epi_data</code>: Data table/tibble of epidemiological data with case numbers per week, with date field labeled as <code>obs_date</code>. The date should be the <em>last</em> day of the epidemiological week. Must contain columns for <code>{casefield}</code>, <code>{populationfield}</code>, and <code>{groupfield}</code>. It may contain other variables/columns, but these are ignored.</li>
+<li><code>casefield</code>: Give the field name for the case counts.</li>
+<li><code>populationfield</code>: Give the population field to give population numbers over time. It is used to calculated incidence, and also optionally used in Farrington method for populationOffset.</li>
+<li><code>groupfield</code>: Give the field name for districts or area divisions of epidemiological AND environmental data. If there are no groupings (all one area), user should give a field with the same value throughout the entire datasets.</li>
+<li><code>inc_per</code>: At what rate should incidence be calculated for? Default is “1000”, meaning x cases per 1000 population.</li>
+<li><code>week_type</code>: For the <code>obs_date</code> in <code>epi_data</code>, you need to specify if you are using “CDC” epiweeks, or ISO-8601 (“ISO”) standard weeks of the year (what WHO uses), the default assumption is ISO. The date should be the <em>last</em> day of the epidemiological week.</li>
+</ul>
+<div id="missing-data" class="section level4">
+<h4>Missing Data</h4>
+<p>There should be a line for each week and geographic grouping, even for missing data (i.e. explicit missing data). Any missing data will be filled in by linear interpolation inside of the epidemiar modeling functions.</p>
+</div>
+</div>
+<div id="environmental-data-env_data" class="section level3">
+<h3>Environmental Data, <code>env_data</code></h3>
+<p>For the environmental data, daily data is expected for each environmental variable for each geographic unit. Based on the lag length chosen, you must have at least that number of days <em>before</em> the first epidemiology data date.</p>
+<p>When calling the epidemiar function:</p>
+<ul>
+<li><code>env_data</code>: Data table/tibble of environmental data values for each geographic grouping, with date field labeled as “obs_date”.</li>
+<li><code>groupfield</code>: Give the field name for districts or area divisions of epidemiological AND environmental data. If there are no groupings (all one area), user should provide a field with the same value throughout the entire datasets.</li>
+<li><code>obsfield</code>: Give the field name of the environmental data observation types.</li>
+<li><code>valuefield</code>: Give the field name of the value of the environmental data observations.</li>
+</ul>
+<div id="non-daily-or-missing-data" class="section level4">
+<h4>Non-daily or Missing Data</h4>
+<p>If you do not have daily data (e.g. weekly, or irregular data), or have implicit missing data, you can use the <code>data_to_daily()</code> function to add any missing rows. This function will also use linear interpolation to fill in values if possible (default ‘interpolate = TRUE’). It is not recommended if you have a lot of missing/non-daily data. It will group on every field in the dataset that is not <code>obs_date</code>, or the user-given <code>{valuefield}</code>. Note: this will not fill out ragged data (different end dates of environmental variable data), but that will be handled inside of epidemiar.</p>
+</div>
+</div>
+<div id="environmental-reference-weekly-climate-data-env_ref_data" class="section level3">
+<h3>Environmental Reference / Weekly Climate Data, <code>env_ref_data</code></h3>
+<p>The environmental reference / climate data should contain a reference value (column “ref_value”) of the environmental variable per geographic group for each week of the year. For example, this could be the historical mean for that week of the year.</p>
+<ul>
+<li><code>{groupfield}</code>: Geographic grouping field, and must match the field names in the environmental &amp; epidemiological datasets.</li>
+<li><code>{obsfield}</code>: Environmental variable field, and must match the field names in the environmental dataset.</li>
+<li><code>week_epidemiar</code>: Week of the year (1 to 52 for CDC, or 1 to 52 or 53 for WHO/ISO).</li>
+<li><code>ref_value</code>: Historical mean, or other reference value, for that week of the year for that <code>groupfield</code> for that <code>obsfield</code>.</li>
+<li><code>ref_*</code>: You can have other field(s) in here that begin with <code>ref_</code>. These fields will propogate through to the <code>environ_timeseries</code> dataset in the ouput, which you can then use for plotting or other uses.</li>
+</ul>
+</div>
+<div id="reference-data" class="section level3">
+<h3>Reference Data</h3>
+<ol style="list-style-type: decimal">
+<li>Environmental variables, <code>env_info</code> This file lists the environmental variables and their aggregation method for to create weekly environmental data from daily data, e.g. rainfall could be the ‘sum’ of the daily values while LST would be the ‘mean’ value.</li>
+</ol>
+<ul>
+<li><code>{obsfield}</code>: Give the field name of the environmental data variables, should match the environmental and environmental reference data.</li>
+<li><code>reference_method</code>: ‘sum’ or ‘mean’, the aggregation method for to create weekly environmental data from daily data.</li>
+<li><code>report_label</code>: Label to be used in creating the formatted report graphs. This column is not used until the formatting Rnw script, so depending on your setup and how you are have formatting reports after the report data is generated, you may not need this column.</li>
+</ul>
+<ol start="2" style="list-style-type: decimal">
+<li>Shapefiles In order to create summaries from Google Earth Engine, you will need to upload assets of the shapefile of your study area. If you are not using GEE and have some other way of obtaining environmental data, you may not need this.</li>
+</ol>
+<p>If you are creating a formatted report later and wish to have maps of the results, you may need shapefiles for this.</p>
+</div>
+</div>
+<div id="setting-up-the-report-and-model" class="section level2">
+<h2>Setting up the Report and Model</h2>
+<div id="setting-up-for-forecasting" class="section level3">
+<h3>Setting up for Forecasting</h3>
+<ul>
+<li><code>report_period</code>: Total number of weeks for the report to include, including the number of future forecast weeks, <code>forecast_future</code>.</li>
+<li><code>forecast_future</code>: The number of weeks to forecast into the future. As the future values of the environmental variables are being imputed based on recent and historical values, it is not recommended to extend the forecast very far into the future, probably no longer than 12 weeks.</li>
+</ul>
+<p>The rest of the forecasting controls are bundled into a named list <code>fc_control</code>:</p>
+<ul>
+<li><code>fc_control$env_vars</code>: Environmental variables. This informs the modeling system which environmental variables to actually use. (You can therefore have extra variables or data in the environmental dataset.) This is just a simple 1 column tibble with the variable names to use - <code>obsfield</code> - same field name as in the environmental data and environmental reference datasets, with entries for which variables to use in the modeling.</li>
+<li><code>fc_control$clusters</code>: Geographic grouping clusters. This is a two-column list matching the geographic group to its cluster number. There must be an entry for each geographic group included in the epidemiological data. The fields are: the geographic group field, <code>groupfield</code>, and “cluster_id”, the numeric ID number for each geographic group. If you only have 1 cluster, each entry for the geographic group should contain the same “cluster_id” value. If you only have one geographic group, this should contain one row for that geographic group with a “cluster_id” (1, for example).</li>
+<li><code>fc_control$lag_length</code>: The number of days of past environmental data to include for the lagged effects.</li>
+<li><code>fc_control$fit_freq</code>: When fitting the model, either fit “once” (highly recommended) or per every “week”. Per “week” will increase the processing time by the number of weeks in the model. It is recommended to only use “once” unless you are doing detailed analyses on the difference.</li>
+<li><code>fc_control$ncores</code>: For the parallel processing, the number of cores to use. If unset, it will default to the number of physical cores available minus one.</li>
+</ul>
+</div>
+<div id="setting-up-for-event-detection" class="section level3">
+<h3>Setting up for Event Detection</h3>
+<ul>
+<li><code>ed_summary_period</code>: The last n weeks of known epidemiological data that will be considered the early detection period for alert summaries. The algorithm will run over the entire report length for each geographic group and mark alerts for all weeks, but it will create the early detection summary alerts only during the <code>ed_summary_period</code> weeks. The early detection summary alerts are recorded in the <code>summary_data</code> item in the output. In the demo, we have both displayed the results as a map and listed in tables.</li>
+<li><code>ed_method</code>: At the moment, the only choices are “Farrington” for the Farrington improved algorithm or “None”.<br />
+</li>
+<li><code>ed_control</code>: This is a list of parameters that are handed to the <code>surveillance::farringtonFlexible()</code> function as the <code>control</code> argument for “Farrington” option. It is unused for the “None” option. See the help for <code>surveillance::farringtonFlexible()</code> for more details. In our use of the function, the user can leave <code>b</code>, the number of past years to include in the creation of the thresholds, as NULL (not set) and epidemiar will calculate the maximum possible value to use, based on what data is available in <code>epi_data</code>.</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

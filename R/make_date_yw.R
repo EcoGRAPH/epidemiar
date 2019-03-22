@@ -9,8 +9,13 @@
 #' @param year epidemiological year
 #' @param week eidemiological week number (1--53).
 #' @param weekday epidemiological weekday number (1--7). Day 1 is a Monday in
-#'   the WHO system  and a Sunday in the CDC system.
-#' @inheritParams epiweek
+#'   the ISO-8601 WHO system and a Sunday in the CDC system.
+#'
+#' @inheritParams lubridate::isoweek
+#' @inheritParams lubridate::epiweek
+#'
+#' @inherit lubridate::isoweek references
+#' @inherit lubridate::epiweek references
 #'
 #' @return A vector of class `Date`.
 #' @export
@@ -18,22 +23,21 @@
 #' @examples
 #' make_date_yw(2017, 1)
 #' make_date_yw(2017, 1, 2)
-#' make_date_yw(2017, 1, system = "cdc")
-#' make_date_yw(2017, 1, 2, system = "cdc")
+#' make_date_yw(2017, 1, system = "CDC")
+#' make_date_yw(2017, 1, system = "ISO")
+#' make_date_yw(2017, 1, 2, system = "ISO")
 #'
 #' # arguments are recycled
 #' make_date_yw(2017, 1:10)
 #' make_date_yw(2017, 1, 1:7)
 #' make_date_yw(2010:2017, 1)
 #'
-make_date_yw <- function(year = 1970L, week = 1L, weekday = 1L, system = "who") {
+make_date_yw <- function(year = 1970L, week = 1L, weekday = 1L, system = "ISO") {
 
-  match.arg(system, c("who", "cdc"))
-
-  origin <- as.Date("1970-01-01 UTC")
+  week_type <- match.arg(system, c("ISO", "CDC"))
 
   lengths <- vapply(list(year, week, weekday), length, 1, USE.NAMES = FALSE)
-  if (min(lengths) == 0L) as.Date(integer(), origin)
+  if (min(lengths) == 0L) as.Date(integer(), lubridate::origin)
 
   # recycle arguments
   N <- max(lengths)
@@ -46,21 +50,13 @@ make_date_yw <- function(year = 1970L, week = 1L, weekday = 1L, system = "who") 
       is.na(y) | is.na(w) | is.na(d), NA,
       {
         jan1 <- lubridate::make_date(y, 1, 1)
-        wday <- epiwday(jan1, system)
+        wday <- epiwday(jan1, week_type)
         to_add <- ifelse(wday <= 4, 1, 8) - wday
         wk1 <- jan1 + to_add
         day1 <- wk1 + (w - 1) * 7
         day1 + d - 1
       }
     )
-  as.Date(out, origin)
+  as.Date(out, lubridate::origin)
 
-}
-
-#' @export
-#' @rdname make_date_yw
-#' @usage NULL
-parse_epiweek <- function(...) {
-  .Deprecated("make_date_yw")
-  make_date_yw(...)
 }

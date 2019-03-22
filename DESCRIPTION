@@ -1,27 +1,36 @@
 Package: epidemiar
 Type: Package
-Title: Create EPIDEMIA Forecasts and Reports
+Title: epidemiar: Create EPIDEMIA Environmentally-Mediated Disease Forecasts
 Version: 1.0.0
-Author: Dawn M. Nekorchuk
-Maintainer: Dawn Nekorchuk <Dawn.Nekorchuk@ou.edu>
-Description: Creates EPIDEMIA Forecasting Reports
-    with Early Warning & Early Detection Alerts
-License: What license is it under?
+Author@R: c(
+  person("Dawn", "Nekorchuk", "M.", email = "dawn.nekorchuk@ou.edu",
+  role = c("aut", "cre"), 
+  person("Michael", "Wimberly", "C.", email = "mcwimberly@ou.edu", role = "rth"), 
+  person("Justin", "Davis", "K.", email = "justinkdavis@ou.edu", role = "ctb"))
+Description: The Epidemic Prognosis Incorporating Disease and Environmental Monitoring 
+  for Integrated Assessment (EPIDEMIA) Forecasting System is a set of tools coded in free, 
+  open-access software, that integrate surveillance and environmental data to model and 
+  create short-term forecasts for environmentally-mediated diseases. 
+  This R package contains the functions for modeling, forecasting, 
+  and early detection & early warning alerts.
+License: The "GNU Affero General Public License" version 3 (AGPL-3)
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1
-Imports: dplyr,
-    glue,
-    lubridate,
-    magrittr,
-    mgcv,
-    parallel,
-    pracma,
-    rlang,
-    splines,
-    tibble,
-    tidyr,
-    zoo
-Suggests: knitr,
+Imports: dplyr (>= 0.7.8),
+    glue (>= 1.3.0),
+    lubridate (>= 1.7.4),
+    magrittr (>= 1.5),
+    mgcv (>= 1.8-26),
+    parallel (>= 3.5.1),
+    pracma (>= 2.2.2),
+    rlang (>= 0.3.1),
+    surveillance (>= 1.16.2),
+    splines (>= 3.5.1),
+    tibble (>= 2.0.1),
+    tidyr (>= 0.8.2),
+    zoo (>= 1.8-3)
+Suggests: 
+    knitr,
     rmarkdown
 VignetteBuilder: knitr

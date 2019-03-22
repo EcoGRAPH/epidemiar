@@ -3,7 +3,6 @@
 
 ## Forecasting
 #' Runs the forecast modeling
-#' @export
 #'
 run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupings,
                          env_data, quo_obsfield, quo_valuefield, env_variables,
@@ -26,6 +25,10 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
   #create alphabetical list of ONLY USED unique environmental variables
   env_variables_used <- dplyr::pull(env_data, !!quo_obsfield) %>% unique() %>% sort()
 
+  # extract start & end dates for each variable for log file
+  env_dt_ranges <- dplyr::group_by(env_data, !!quo_obsfield) %>%
+    dplyr::summarize(start_dt = min(obs_date), end_dt = max(obs_date))
+
   # extend data into future, for future forecast portion
   env_data_extd <- extend_env_future(env_data, quo_groupfield, groupings, quo_obsfield, quo_valuefield,
                                      env_ref_data, env_info, env_variables_used, report_dates, week_type)
@@ -37,7 +40,7 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
   epi_fc <- epi_format_fc(epi_data_extd, quo_groupfield, fc_control)
 
   # anomalizing the environ data
-  env_fc <- anomalize_env(env_fc, quo_groupfield, quo_obsfield, ncores)
+  env_fc <- anomalize_env(env_fc, quo_groupfield, env_variables_used, ncores)
 
   # create the lags
   epi_lag <- lag_environ_to_epi(epi_fc, quo_groupfield, groupings,
@@ -105,14 +108,13 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
   # return list with res and other needed items
   fc_res_full <- create_named_list(fc_epi = preds_catch, fc_res,
                                    env_data_extd, env_variables_used,
-                                   reg_obj)
+                                   env_dt_ranges, reg_obj)
 }
 
 #forecasting helper functions
 # this creates a modified b-spline basis, which is still (piecewise) polynomial, so
 # we will keep this name
 #' Truncates poly
-#' @export
 #'
 truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
 
@@ -168,7 +170,6 @@ truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
 }
 
 #' Pull only model env variables
-#' @export
 #'
 pull_model_envvars <- function(env_data, quo_obsfield, fc_control){
 
@@ -281,7 +282,6 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
       ## For forceast of daily values per week
       #are a blend of that 'last week mean' in report_dates$known$max+1 & historical ref during that week
       #rem: env data is DAILY, env ref is WEEKLY
-      #rem: In the env_ref, some var may be mean, some may be sum, etc. for the week
       #Plan: get value for that week (week_epidemiar last date of week, +1 to start of next week), then use fill down for rest of daily values in week
 
       #set up first week kick off value (mean last week of known data)
@@ -364,7 +364,6 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
 }
 
 #' Calculate mean of last week env values
-#' @export
 #'
 env_last_week_mean <- function(env_df, env_variables_used, quo_groupfield, quo_obsfield, groupings){
   #gets mean of previous week of daily env data, puts in first NA slot
@@ -397,7 +396,6 @@ env_last_week_mean <- function(env_df, env_variables_used, quo_groupfield, quo_o
 }
 
 #' Fill env data down
-#' @export
 #'
 env_fill_down <- function(env_df, quo_groupfield, quo_obsfield, quo_valuefield){
   #to fill down values (except for original value field) for remaining length of dataset given
@@ -412,7 +410,6 @@ env_fill_down <- function(env_df, quo_groupfield, quo_obsfield, quo_valuefield){
 }
 
 #' Extend epidemiology dataframe into future
-#' @export
 #'
 extend_epi_future <- function(epi_data, quo_popfield, quo_groupfield, groupings, report_dates){
   #extended epi data into future dates
@@ -434,7 +431,6 @@ extend_epi_future <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 }
 
 #' Format env data for modeling
-#' @export
 #'
 env_format_fc <- function(env_data_extd, quo_groupfield, quo_obsfield){
   #turns long format into wide format - one entry per day per group
@@ -448,7 +444,6 @@ env_format_fc <- function(env_data_extd, quo_groupfield, quo_obsfield){
 }
 
 #' Format epi data for modeling
-#' @export
 #'
 epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
 
@@ -468,26 +463,44 @@ epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
 }
 
 #' Convert environmental data into anomalies
-#' @export
 #'
-anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield, ncores) {
+anomalize_env <- function(env_fc, quo_groupfield, env_variables_used, ncores) {
 
-  # the following code only works on dataframes (e.g. env_fc[,curcol] instead of env_fc[[curcol]])
-  # but I believe there's no use fixing it into tibble format since we're probably going to do it all with NSE,
-  # and this conversion won't be necessary anyway
+  # Loop through each environmental variable replacing non-NA observations
+  # with residuals from a gam with only geographic area (group) and day of year
+
+  #Originally written with dataframes. Tibble/NSE/dplyr conversion not yet fully done.
+  # #new tibble
+  # env_fc_anom <- env_fc %>%
+  #   mutate(group_factor = factor(!!quo_groupfield),
+  #          doy = format(obs_date, "%j")) %>% as.numeric()
+
+  # needed data for gam
+  group_factor <- env_fc %>% pull(!!quo_groupfield) %>% factor()
+  doy <- env_fc %>% pull(obs_date) %>% format("%j") %>% as.numeric()
+
   env_fc <- as.data.frame(env_fc)
 
-  # loop through environmental columns - sorry, can't figure out how to do this with NSE today
-  regionfactor <- factor(env_fc[,1])
-  doy          <- as.numeric(format(env_fc$obs_date, "%j"))
+  # loop through environmental columns
+  # note: brittle on column position until rewrite
   for (curcol in 4:ncol(env_fc)) {
 
     cl <- parallel::makeCluster(ncores)
 
-    tempbam <- mgcv::bam(env_fc[,curcol] ~ regionfactor + s(doy, bs="cc", by=regionfactor),
-                         data=env_fc,
-                         chunk.size=1000,
-                         cluster=cl)
+    #if more than one geographic area
+    if (nlevels(group_factor) > 1){
+      tempbam <- mgcv::bam(env_fc[,curcol] ~ group_factor + s(doy, bs="cc", by=group_factor),
+                           data=env_fc,
+                           chunk.size=1000,
+                           cluster=cl)
+    } else {
+      #if only 1 geographic area, then run without group_factor
+      tempbam <- mgcv::bam(env_fc[,curcol] ~ s(doy, bs="cc"),
+                           data=env_fc,
+                           chunk.size=1000,
+                           cluster=cl)
+
+    }
 
     # could perhaps more cleverly be figured out by understanding the na.options of bam,
     # but for the moment just replace non-NA observations with their residuals
@@ -503,7 +516,6 @@ anomalize_env <- function(env_fc, quo_groupfield, quo_obsfield, ncores) {
 }
 
 #' Lag the env data
-#' @export
 #'
 lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
                                env_fc, env_variables_used, laglen){
@@ -588,7 +600,6 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 }
 
 #' Run forecast regression
-#' @export
 #'
 forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                                 env_variables_used, req_date, ncores,
@@ -606,8 +617,14 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   epi_lag <- epi_lag %>%
     dplyr::mutate(known = ifelse(obs_date <= last_known_date, 1, 0))
 
-  #number of clusters (different function for lm() needed if <= 1)
+  # ensure that quo_name(quo_groupfield) is a factor - gam/bam will fail if given a character,
+  # which is unusual among regression functions, which typically just coerce into factors.
+  epi_lag <- epi_lag %>% dplyr::mutate(!!rlang::quo_name(quo_groupfield) := factor(!!quo_groupfield))
+
+  #number of clusters
   n_clusters <- nlevels(epi_lag$cluster_id)
+  #number of geographic area groupings
+  n_groupings <- epi_lag %>% pull(!!quo_groupfield) %>% nlevels()
 
   #create variable bandsummaries equation piece
   #  e.g. 'bandsummaries_{var1} * cluster_id' for however many env var bandsummaries there are
@@ -630,24 +647,32 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
 
   # get list of modbspline reserved variables and format for inclusion into model
   modb_list <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)
-  modb_list <- paste(modb_list, "*", rlang::quo_name(quo_groupfield))
-  modb_eq <- glue::glue_collapse(modb_list, sep = " + ")
-
-  # ensure that quo_name(quo_groupfield) is a factor - gam/bam will fail if given a character,
-  # which is unusual among regression functions, which typically just coerce into factors.
-  epi_lag <- epi_lag %>% dplyr::mutate(!!rlang::quo_name(quo_groupfield) := factor(!!quo_groupfield))
+  # variant depending on >1 geographic area groupings
+  if (n_groupings > 1){
+    modb_list_grp <- paste(modb_list, "*", rlang::quo_name(quo_groupfield))
+    modb_eq <- glue::glue_collapse(modb_list_grp, sep = " + ")
+  } else {
+    modb_eq <- glue::glue_collapse(modb_list, sep = " + ")
+  }
 
   #filter to known
   epi_known <- epi_lag %>%
     dplyr::filter(known == 1)
 
-  #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create expression to give to lm()
-  reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
-                                    "+s(doy, bs=\"cc\", by=",
-                                    rlang::quo_name(quo_groupfield),
-                                    ") + ",
-                                    rlang::quo_name(quo_groupfield), "+",
-                                    bandsums_eq))
+  #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create expression to give to modeling function
+  #different versions if multiple geographic area groupings or not
+  if (n_groupings > 1){
+    reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
+                                      "+s(doy, bs=\"cc\", by=",
+                                      rlang::quo_name(quo_groupfield),
+                                      ") + ",
+                                      rlang::quo_name(quo_groupfield), "+",
+                                      bandsums_eq))
+  } else {
+    reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
+                                      "+s(doy, bs=\"cc\") + ",
+                                      bandsums_eq))
+  }
 
   # set up clusters for parallel gam
   cl <- parallel::makeCluster(ncores)

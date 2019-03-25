@@ -17,18 +17,18 @@ License: The "GNU Affero General Public License" version 3 (AGPL-3)
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1
-Imports: dplyr (>= 0.7.8),
-    glue (>= 1.3.0),
-    lubridate (>= 1.7.4),
-    magrittr (>= 1.5),
-    mgcv (>= 1.8-26),
-    parallel (>= 3.5.1),
-    pracma (>= 2.2.2),
-    rlang (>= 0.3.1),
-    surveillance (>= 1.16.2),
-    splines (>= 3.5.1),
-    tibble (>= 2.0.1),
-    tidyr (>= 0.8.2),
+Imports: dplyr,
+    glue,
+    lubridate,
+    magrittr,
+    mgcv,
+    parallel,
+    pracma,
+    rlang,
+    surveillance,
+    splines,
+    tibble,
+    tidyr,
     zoo
 Suggests: 
     knitr,

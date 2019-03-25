@@ -1,7 +1,7 @@
 Package: epidemiar
 Type: Package
 Title: epidemiar: Create EPIDEMIA Environmentally-Mediated Disease Forecasts
-Version: 1.1.0
+Version: 1.1.1
 Author@R: c(
   person("Dawn", "Nekorchuk", "M.", email = "dawn.nekorchuk@ou.edu",
   role = c("aut", "cre"), 

@@ -124,6 +124,6 @@ For more details see the vignette on input data and modeling parameters:
 \code{vignette("data-modeling", package = "epidemiar")}
 }
 \examples{
-See model_forecast_script.R in epidemiar-demo for full example: https://github.com/EcoGRAPH/epidemiar-demo
+"See model_forecast_script in epidemiar-demo for full example: https://github.com/EcoGRAPH/epidemiar-demo"
 
 }

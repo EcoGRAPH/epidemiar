@@ -3,10 +3,11 @@ Type: Package
 Title: epidemiar: Create EPIDEMIA Environmentally-Mediated Disease Forecasts
 Version: 1.1.1
 Author@R: c(
-  person("Dawn", "Nekorchuk", "M.", email = "dawn.nekorchuk@ou.edu",
-  role = c("aut", "cre"), 
-  person("Michael", "Wimberly", "C.", email = "mcwimberly@ou.edu", role = "rth"), 
-  person("Justin", "Davis", "K.", email = "justinkdavis@ou.edu", role = "ctb"))
+  person(given = c("Dawn", "M"), family = "Nekorchuk", email = "dawn.nekorchuk@ou.edu",
+  role = c("aut", "cre")), 
+  person(given = c("Michael", "C"), family = "Wimberly", email = "mcwimberly@ou.edu", role = "rth"), 
+  person(given = c("Justin", "K"), family = "Davis", email = "justinkdavis@ou.edu", role = "ctb"))
+Author: "Dawn M Nekorchuk <dawn.nekorchuk@ou.edu> [aut, cre]", "Michael C Wimberly <mcwimberly@ou.edu> [rth]", "Justin K Davis <justinkdavis@ou.edu> [ctb]" 
 Description: The Epidemic Prognosis Incorporating Disease and Environmental Monitoring 
   for Integrated Assessment (EPIDEMIA) Forecasting System is a set of tools coded in free, 
   open-access software, that integrate surveillance and environmental data to model and 

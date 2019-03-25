@@ -7,7 +7,6 @@ Author@R: c(
   role = c("aut", "cre")), 
   person(given = c("Michael", "C"), family = "Wimberly", email = "mcwimberly@ou.edu", role = "rth"), 
   person(given = c("Justin", "K"), family = "Davis", email = "justinkdavis@ou.edu", role = "ctb"))
-Author: "Dawn M Nekorchuk <dawn.nekorchuk@ou.edu> [aut, cre]", "Michael C Wimberly <mcwimberly@ou.edu> [rth]", "Justin K Davis <justinkdavis@ou.edu> [ctb]" 
 Description: The Epidemic Prognosis Incorporating Disease and Environmental Monitoring 
   for Integrated Assessment (EPIDEMIA) Forecasting System is a set of tools coded in free, 
   open-access software, that integrate surveillance and environmental data to model and 

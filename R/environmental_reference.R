@@ -26,6 +26,14 @@
 #'@return Returns a dataset with mean and other reference statistics of the
 #'  environmental variable per geographic grouping per week of year, in the same
 #'  format that would be acceptable as env_info in run_epidemia().
+#'  ref_value: mean of that week number over all years
+#'  ref_sd: standard deviation of that week number over all years
+#'  ref_yrcount: number of years to generate summary
+#'  ref_max: maximum value in the week over all years
+#'  ref_uq: 75% quantile
+#'  ref_median: median
+#'  ref_lq: 25% quantile
+#'  ref_min: minimum
 #'
 #'
 #'@examples env_daily_to_ref(daily_env_data = am_env_data,

@@ -74,6 +74,7 @@ The environmental reference / climate data should contain a reference value (col
 * `ref_value`: Historical mean, or other reference value, for that week of the year for that `groupfield` for that `obsfield`. 
 * `ref_*`: You can have other field(s) in here that begin with `ref_`. These fields will propogate through to the `environ_timeseries` dataset in the ouput, which you can then use for plotting or other uses. 
 
+If you have `env_data`, but do not yet have a reference/climatology built from it, you can use the `env_daily_to_ref()` function to create one in the format accepted by `run_epidemiar()` for `env_ref_data`. Because of processing time (especially for long histories), it is recommended that you run this infrequently to generate a reference dataset that is then saved to be read in later, rather than regenerated each time. The `week_type` defaults to "ISO" for ISO8601/WHO standard week of year. This function also requires the `env_info` data, see below.  
 
 ### Reference Data
 

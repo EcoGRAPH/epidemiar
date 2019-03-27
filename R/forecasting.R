@@ -182,7 +182,6 @@ pull_model_envvars <- function(env_data, quo_obsfield, fc_control){
 }
 
 #' Extend environmental data into the future
-#' @export
 #'
 extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield, quo_valuefield,
                               env_ref_data, env_info, env_variables_used, report_dates, week_type){

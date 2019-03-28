@@ -96,7 +96,8 @@
 #' For more details see the vignette on the output data:
 #' \code{vignette("output-report-data", package = "epidemiar")}
 #'
-#'@examples "See model_forecast_script in epidemiar-demo for full example: https://github.com/EcoGRAPH/epidemiar-demo"
+#'@examples "See model_forecast_script in epidemiar-demo for full example:
+#'https://github.com/EcoGRAPH/epidemiar-demo"
 #'
 #'@export
 #'

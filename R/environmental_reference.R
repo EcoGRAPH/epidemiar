@@ -100,6 +100,14 @@ env_daily_to_ref <- function(daily_env_data,
                      ref_median = median(val_epidemiar, na.rm = TRUE),
                      ref_lq = quantile(val_epidemiar, probs = 0.25, na.rm = TRUE),
                      ref_min = min(val_epidemiar, na.rm = TRUE)) %>%
+    #clean up NaN and Inf values (if entire week missing data)
+    dplyr::mutate(ref_value = ifelse(is.finite(ref_value), ref_value, NA),
+                  ref_sd = ifelse(is.finite(ref_sd), ref_sd, NA),
+                  ref_max = ifelse(is.finite(ref_max), ref_max, NA),
+                  ref_uq = ifelse(is.finite(ref_uq), ref_uq, NA),
+                  ref_median = ifelse(is.finite(ref_median), ref_median, NA),
+                  ref_lq = ifelse(is.finite(ref_lq), ref_lq, NA),
+                  ref_min = ifelse(is.finite(ref_min), ref_min, NA)) %>%
     #ungroup to end
     dplyr::ungroup()
 

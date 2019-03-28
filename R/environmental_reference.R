@@ -36,13 +36,16 @@
 #'  ref_min: minimum
 #'
 #'
-#'@examples env_daily_to_ref(daily_env_data = am_env_data,
+#'@examples
+#'\dontrun{
+#'env_daily_to_ref(daily_env_data = am_env_data,
 #'                           groupfield = woreda_name,
 #'                           obsfield = environ_var_code,
 #'                           valuefield = obs_value,
 #'                           week_type = "ISO",
 #'                           env_info = am_env_info)
 #' See epidemiar-demo: https://github.com/EcoGRAPH/epidemiar-demo
+#'}
 #'
 #'@export
 #'

@@ -7,6 +7,32 @@
 stss_res_to_output_data(stss_res_list, epi_fc_data, quo_popfield, inc_per,
   quo_groupfield, groupings, report_dates)
 }
+\arguments{
+\item{stss_res_list}{List of sts output object from Farrington algorithm.}
+
+\item{epi_fc_data}{Internal pass of epidemiological data complete with future
+forecast values.}
+
+\item{quo_popfield}{Quosure of user-given field containing population values.}
+
+\item{inc_per}{Number for what unit of population the incidence should be
+reported in, e.g. incidence rate of 3 per 1000 people.}
+
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+
+\item{groupings}{A unique list of the geographic groupings (from groupfield).}
+
+\item{report_dates}{Internally generated set of report date information: min,
+max, list of dates for full report, known epidemiological data period,
+forecast period, and early detection period.}
+}
+\value{
+Returns a list of three series from the Farrington sts result output:
+"ed" : early detection alerts (ed period of most recent epi data)
+"ew" : early warning alerts (forecast/future portion)
+"thresh" : threshold values per week
+}
 \description{
 Formats output data from sts result objects
 }

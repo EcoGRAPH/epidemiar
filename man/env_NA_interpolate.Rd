@@ -2,10 +2,28 @@
 % Please edit documentation in R/cleaners_helpers.R
 \name{env_NA_interpolate}
 \alias{env_NA_interpolate}
-\title{Interpolates missing env data}
+\title{Interpolates missing environmental data.}
 \usage{
 env_NA_interpolate(env_data, quo_obsfield, quo_valuefield, quo_groupfield)
 }
+\arguments{
+\item{env_data}{Input data tibble with environmental data: geographic
+groupings in groupfield, environmental variable identified in obsfield, and
+data values in valuefield. Contains a date column "obs_date".}
+
+\item{quo_obsfield}{Quosure of the user given field that holds the
+environmental variable identifiers/names/IDs.}
+
+\item{quo_valuefield}{Quosure of the user given field that holds the
+environmental variable observation value.}
+
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+}
+\value{
+Same data as env_data, with new interpolated field, val_epidemiar, of
+  the environmental variable data.
+}
 \description{
-Interpolates missing env data
+Interpolates missing environmental data.
 }

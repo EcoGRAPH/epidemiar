@@ -1,8 +1,25 @@
 # All run_epidemiar() subfunctions related to early detection
 
 ## Early Detection
-#' Run event detection algorithm.
-#' Generates three series:
+#'Main subfunction for running event detection algorithm.
+#'
+#'@param epi_fc_data Internal pass of epidemiological data complete with future
+#'  forecast values.
+#'@param quo_popfield Quosure of user-given field containing population values.
+#'@param inc_per Number for what unit of population the incidence should be
+#'  reported in, e.g. incidence rate of 3 per 1000 people.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'@param ed_method Which method for early detection should be used ("Farrington"
+#'  is only current option, or "None").
+#'@param ed_control All parameters for early detection algorithm, passed through
+#'  to that subroutine.
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'
+#'@return Returns a list of three generated series:
 #' "ed" : early detection alerts (ed period of most recent epi data)
 #' "ew" : early warning alerts (forecast/future portion)
 #' "thresh" : threshold values per week
@@ -29,6 +46,25 @@ run_event_detection <- function(epi_fc_data, quo_popfield, inc_per,
 }
 
 #' Run the Farrington early detection algorithm
+#'
+#'@param epi_fc_data Internal pass of epidemiological data complete with future
+#'  forecast values.
+#'@param quo_popfield Quosure of user-given field containing population values.
+#'@param inc_per Number for what unit of population the incidence should be
+#'  reported in, e.g. incidence rate of 3 per 1000 people.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'@param ed_control All parameters for early detection algorithm, passed through
+#'  to that subroutine.
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'
+#'@return Returns a list of three generated series from the Farrington algorithm:
+#' "ed" : early detection alerts (ed period of most recent epi data)
+#' "ew" : early warning alerts (forecast/future portion)
+#' "thresh" : threshold values per week
 #'
 run_farrington <- function(epi_fc_data, quo_popfield, inc_per,
                            quo_groupfield, groupings,
@@ -134,6 +170,16 @@ run_farrington <- function(epi_fc_data, quo_popfield, inc_per,
 
 #' Make the list of sts objects
 #'
+#'@param epi_fc_data Internal pass of epidemiological data complete with future
+#'  forecast values.
+#'@param quo_popfield Quosure of user-given field containing population values.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'
+#'@return A list of surveillance time series (sts) objects,
+#'one for each geographic grouping.
+#'
 make_stss <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings){
   #create a list of surveillance::sts objects, one for each group
   stss <- vector('list', length(groupings))
@@ -172,6 +218,24 @@ make_stss <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings){
 }
 
 #' Formats output data from sts result objects
+#'
+#'@param stss_res_list List of sts output object from Farrington algorithm.
+#'@param epi_fc_data Internal pass of epidemiological data complete with future
+#'  forecast values.
+#'@param quo_popfield Quosure of user-given field containing population values.
+#'@param inc_per Number for what unit of population the incidence should be
+#'  reported in, e.g. incidence rate of 3 per 1000 people.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'
+#'@return Returns a list of three series from the Farrington sts result output:
+#' "ed" : early detection alerts (ed period of most recent epi data)
+#' "ew" : early warning alerts (forecast/future portion)
+#' "thresh" : threshold values per week
 #'
 stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
                                     quo_popfield, inc_per,
@@ -239,9 +303,21 @@ stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
 
 #' Run No outbreak detection algorithm
 #'
+#'@param epi_fc_data Internal pass of epidemiological data complete with future
+#'  forecast values.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'
+#'@return Returns a list of three generated series with all NAs:
+#' "ed" : early detection alerts (ed period of most recent epi data)
+#' "ew" : early warning alerts (forecast/future portion)
+#' "thresh" : threshold values per week
+#'
 run_no_detection <- function(epi_fc_data, quo_groupfield, report_dates){
 
-  #return(NULL) #ugly downstream. Maybe easier if all NA
 
   #early detection (KNOWN - pre-forecast) event detection alert series
   ed_alert_res <- epi_fc_data %>%

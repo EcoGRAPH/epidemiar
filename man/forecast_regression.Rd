@@ -7,6 +7,42 @@
 forecast_regression(epi_lag, quo_groupfield, groupings, env_variables_used,
   req_date, ncores, fit_freq, rpt_start)
 }
+\arguments{
+\item{epi_lag}{Epidemiological dataset with basis spline summaries of the
+lagged environmental data anomalies, as output by lag_environ_to_epi().}
+
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+
+\item{groupings}{A unique list of the geographic groupings (from groupfield).}
+
+\item{env_variables_used}{List of environmental variables that were used in
+the modeling.}
+
+\item{req_date}{The end date of requested forecast regression. When fit_freq
+== "once", this is the last date of the full report, the end date of the
+forecast period.}
+
+\item{ncores}{The number of physical cores to use in parallel processing, set
+in fc_control$ncores, else the max of the number of physical core available
+minus 1, or 1 core.}
+
+\item{fit_freq}{String indicating "once" or "weekly" on how often to fit the
+model - once for the whole report, or every week of the report. Unless
+otherwise needed, the value should be "once", as weekly drastically
+increases processing time.}
+
+\item{rpt_start}{The start date of the requested forecast regression which is
+the earliest date that will be included in the report. Calculated as
+subtracting the number of weeks of known epidemiological period to show
+(which is report_period - forecast_future) from the date of the last known
+epidemiological data.}
+}
+\value{
+Named list containing:
+date_preds: Full forecasted resulting dataset.
+reg_obj: The regression object from modeling.
+}
 \description{
 Run forecast regression
 }

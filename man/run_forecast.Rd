@@ -8,6 +8,67 @@ run_forecast(epi_data, quo_popfield, inc_per, quo_groupfield, groupings,
   env_data, quo_obsfield, quo_valuefield, env_variables, fc_control,
   env_ref_data, env_info, report_dates, week_type)
 }
+\arguments{
+\item{epi_data}{Epidemiological data with case numbers per week, with date
+field "obs_date".}
+
+\item{quo_popfield}{Quosure of user-given field containing population values.}
+
+\item{inc_per}{Number for what unit of population the incidence should be
+reported in, e.g. incidence rate of 3 per 1000 people.}
+
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+
+\item{groupings}{A unique list of the geographic groupings (from groupfield).}
+
+\item{env_data}{Daily environmental data for the same groupfields and date
+range as the epidemiological data. It may contain extra data (other
+districts or date ranges). The data must be in long format (one row for each
+date and environmental variable combination), and must start at absolutel
+minimum \code{laglen} (in \code{fc_control}) days before epi_data for
+forecasting.}
+
+\item{quo_obsfield}{Quosure of user given field name of the environmental data
+variables}
+
+\item{quo_valuefield}{Quosure of user given field name of the value of the
+environmental data variable observations.}
+
+\item{env_variables}{alphabetical list of all unique environmental variables
+present in the original env_data dataset.}
+
+\item{fc_control}{Parameters for forecasting, including which environmental
+variable to include and any geographic clusters.}
+
+\item{env_ref_data}{Historical averages by week of year for environmental
+variables. Used in extended environmental data into the future for long
+forecast time, to calculate anomalies in early detection period, and to
+display on timeseries in reports.}
+
+\item{env_info}{Lookup table for environmental data - reference creation
+method (e.g. sum or mean), report labels, etc.}
+
+\item{report_dates}{Internally generated set of report date information: min,
+max, list of dates for full report, known epidemiological data period,
+forecast period, and early detection period.}
+
+\item{week_type}{String indicating the standard (WHO ISO-8601 or CDC epi
+weeks) that the weeks of the year in epidemiological and environmental
+reference data use ["ISO" or "CDC"].}
+}
+\value{
+Named list containing:
+fc_epi: Full forecasted resulting dataset.
+fc_res: The forecasted series in report format.
+env_data_extd: Data set of the environmental data variables extended into the
+ unknown/future.
+env_variables_used: list of environmental variables that were used in the
+ modeling (had to be both listed in model variables input file and present the
+ env_data dataset)
+env_dt_ranges: Date ranges of the input environmental data.
+reg_obj: The regression object from modeling.
+}
 \description{
 Runs the forecast modeling
 }

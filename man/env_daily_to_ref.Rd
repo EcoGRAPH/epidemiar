@@ -23,9 +23,11 @@ name).}
 \item{valuefield}{Field name of the value of the environmental data variable
 observations (unquoted field name).}
 
-\item{week_type}{The standard (WHO ISO-8601 or CDC epi weeks) that the weeks
-of the year that match with the epidemiological data when running
-run_epidemia().}
+\item{week_type}{String indicating the standard (WHO ISO-8601 or CDC epi
+weeks) that the weeks of the year in epidemiological and environmental
+reference data use ["ISO" or "CDC"]. (Required: epidemiological observation
+dates listed are LAST day of week).Must match with the epidemiological data
+when running run_epidemia().}
 
 \item{env_info}{Lookup table for environmental data - reference creation
 method (e.g. sum or mean) for daily to weekly values.}

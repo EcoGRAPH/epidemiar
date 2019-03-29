@@ -2,10 +2,24 @@
 % Please edit documentation in R/formatters_calculators.R
 \name{create_summary_data}
 \alias{create_summary_data}
-\title{Creates summary data}
+\title{Creates early detection and early warning alerts levels for each geographic group.}
 \usage{
 create_summary_data(ed_res, quo_groupfield, report_dates)
 }
+\arguments{
+\item{ed_res}{Event detection results from run_event_detection().}
+
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+
+\item{report_dates}{Internally generated set of report date information: min,
+max, list of dates for full report, known epidemiological data period,
+forecast period, and early detection period.}
+}
+\value{
+Data set of early detection and early warning alert summaries for each
+ geographic group. Returned as summary_data in the run_epidemia() output.
+}
 \description{
-Creates summary data
+Creates early detection and early warning alerts levels for each geographic group.
 }

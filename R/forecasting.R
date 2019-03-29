@@ -1,8 +1,53 @@
 # All run_epidemiar() subfunctions related to forecasting
-
-
 ## Forecasting
+
 #' Runs the forecast modeling
+#'
+#'@param epi_data Epidemiological data with case numbers per week, with date
+#'  field "obs_date".
+#'@param quo_popfield Quosure of user-given field containing population values.
+#'@param inc_per Number for what unit of population the incidence should be
+#'  reported in, e.g. incidence rate of 3 per 1000 people.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'@param env_data Daily environmental data for the same groupfields and date
+#'  range as the epidemiological data. It may contain extra data (other
+#'  districts or date ranges). The data must be in long format (one row for each
+#'  date and environmental variable combination), and must start at absolutel
+#'  minimum \code{laglen} (in \code{fc_control}) days before epi_data for
+#'  forecasting.
+#'@param quo_obsfield Quosure of user given field name of the environmental data
+#'  variables
+#'@param quo_valuefield Quosure of user given field name of the value of the
+#'  environmental data variable observations.
+#'@param env_variables alphabetical list of all unique environmental variables
+#'  present in the original env_data dataset.
+#'@param fc_control Parameters for forecasting, including which environmental
+#'  variable to include and any geographic clusters.
+#'@param env_ref_data Historical averages by week of year for environmental
+#'  variables. Used in extended environmental data into the future for long
+#'  forecast time, to calculate anomalies in early detection period, and to
+#'  display on timeseries in reports.
+#'@param env_info Lookup table for environmental data - reference creation
+#'  method (e.g. sum or mean), report labels, etc.
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'@param week_type String indicating the standard (WHO ISO-8601 or CDC epi
+#'  weeks) that the weeks of the year in epidemiological and environmental
+#'  reference data use ["ISO" or "CDC"].
+#'
+#'@return Named list containing:
+#'fc_epi: Full forecasted resulting dataset.
+#'fc_res: The forecasted series in report format.
+#'env_data_extd: Data set of the environmental data variables extended into the
+#'  unknown/future.
+#'env_variables_used: list of environmental variables that were used in the
+#'  modeling (had to be both listed in model variables input file and present the
+#'  env_data dataset)
+#'env_dt_ranges: Date ranges of the input environmental data.
+#'reg_obj: The regression object from modeling.
 #'
 run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupings,
                          env_data, quo_obsfield, quo_valuefield, env_variables,
@@ -112,9 +157,21 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
 }
 
 #forecasting helper functions
-# this creates a modified b-spline basis, which is still (piecewise) polynomial, so
-# we will keep this name
-#' Truncates poly
+# this creates a modified b-spline basis (which is a piecewise polynomial)
+
+#' Truncates poly. Creates a modified b-spline basis.
+#'
+#' The modified basis splines are used to capture any long term trends per
+#' geographic group.
+#'
+#'@param x Vector of weekly observation dates.
+#'@param degree Degree passed to splines::bs().
+#'@param maxobs Date of the last known value.
+#'@param minobs Date of the first known value.
+#'
+#'@returna A modified b-spline basis with the last basis splines reversed and
+#'  the second to last basis spline function removed (to reduce the edge effects
+#'  of using splines).
 #'
 truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
 
@@ -169,7 +226,22 @@ truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
 
 }
 
-#' Pull only model env variables
+#' Pull only model env variables.
+#'
+#'@param env_data Daily environmental data for the same groupfields and date
+#'  range as the epidemiological data. It may contain extra data (other
+#'  districts or date ranges). The data must be in long format (one row for each
+#'  date and environmental variable combination), and must start at absolutel
+#'  minimum \code{laglen} (in \code{fc_control}) days before epi_data for
+#'  forecasting.
+#'@param quo_obsfield Quosure of user given field name of the environmental data
+#'  variables
+#'@param fc_control Parameters for forecasting, including which environmental
+#'  variable to include and any geographic clusters.
+#'
+#'@return List of environmental variables that were used in the
+#'  modeling (had to be both listed in model variables input file and present the
+#'  env_data dataset).
 #'
 pull_model_envvars <- function(env_data, quo_obsfield, fc_control){
 
@@ -181,7 +253,44 @@ pull_model_envvars <- function(env_data, quo_obsfield, fc_control){
     dplyr::filter(!!quo_obsfield %in% model_vars)
 }
 
-#' Extend environmental data into the future
+#' Extend environmental data into the future.
+#'
+#'@param env_data Daily environmental data for the same groupfields and date
+#'  range as the epidemiological data. It may contain extra data (other
+#'  districts or date ranges). The data must be in long format (one row for each
+#'  date and environmental variable combination), and must start at absolutel
+#'  minimum \code{laglen} (in \code{fc_control}) days before epi_data for
+#'  forecasting.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'@param quo_obsfield Quosure of user given field name of the environmental data
+#'  variables
+#'@param quo_valuefield Quosure of user given field name of the value of the
+#'  environmental data variable observations.
+#'@param env_ref_data Historical averages by week of year for environmental
+#'  variables. Used in extended environmental data into the future for long
+#'  forecast time, to calculate anomalies in early detection period, and to
+#'  display on timeseries in reports.
+#'@param env_info Lookup table for environmental data - reference creation
+#'  method (e.g. sum or mean), report labels, etc.
+#'@param env_variables_used List of environmental variables that were used in
+#'  the modeling
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'@param week_type String indicating the standard (WHO ISO-8601 or CDC epi
+#'  weeks) that the weeks of the year in epidemiological and environmental
+#'  reference data use ["ISO" or "CDC"].
+#'
+#'@return Environmental dataset, with data extended into the future forecast
+#'  period. Unknown environmental data in known epidemiological data period is
+#'  filled in with last known data (i.e. "persistence" method, using the mean of
+#'  the previous week of known data). In the forecast portion, if there are four
+#'  or fewer weeks unknown, then it is also filled in with persistence method.
+#'  If in the forecast portion, there is more than four weeks unknown, the
+#'  values are filled in using a progressive blend of the the mean of the last
+#'  known week and the historical means.
 #'
 extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield, quo_valuefield,
                               env_ref_data, env_info, env_variables_used, report_dates, week_type){
@@ -362,7 +471,20 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
   extended_env_fill
 }
 
-#' Calculate mean of last week env values
+#' Calculate mean of last week environmental values.
+#'
+#'@param env_df An environmental dataset with NA values at the end of known data.
+#'@param env_variables_used List of environmental variables that were used in
+#'  the modeling.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param quo_obsfield Quosure of user given field name of the environmental data
+#'  variables.
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'
+#'@return Data table. The first NA slot of an environmental variable per
+#'  grouping is filled in with the mean of the previous week of daily
+#'  environmental data.
 #'
 env_last_week_mean <- function(env_df, env_variables_used, quo_groupfield, quo_obsfield, groupings){
   #gets mean of previous week of daily env data, puts in first NA slot
@@ -394,7 +516,19 @@ env_last_week_mean <- function(env_df, env_variables_used, quo_groupfield, quo_o
   env_mean
 }
 
-#' Fill env data down
+#' Fill environmental data down (i.e. persistence method to imput data)
+#'
+#'@param env_df An environmental dataset with NA values at the end of known data.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param quo_obsfield Quosure of user given field name of the environmental data
+#'  variables.
+#'@param quo_valuefield Quosure of user given field name of the value of the
+#'  environmental data variable observations.
+#'
+#'@return Environmental data. Any NA values at the end of known data series are
+#'  filled in with the last non-NA value, per grouping, per environmental
+#'  variable.
 #'
 env_fill_down <- function(env_df, quo_groupfield, quo_obsfield, quo_valuefield){
   #to fill down values (except for original value field) for remaining length of dataset given
@@ -408,7 +542,21 @@ env_fill_down <- function(env_df, quo_groupfield, quo_obsfield, quo_valuefield){
   env_filled
 }
 
-#' Extend epidemiology dataframe into future
+#' Extend epidemiology dataframe into future.
+#'
+#'@param epi_data Epidemiological data with case numbers per week, with date
+#'  field "obs_date".
+#'@param quo_popfield Quosure of user-given field containing population values.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'
+#'@return Epidemiological dataset extended past the known epi data time range
+#'  and into the future/forecast period. Case numbers are filled in the NA (to
+#'  be forecasted), and the population is estimated in a persistence method.
 #'
 extend_epi_future <- function(epi_data, quo_popfield, quo_groupfield, groupings, report_dates){
   #extended epi data into future dates
@@ -431,6 +579,16 @@ extend_epi_future <- function(epi_data, quo_popfield, quo_groupfield, groupings,
 
 #' Format env data for modeling
 #'
+#'@param env_data_extd An environmental dataset extended into the
+#'  future/forecast period with estimated values for the environmental
+#'  variables.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param quo_obsfield Quosure of user given field name of the environmental data
+#'  variables.
+#'
+#'@return An environmental dataset formatted to pass over to BAM/GAM modeling.
+#'
 env_format_fc <- function(env_data_extd, quo_groupfield, quo_obsfield){
   #turns long format into wide format - one entry per day per group
   #1: groupfield, 2: Date, 3: numericdate, 4+: env var (column name is env name)
@@ -443,6 +601,15 @@ env_format_fc <- function(env_data_extd, quo_groupfield, quo_obsfield){
 }
 
 #' Format epi data for modeling
+#'
+#'@param epi_data_extd An epidemiological dataset extended into the
+#'  future/forecast period with NA values for to-be-forecasted case numbers.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param fc_control Parameters for forecasting, including which environmental
+#'  variable to include and any geographic clusters.
+#'
+#'@return An epidemiological dataset formatted to pass over to BAM/GAM modeling.
 #'
 epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
 
@@ -461,7 +628,25 @@ epi_format_fc <- function(epi_data_extd, quo_groupfield, fc_control){
   epi_format
 }
 
-#' Convert environmental data into anomalies
+#' Convert environmental data into anomalies.
+#'
+#' Raw environmental values are not used in modeling, but rather their
+#' anomalies, departures for the historical "normal". We are looking at the
+#' influence of deviation from normal in the environmental factors to help
+#' explain deviations from normal in the human cases.
+#'
+#'@param env_fc Environmental data formatted for forecasting by env_format_fc().
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param env_variables_used List of environmental variables that were used in
+#'  the modeling.
+#'@param ncores The number of physical cores to use in parallel processing, set
+#'  in fc_control$ncores, else the max of the number of physical core available
+#'  minus 1, or 1 core.
+#'
+#'@return Environmental dataset in same format as env_fc but with the residuals
+#'  from a GAM with geographic unit and cyclical cubic regression spline on day
+#'  of year per geographic group in place of the original raw values.
 #'
 anomalize_env <- function(env_fc, quo_groupfield, env_variables_used, ncores) {
 
@@ -514,7 +699,23 @@ anomalize_env <- function(env_fc, quo_groupfield, env_variables_used, ncores) {
 
 }
 
-#' Lag the env data
+#' Lag the environmental data.
+#'
+#'@param epi_fc An epidemiological dataset extended into the
+#'  future/forecast period with NA values for to-be-forecasted case numbers,
+#'  as formatted for forecasting by epi_format_fc().
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'@param env_fc Environmental data formatted for forecasting by env_format_fc().
+#'@param env_variables_used List of environmental variables that were used in
+#'  the modeling.
+#'@param laglen The maximum number of days in the past to consider interactions
+#'  between the environmental variable anomalies and the disease case counts.
+#'
+#'@return Wide dataset based on epidemiological data dates with five
+#'  bandsummaries per environmental variable, from the basis spline summaries of
+#'  the lagged environmental variable.
 #'
 lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
                                env_fc, env_variables_used, laglen){
@@ -599,6 +800,34 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 }
 
 #' Run forecast regression
+#'
+#'@param epi_lag Epidemiological dataset with basis spline summaries of the
+#'  lagged environmental data anomalies, as output by lag_environ_to_epi().
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'@param env_variables_used List of environmental variables that were used in
+#'  the modeling.
+#'@param req_date The end date of requested forecast regression. When fit_freq
+#'  == "once", this is the last date of the full report, the end date of the
+#'  forecast period.
+#'@param ncores The number of physical cores to use in parallel processing, set
+#'  in fc_control$ncores, else the max of the number of physical core available
+#'  minus 1, or 1 core.
+#'@param fit_freq String indicating "once" or "weekly" on how often to fit the
+#'  model - once for the whole report, or every week of the report. Unless
+#'  otherwise needed, the value should be "once", as weekly drastically
+#'  increases processing time.
+#'@param rpt_start The start date of the requested forecast regression which is
+#'  the earliest date that will be included in the report. Calculated as
+#'  subtracting the number of weeks of known epidemiological period to show
+#'  (which is report_period - forecast_future) from the date of the last known
+#'  epidemiological data.
+#'
+#'@return Named list containing:
+#'date_preds: Full forecasted resulting dataset.
+#'reg_obj: The regression object from modeling.
+#'
 #'
 forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                                 env_variables_used, req_date, ncores,

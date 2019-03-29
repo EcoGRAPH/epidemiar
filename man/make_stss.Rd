@@ -6,6 +6,21 @@
 \usage{
 make_stss(epi_fc_data, quo_popfield, quo_groupfield, groupings)
 }
+\arguments{
+\item{epi_fc_data}{Internal pass of epidemiological data complete with future
+forecast values.}
+
+\item{quo_popfield}{Quosure of user-given field containing population values.}
+
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+
+\item{groupings}{A unique list of the geographic groupings (from groupfield).}
+}
+\value{
+A list of surveillance time series (sts) objects,
+one for each geographic grouping.
+}
 \description{
 Make the list of sts objects
 }

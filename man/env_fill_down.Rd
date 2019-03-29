@@ -2,10 +2,27 @@
 % Please edit documentation in R/forecasting.R
 \name{env_fill_down}
 \alias{env_fill_down}
-\title{Fill env data down}
+\title{Fill environmental data down (i.e. persistence method to imput data)}
 \usage{
 env_fill_down(env_df, quo_groupfield, quo_obsfield, quo_valuefield)
 }
+\arguments{
+\item{env_df}{An environmental dataset with NA values at the end of known data.}
+
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+
+\item{quo_obsfield}{Quosure of user given field name of the environmental data
+variables.}
+
+\item{quo_valuefield}{Quosure of user given field name of the value of the
+environmental data variable observations.}
+}
+\value{
+Environmental data. Any NA values at the end of known data series are
+ filled in with the last non-NA value, per grouping, per environmental
+ variable.
+}
 \description{
-Fill env data down
+Fill environmental data down (i.e. persistence method to imput data)
 }

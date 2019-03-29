@@ -6,6 +6,20 @@
 \usage{
 env_format_fc(env_data_extd, quo_groupfield, quo_obsfield)
 }
+\arguments{
+\item{env_data_extd}{An environmental dataset extended into the
+future/forecast period with estimated values for the environmental
+variables.}
+
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+
+\item{quo_obsfield}{Quosure of user given field name of the environmental data
+variables.}
+}
+\value{
+An environmental dataset formatted to pass over to BAM/GAM modeling.
+}
 \description{
 Format env data for modeling
 }

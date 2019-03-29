@@ -1,5 +1,9 @@
 #' Adds ISO or CDC datefields to a data set with a "obs_date" (Date) field
 #'
+#' @param df Data table or tibble with a field named "obs_date"
+#' @param type String to indicate whether to use "ISO" ISO-8601 week of year
+#'   (used by WHO) or "CDC" epi weeks.
+#'
 #' @return dataframe (or tibble) with week and year fields added
 #'
 #' @export

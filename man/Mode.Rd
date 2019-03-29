@@ -15,7 +15,8 @@ Mode(x, na.rm = FALSE)
 A vector of length 1 and the same class as \code{x}.
 }
 \description{
-Calculate the mode of a set of values, for numeric or character/factor data. In ties, returns the first tied value.
+Calculate the mode of a set of values, for numeric or character/factor data.
+In ties, returns the first tied value.
 }
 \examples{
 Mode(c(1,1,2,3))

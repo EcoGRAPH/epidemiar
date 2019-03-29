@@ -7,6 +7,33 @@
 run_farrington(epi_fc_data, quo_popfield, inc_per, quo_groupfield,
   groupings, ed_control, report_dates)
 }
+\arguments{
+\item{epi_fc_data}{Internal pass of epidemiological data complete with future
+forecast values.}
+
+\item{quo_popfield}{Quosure of user-given field containing population values.}
+
+\item{inc_per}{Number for what unit of population the incidence should be
+reported in, e.g. incidence rate of 3 per 1000 people.}
+
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+
+\item{groupings}{A unique list of the geographic groupings (from groupfield).}
+
+\item{ed_control}{All parameters for early detection algorithm, passed through
+to that subroutine.}
+
+\item{report_dates}{Internally generated set of report date information: min,
+max, list of dates for full report, known epidemiological data period,
+forecast period, and early detection period.}
+}
+\value{
+Returns a list of three generated series from the Farrington algorithm:
+"ed" : early detection alerts (ed period of most recent epi data)
+"ew" : early warning alerts (forecast/future portion)
+"thresh" : threshold values per week
+}
 \description{
 Run the Farrington early detection algorithm
 }

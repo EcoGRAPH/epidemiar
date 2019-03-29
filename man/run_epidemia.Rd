@@ -21,18 +21,26 @@ counts (unquoted field name).}
 numbers over time (unquoted field name). Used to calculated incidence. Also
 optionally used in Farrington method for populationOffset.}
 
+\item{inc_per}{Number for what unit of population the incidence should be
+reported in, e.g. incidence rate of 3 per 1000 people.}
+
 \item{groupfield}{The column name of the field for district or geographic area
 unit division names of epidemiological AND environmental data (unquoted
 field name). If there are no groupings (all one area), user should give a
 field that contains the same value throughout.}
 
-\item{week_type}{The standard (WHO ISO-8601 or CDC epi weeks) that the weeks
-of the year in epidemiological and environmental reference data use
-(required: dates listed are LAST day of week).}
+\item{week_type}{String indicating the standard (WHO ISO-8601 or CDC epi
+weeks) that the weeks of the year in epidemiological and environmental
+reference data use ["ISO" or "CDC"]. (Required: epidemiological observation
+dates listed are LAST day of week).}
 
 \item{report_period}{The number of weeks that the entire report will cover.
 The \code{report_period} minus \code{forecast_future} is the number of weeks
 of past (known) data that will be included.}
+
+\item{ed_summary_period}{The number of weeks that will be considered the "early
+detection period". It will count back from the week of last known
+epidemiological data.}
 
 \item{ed_method}{Which method for early detection should be used ("Farrington"
 is only current option, or "None").}
@@ -43,8 +51,9 @@ to that subroutine.}
 \item{env_data}{Daily environmental data for the same groupfields and date
 range as the epidemiological data. It may contain extra data (other
 districts or date ranges). The data must be in long format (one row for each
-date and environmental variable combination), and must start \code{laglen}
-(in \code{fc_control}) days before epi_data for forecasting.}
+date and environmental variable combination), and must start at absolutel
+minimum \code{laglen} (in \code{fc_control}) days before epi_data for
+forecasting.}
 
 \item{obsfield}{Field name of the environmental data variables (unquoted field
 name).}
@@ -65,10 +74,6 @@ display on timeseries in reports.}
 
 \item{env_info}{Lookup table for environmental data - reference creation
 method (e.g. sum or mean), report labels, etc.}
-
-\item{detection_period}{The number of weeks that will be considered the "early
-detection period". It will count back from the week of last known
-epidemiological data.}
 }
 \value{
 Returns a suite of summary and report data.

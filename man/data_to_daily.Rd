@@ -2,12 +2,27 @@
 % Please edit documentation in R/data_to_daily.R
 \name{data_to_daily}
 \alias{data_to_daily}
-\title{With any interval or missing data, converts into daily values
-with optional linear interpolation}
+\title{Converts non-daily data to daily data, with optional interpolation}
 \usage{
 data_to_daily(data_notdaily, valuefield, interpolate = TRUE)
 }
+\arguments{
+\item{data_notdaily}{Input dataset with values in valuefield, and date field
+in "obs_date". Function will group on all other fields present and create
+combinations of those plus the date.}
+
+\item{valuefield}{Field that the observation values are in.}
+
+\item{interpolate}{Logical to whether or not interpolate all NAs in dataset
+before returning.}
+}
+\value{
+Returns tibble expanded to have either explicit missing, or linearly
+  interpolated values for every date from the minimum to maximum dates in the
+  original dataset.
+}
 \description{
-With any interval or missing data, converts into daily values
-with optional linear interpolation
+Takes in a dataset with implicit missing data (missing rows) or interval data
+and expands it into daily data, filling in with NAs, and then optionally
+linearly interpolating all NA values.
 }

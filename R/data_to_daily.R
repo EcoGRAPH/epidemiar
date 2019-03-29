@@ -1,6 +1,20 @@
-## Converts data to daily data
-#' With any interval or missing data, converts into daily values
-#' with optional linear interpolation
+#' Converts non-daily data to daily data, with optional interpolation
+#'
+#' Takes in a dataset with implicit missing data (missing rows) or interval data
+#' and expands it into daily data, filling in with NAs, and then optionally
+#' linearly interpolating all NA values.
+#'
+#' @param data_notdaily Input dataset with values in valuefield, and date field
+#'   in "obs_date". Function will group on all other fields present and create
+#'   combinations of those plus the date.
+#' @param valuefield Field that the observation values are in.
+#' @param interpolate Logical to whether or not interpolate all NAs in dataset
+#'   before returning.
+#'
+#' @return Returns tibble expanded to have either explicit missing, or linearly
+#'   interpolated values for every date from the minimum to maximum dates in the
+#'   original dataset.
+#'
 #' @export
 #'
 data_to_daily <- function(data_notdaily, valuefield, interpolate = TRUE){

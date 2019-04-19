@@ -1,12 +1,21 @@
 ---
 title: "Output Data"
-author: "Dawn M. Nekorchuk"
-date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+author: |
+  | Dawn Nekorchuk, Michael Wimberly, and EPIDEMIA Team Members
+  | Department of Geography and Environmental Sustainability, University of Oklahoma
+  | dawn.nekorchuk@ou.edu; mcwimberly@ou.edu
+date: "Updated `r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  rmarkdown::html_vignette:
+   fig_caption: yes
+  pdf_document:
+   toc: true
+   toc_depth: 2
+   number_sections: true
 vignette: >
   %\VignetteIndexEntry{Output Data}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
 ---
 
 ```{r setup, include = FALSE}

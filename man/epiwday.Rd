@@ -10,6 +10,11 @@ epiwday(x, system = "ISO")
 \item{x}{a date-time object. Must be a POSIXct, POSIXlt, Date, chron,
 yearmon, yearqtr, zoo, zooreg, timeDate, xts, its, ti, jul, timeSeries, or
 fts object.}
+
+\item{system}{String indicating the standard (WHO ISO-8601 or CDC epi
+weeks) that the weeks of the year in epidemiological and environmental
+reference data use ["ISO" or "CDC"]. (Required: epidemiological observation
+dates listed are LAST day of week).#'}
 }
 \value{
 The weekday number (1--7) as an integer vector.
@@ -23,7 +28,7 @@ The WHO system uses the ISO 8601 standard in which weeks start on Monday,
 while in the CDC system weeks start on Sunday.
 }
 \examples{
-#' epiwday(as.Date("2005-01-01")) # 6
+epiwday(as.Date("2005-01-01")) # 6
 epiwday(as.Date("2005-01-01"), system = "ISO") # 6
 epiwday(as.Date("2005-01-01"), system = "CDC") # 7
 

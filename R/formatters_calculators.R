@@ -1,7 +1,33 @@
 #Formatting and Report section data calculators
 
 ## Environmental Data for report
-#' Formats env data for report
+#' Formats environmental data for report timeseries.
+#'
+#'@param env_ext_data An environmental dataset extended into the
+#'  future/forecast period with estimated values for the environmental
+#'  variables. The env_data_extd object returned by run_forecast().
+#'@param env_ref_data Historical averages by week of year for environmental
+#'  variables. Used in extended environmental data into the future for long
+#'  forecast time, to calculate anomalies in early detection period, and to
+#'  display on timeseries in reports.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param quo_obsfield Quosure of user given field name of the environmental data
+#'  variables
+#'@param env_used List of environmental variables that were used in
+#'  the modeling.
+#'@param env_info Lookup table for environmental data - reference creation
+#'  method (e.g. sum or mean), report labels, etc.
+#'@param week_type String indicating the standard (WHO ISO-8601 or CDC epi
+#'  weeks) that the weeks of the year in epidemiological and environmental
+#'  reference data use ["ISO" or "CDC"].
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'
+#'@return Data set of multiple timeseries for the used environmental variables
+#'  during the report period for each geographic unit. Returned as
+#'  environ_timeseries in the run_epidemia() output.
 #'
 environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
                                   quo_obsfield, env_used, env_info,
@@ -52,12 +78,12 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
 
   # add climatology data
   # climatology is based on week number
-  #   (hopefully set up with the same type as was selected when ref data was created, will add checks)
+  #   (should have been set up with the same week type as was selected when ref data was created)
   environ_timeseries <- environ_timeseries %>%
     #join
     dplyr::left_join(env_ref_varused %>%
                        dplyr::select(!!quo_obsfield, !!quo_groupfield, week_epidemiar,
-                                     ref_value, ref_sd, ref_median, ref_uq, ref_lq),
+                                     ref_value, starts_with("ref_")),
                      #NSE fun
                      by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
                                              rlang::quo_name(quo_obsfield),
@@ -69,7 +95,17 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
 
 
 ## Setting up summary data
-#' Creates summary data
+#' Creates early detection and early warning alerts levels for each geographic group.
+#'
+#'@param ed_res Event detection results from run_event_detection().
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'
+#'@return Data set of early detection and early warning alert summaries for each
+#'  geographic group. Returned as summary_data in the run_epidemia() output.
 #'
 create_summary_data <- function(ed_res, quo_groupfield, report_dates){
 
@@ -85,7 +121,7 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
     #group (because need to look at period per group level)
     dplyr::group_by(!!quo_groupfield) %>%
     #summarize to 1 obs per grouping
-    dplyr::summarize(ed_alert_count = sum(value, na.rm = TRUE)) %>%
+    dplyr::summarize(ed_alert_count = if_else(all(is.na(value)), NA_real_, sum(value, na.rm = TRUE))) %>%
     # create 3 levels (0, 1, 2 = >1)
     dplyr::mutate(warning_level = if_else(ed_alert_count > 1, 2, ed_alert_count),
                   #factor to label
@@ -106,7 +142,7 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
     #group
     dplyr::group_by(!!quo_groupfield) %>%
     #summarize to 1 obs per grouping
-    dplyr::summarize(ew_alert_count = sum(value, na.rm = TRUE)) %>%
+    dplyr::summarize(ew_alert_count = if_else(all(is.na(value)), NA_real_, sum(value, na.rm = TRUE))) %>%
     # create 3 levels (0, 1, 2 = >1)
     dplyr::mutate(warning_level = if_else(ew_alert_count > 1, 2, ew_alert_count),
                   #factor to label
@@ -125,7 +161,17 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
   summary_data
 }
 
-#' Creates summary of incidence in ED period
+#' Creates summary of disease incidence in early detection period.
+#'
+#'@param obs_res Formatted dataset of observed disease incidence.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'
+#'@return Mean disease incidence per geographic group during the early detection
+#'  period, returned as epi_summary in the run_epidemia() ouput.
 #'
 create_epi_summary <- function(obs_res, quo_groupfield, report_dates){
   #using obs_res - if cases/incidence becomes a user set choice, this might make it easier (value is already what it needs to be)
@@ -142,10 +188,23 @@ create_epi_summary <- function(obs_res, quo_groupfield, report_dates){
 }
 
 
-
-
 ## Calculate anomalies
-#' Calculates anomalies
+#' Calculates and summarizes environmental anomalies in the early detection period.
+#'
+#'@param env_ts Environmental timeseries dataset as output from environ_report_format().
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param quo_obsfield Quosure of user given field name of the environmental data
+#'  variables.
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'
+#' @return These data are the recent (during the early detection period)
+#'   differences (anomalies) of the environmental variable values from the
+#'   climatology/reference mean. Note: these are not the same as daily
+#'   environmental anomalies calculated as residuals from GAM in anomalize_env()
+#'   as part of forecasting.
 #'
 calc_env_anomalies <- function(env_ts, quo_groupfield, quo_obsfield, report_dates){
   # anomalies

@@ -6,6 +6,12 @@
 \usage{
 add_datefields(df, type = "ISO")
 }
+\arguments{
+\item{df}{Data table or tibble with a field named "obs_date"}
+
+\item{type}{String to indicate whether to use "ISO" ISO-8601 week of year
+(used by WHO) or "CDC" epi weeks.}
+}
 \value{
 dataframe (or tibble) with week and year fields added
 }

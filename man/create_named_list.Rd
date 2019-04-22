@@ -2,10 +2,21 @@
 % Please edit documentation in R/cleaners_helpers.R
 \name{create_named_list}
 \alias{create_named_list}
-\title{Create a named list}
+\title{Create a named list.}
 \usage{
 create_named_list(...)
 }
+\arguments{
+\item{...}{List of objects, named or not, to be included in the fully named
+list.}
+}
 \description{
-Create a named list
+Creates a named list from the user given items. Will preserve the names of
+items that already have names.
+}
+\examples{
+a <- list("a", "aa", "aaa")
+b <- data.frame(x = 1:4, y = 5:8)
+create_named_list(a, b, c = rep(1:4))
+
 }

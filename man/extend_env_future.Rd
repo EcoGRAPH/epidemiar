@@ -2,12 +2,60 @@
 % Please edit documentation in R/forecasting.R
 \name{extend_env_future}
 \alias{extend_env_future}
-\title{Extend environmental data into the future}
+\title{Extend environmental data into the future.}
 \usage{
 extend_env_future(env_data, quo_groupfield, groupings, quo_obsfield,
   quo_valuefield, env_ref_data, env_info, env_variables_used, report_dates,
   week_type)
 }
+\arguments{
+\item{env_data}{Daily environmental data for the same groupfields and date
+range as the epidemiological data. It may contain extra data (other
+districts or date ranges). The data must be in long format (one row for each
+date and environmental variable combination), and must start at absolutel
+minimum \code{laglen} (in \code{fc_control}) days before epi_data for
+forecasting.}
+
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+
+\item{groupings}{A unique list of the geographic groupings (from groupfield).}
+
+\item{quo_obsfield}{Quosure of user given field name of the environmental data
+variables}
+
+\item{quo_valuefield}{Quosure of user given field name of the value of the
+environmental data variable observations.}
+
+\item{env_ref_data}{Historical averages by week of year for environmental
+variables. Used in extended environmental data into the future for long
+forecast time, to calculate anomalies in early detection period, and to
+display on timeseries in reports.}
+
+\item{env_info}{Lookup table for environmental data - reference creation
+method (e.g. sum or mean), report labels, etc.}
+
+\item{env_variables_used}{List of environmental variables that were used in
+the modeling}
+
+\item{report_dates}{Internally generated set of report date information: min,
+max, list of dates for full report, known epidemiological data period,
+forecast period, and early detection period.}
+
+\item{week_type}{String indicating the standard (WHO ISO-8601 or CDC epi
+weeks) that the weeks of the year in epidemiological and environmental
+reference data use ["ISO" or "CDC"].}
+}
+\value{
+Environmental dataset, with data extended into the future forecast
+ period. Unknown environmental data in known epidemiological data period is
+ filled in with last known data (i.e. "persistence" method, using the mean of
+ the previous week of known data). In the forecast portion, if there are four
+ or fewer weeks unknown, then it is also filled in with persistence method.
+ If in the forecast portion, there is more than four weeks unknown, the
+ values are filled in using a progressive blend of the the mean of the last
+ known week and the historical means.
+}
 \description{
-Extend environmental data into the future
+Extend environmental data into the future.
 }

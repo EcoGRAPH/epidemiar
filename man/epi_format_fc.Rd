@@ -6,6 +6,19 @@
 \usage{
 epi_format_fc(epi_data_extd, quo_groupfield, fc_control)
 }
+\arguments{
+\item{epi_data_extd}{An epidemiological dataset extended into the
+future/forecast period with NA values for to-be-forecasted case numbers.}
+
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+
+\item{fc_control}{Parameters for forecasting, including which environmental
+variable to include and any geographic clusters.}
+}
+\value{
+An epidemiological dataset formatted to pass over to BAM/GAM modeling.
+}
 \description{
 Format epi data for modeling
 }

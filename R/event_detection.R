@@ -1,10 +1,30 @@
 # All run_epidemiar() subfunctions related to early detection
 
 ## Early Detection
-#' Run early detection algorithm
+#'Main subfunction for running event detection algorithm.
 #'
+#'@param epi_fc_data Internal pass of epidemiological data complete with future
+#'  forecast values.
+#'@param quo_popfield Quosure of user-given field containing population values.
+#'@param inc_per Number for what unit of population the incidence should be
+#'  reported in, e.g. incidence rate of 3 per 1000 people.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'@param ed_method Which method for early detection should be used ("Farrington"
+#'  is only current option, or "None").
+#'@param ed_control All parameters for early detection algorithm, passed through
+#'  to that subroutine.
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
 #'
-run_early_detection <- function(epi_fc_data, quo_popfield, inc_per,
+#'@return Returns a list of three generated series:
+#' "ed" : early detection alerts (ed period of most recent epi data)
+#' "ew" : early warning alerts (forecast/future portion)
+#' "thresh" : threshold values per week
+#'
+run_event_detection <- function(epi_fc_data, quo_popfield, inc_per,
                                 quo_groupfield, groupings,
                                 ed_method, ed_control, report_dates){
   message("Running early detection")
@@ -12,14 +32,39 @@ run_early_detection <- function(epi_fc_data, quo_popfield, inc_per,
   #only supporting Farrington Improved method from Surveillance right now,
   #leaving option open for expanding later
   if (ed_method == "Farrington") {
+
     ed_far_res <- run_farrington(epi_fc_data, quo_popfield, inc_per,
                                  quo_groupfield, groupings,
                                  ed_control, report_dates)
     return(ed_far_res)
-  } else stop("Early Detection method not supported")
+
+  } else if (ed_method == "None") {
+
+    ed_far_res <- run_no_detection(epi_fc_data, quo_groupfield, report_dates)
+
+  } else stop("Early Detection/Warning method not supported")
 }
 
 #' Run the Farrington early detection algorithm
+#'
+#'@param epi_fc_data Internal pass of epidemiological data complete with future
+#'  forecast values.
+#'@param quo_popfield Quosure of user-given field containing population values.
+#'@param inc_per Number for what unit of population the incidence should be
+#'  reported in, e.g. incidence rate of 3 per 1000 people.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'@param ed_control All parameters for early detection algorithm, passed through
+#'  to that subroutine.
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'
+#'@return Returns a list of three generated series from the Farrington algorithm:
+#' "ed" : early detection alerts (ed period of most recent epi data)
+#' "ew" : early warning alerts (forecast/future portion)
+#' "thresh" : threshold values per week
 #'
 run_farrington <- function(epi_fc_data, quo_popfield, inc_per,
                            quo_groupfield, groupings,
@@ -43,15 +88,6 @@ run_farrington <- function(epi_fc_data, quo_popfield, inc_per,
 
   #get evaluation period (range of row numbers)
   far_control[["range"]] <- seq(nrow(epi_stss[[1]]) - length(report_dates$full$seq) + 1, nrow(epi_stss[[1]]))
-
-  #set number of years to go back in time
-  # allow user set b, else calculate maximum number of years previous data available
-  if (is.null(ed_control[["b"]])){
-    #probably more properly done with isoyears and isoweeks, honestly.  <<>>
-    daydiff <- difftime(report_dates$full$min, min(epi_fc_data$obs_date), "days") %>% as.numeric()
-    far_control[["b"]] <- floor(daydiff / 365.242)
-
-  } else far_control[["b"]] <- ed_control[["b"]]
 
   #test for all other parameters that can be passed onto Farrington flexible method
   # if not null, use user parameter, otherwise leave as null to use its defaults
@@ -95,6 +131,29 @@ run_farrington <- function(epi_fc_data, quo_popfield, inc_per,
     far_control[["thresholdMethod"]] <- ed_control[["thresholdMethod"]]
   }
 
+  #set number of years to go back in time
+  # allow user set b, else calculate maximum number of years previous data available
+  # includes allowance for window value, w # of weeks
+  if (is.null(ed_control[["b"]])){
+
+    #subtract window to earliest report date
+    #    this will appropriately increase the amount of time needed without altering the actual available data date
+    #    allow default w=3
+    if (!is.null(ed_control[["w"]])){
+      adjdt <- report_dates$full$min - lubridate::weeks(ed_control[["w"]])
+    } else adjdt <- report_dates$full$min - lubridate::weeks(3)
+
+    #calculate number of years difference between earliest available data date and adjusted report date "start"
+    #    using interval(), because this allows time_lenth() to deal with leap years, etc.
+    yrdiff <- lubridate::interval(min(epi_fc_data$obs_date), adjdt) %>%
+      lubridate::time_length(unit = "years")
+
+    #get the minimum integer year value to feed to Farrington control (cannot round up, must only request data that exists)
+    far_control[["b"]] <- floor(yrdiff)
+
+  } else far_control[["b"]] <- ed_control[["b"]]
+
+
   #run Farringtons
   far_res_list <- vector('list', length(epi_stss))
   for (i in 1:length(epi_stss)){
@@ -110,6 +169,16 @@ run_farrington <- function(epi_fc_data, quo_popfield, inc_per,
 }
 
 #' Make the list of sts objects
+#'
+#'@param epi_fc_data Internal pass of epidemiological data complete with future
+#'  forecast values.
+#'@param quo_popfield Quosure of user-given field containing population values.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'
+#'@return A list of surveillance time series (sts) objects,
+#'one for each geographic grouping.
 #'
 make_stss <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings){
   #create a list of surveillance::sts objects, one for each group
@@ -149,6 +218,24 @@ make_stss <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings){
 }
 
 #' Formats output data from sts result objects
+#'
+#'@param stss_res_list List of sts output object from Farrington algorithm.
+#'@param epi_fc_data Internal pass of epidemiological data complete with future
+#'  forecast values.
+#'@param quo_popfield Quosure of user-given field containing population values.
+#'@param inc_per Number for what unit of population the incidence should be
+#'  reported in, e.g. incidence rate of 3 per 1000 people.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'
+#'@return Returns a list of three series from the Farrington sts result output:
+#' "ed" : early detection alerts (ed period of most recent epi data)
+#' "ew" : early warning alerts (forecast/future portion)
+#' "thresh" : threshold values per week
 #'
 stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
                                     quo_popfield, inc_per,
@@ -212,4 +299,60 @@ stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
   ed <- rbind(ed_alert_res, ew_alert_res, ed_thresh_res)
 
   ed
+}
+
+#' Run No outbreak detection algorithm
+#'
+#'@param epi_fc_data Internal pass of epidemiological data complete with future
+#'  forecast values.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'
+#'@return Returns a list of three generated series with all NAs:
+#' "ed" : early detection alerts (ed period of most recent epi data)
+#' "ew" : early warning alerts (forecast/future portion)
+#' "thresh" : threshold values per week
+#'
+run_no_detection <- function(epi_fc_data, quo_groupfield, report_dates){
+
+
+  #early detection (KNOWN - pre-forecast) event detection alert series
+  ed_alert_res <- epi_fc_data %>%
+    dplyr::filter(obs_date %in% report_dates$known$seq) %>%
+    dplyr::mutate(series = "ed",
+                  value = NA_integer_,
+                  lab = "Early Detection Alert",
+                  upper = NA,
+                  lower = NA) %>%
+    dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
+
+  #gather early WARNING event detection alert series
+  ew_alert_res <- epi_fc_data %>%
+    dplyr::filter(obs_date %in% report_dates$forecast$seq) %>%
+    dplyr::mutate(series = "ew",
+                  value = NA_integer_,
+                  lab = "Early Warning Alert",
+                  upper = NA,
+                  lower = NA) %>%
+    dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
+
+  #gather event detection threshold series
+  ed_thresh_res <- epi_fc_data %>%
+    dplyr::filter(obs_date %in% report_dates$full$seq) %>%
+    dplyr::mutate(series = "thresh",
+                  value = NA_real_,
+                  lab = "Alert Threshold",
+                  upper = NA,
+                  lower = NA) %>%
+    dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
+
+  #combine ed results
+  ed <- rbind(ed_alert_res, ew_alert_res, ed_thresh_res)
+
+  ed
+
+
 }

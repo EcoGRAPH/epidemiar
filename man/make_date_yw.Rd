@@ -13,6 +13,11 @@ make_date_yw(year = 1970L, week = 1L, weekday = 1L, system = "ISO")
 
 \item{weekday}{epidemiological weekday number (1--7). Day 1 is a Monday in
 the ISO-8601 WHO system and a Sunday in the CDC system.}
+
+\item{system}{String indicating the standard (WHO ISO-8601 or CDC epi
+weeks) that the weeks of the year in epidemiological and environmental
+reference data use ["ISO" or "CDC"]. (Required: epidemiological observation
+dates listed are LAST day of week).#'}
 }
 \value{
 A vector of class `Date`.

@@ -10,6 +10,10 @@
 #' @param week eidemiological week number (1--53).
 #' @param weekday epidemiological weekday number (1--7). Day 1 is a Monday in
 #'   the ISO-8601 WHO system and a Sunday in the CDC system.
+#'@param system String indicating the standard (WHO ISO-8601 or CDC epi
+#'  weeks) that the weeks of the year in epidemiological and environmental
+#'  reference data use ["ISO" or "CDC"]. (Required: epidemiological observation
+#'  dates listed are LAST day of week).#'
 #'
 #' @inheritParams lubridate::isoweek
 #' @inheritParams lubridate::epiweek

@@ -1,0 +1,100 @@
+---
+title: "Output Data"
+author: |
+  | Dawn Nekorchuk, Michael Wimberly, and EPIDEMIA Team Members
+  | Department of Geography and Environmental Sustainability, University of Oklahoma
+  | dawn.nekorchuk@ou.edu; mcwimberly@ou.edu
+date: "Updated `r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  rmarkdown::html_vignette:
+   fig_caption: yes
+  pdf_document:
+   toc: true
+   toc_depth: 2
+   number_sections: true
+vignette: >
+  %\VignetteIndexEntry{Output Data}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Epidemiar Output Dataset
+
+The results of `run_epidemia()` is a named list of the following datasets or objects:
+
+1. `summary_data`
+2. `epi_summary`
+3. `modeling_results_data`
+4. `environ_timeseries`
+5. `environ_anomalies`
+6. `params_meta`
+7. `regression_object`
+
+
+## `summary_data`
+Early detection and early warning alerts levels for each geographic group. Early detection alerts (`ed_alert_count`) are alerts that are triggered during the early detection period, which was defined by the argument `ed_summary_period`, the _n_ most recent weeks of known epidemiology data. Similarly, early warning alerts (`ew_alert_count`) are alerts in the future forecast estimates. “High” level indicates two or more weeks in this period had incidences greater than the alert threshold, “Medium” means that one week was in alert status, and “Low” means no weeks had alerts (`ed_sum_level` and `ew_level`, respectively).
+
+* `{groupfield}`: The user-given geographic grouping field
+* `ed_alert_count`: Number of alerts triggered in the early detection period
+* `ed_sum_level`: High/Medium/Low depending on the number of alerts, 2+/1/0 respectively
+* `ew_alert_count`: Number of alerts triggered in the early warning period (future forecast period)
+* `ew_level`: High/Medium/Low depending on the number of alerts, 2+/1/0 respectively
+
+## `epi_summary`
+Mean disease incidence per geographic group during the early detection period.
+
+* `{groupfield}`: The user-given geographic grouping field
+* `mean_inc`: The mean disease incidence per geographic group summarized over the early detection period
+
+
+## `modeling_results_data`
+These are multiple timeseries values for observed, forecast, and alert thresholds of disease incidence, over the report period, for each geographic unit. These data can be used in creating the individual geographic unit control charts.
+
+* `{groupfield}`: The user-given geographic grouping field
+* `obs_date`: The last day of the epidemiological week (ISO/CDC, by `week_type`), Date object
+* `series`: "obs" = observed disease incidence, "fc" = modeled/forecast incidence values, "thresh" = event detection threshold values, "ed" = early detection alert (binary), "ew" = early warning alert (binary)
+* `value`: Value of the `series` for that geographic group for that week
+* `lab`: Labels for the series ("Observed", "Forecast Trend", "Alert Threshold", "Early Detection Alert", "Early Warning Alert")
+* `upper`: Unused
+* `lower`: Unused
+* `week_epidemiar`: ISO/CDC week number, based on user given `week_type` argument
+* `year_epidemiar`: ISO/CDC year, based on user given `week_type` argument
+
+
+## `environ_timeseries`
+These are multiple timeseries for the used environmental variables during the report period for each geographic unit.
+
+* `{groupfield}`: The user-given geographic grouping field
+* `{obsfield}`: The user-given field for the environmental variable name/ID
+* `year_epidemiar`: ISO/CDC year, based on user given `week_type` argument
+* `week_epidemiar`: ISO/CDC week number, based on user given `week_type` argument
+* `obs_date`: The last day of the epidemiological week (ISO/CDC, by `week_type`), Date object
+* `val_epidemiar`: Value of the environmental variable for that geographic group for that week. Values are a combination of observed, or interpolated (for missing) or extended (future estimated) values.   
+* `reference_method`: Method for creating a weekly summary from daily data (e.g. "sum" for rainfall, or "mean" for NDWI)
+* `data_source`: "Observed", "Interpolated", or "Extended". Missing environmental data is handled in three different ways, depending on time period. For missing values in the middle of series, the value is a linear approximation of surrounding values ("Interpolated"). For missing values at the end of the series, up to the future forecast portion, values are carried forward in a persistence approach (also marked "Interpolated" at the moment). For the forecast future portion, values are a blending of the last known values and the climatic historical mean, with a gradual weighting scheme shifting from more weight from last known to historical mean ("Extended").      
+* `ref_value`: From `env_ref_data`.        
+* `ref_*`: Fields from `env_ref_data` that begin with `ref_` have been propogating through to here. (Potentially useful for plotting, for example.) 
+
+
+## `environ_anomalies`
+These data are the recent (during the early detection period) differences (anomalies) of the environmental variable values from the climatology/reference mean.
+
+* `{groupfield}`: The user-given geographic grouping field
+* `{obsfield}`: The user-given field for the environmental variable name/ID
+* `anom_ed_mean`: The mean of the anomalies per environmental variable per geographic group summarized during the early detection period. The anomalies are calculated as the difference from the observed value to the historical mean for that week of the year.
+
+## `params_meta`
+This lists dates, settings, and parameters that `run_epidemiar()` was called with.
+
+## `regression_object`
+This is the regression object from the general additive model (GAM, parallelized with BAM) regression. This is only for additional statistical investigation of the model, and is usually not saved (large object).
+
+
+

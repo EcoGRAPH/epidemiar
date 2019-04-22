@@ -2,11 +2,34 @@
 % Please edit documentation in R/forecasting.R
 \name{lag_environ_to_epi}
 \alias{lag_environ_to_epi}
-\title{Lag the env data}
+\title{Lag the environmental data.}
 \usage{
 lag_environ_to_epi(epi_fc, quo_groupfield, groupings, env_fc,
   env_variables_used, laglen)
 }
+\arguments{
+\item{epi_fc}{An epidemiological dataset extended into the
+future/forecast period with NA values for to-be-forecasted case numbers,
+as formatted for forecasting by epi_format_fc().}
+
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+
+\item{groupings}{A unique list of the geographic groupings (from groupfield).}
+
+\item{env_fc}{Environmental data formatted for forecasting by env_format_fc().}
+
+\item{env_variables_used}{List of environmental variables that were used in
+the modeling.}
+
+\item{laglen}{The maximum number of days in the past to consider interactions
+between the environmental variable anomalies and the disease case counts.}
+}
+\value{
+Wide dataset based on epidemiological data dates with five
+ bandsummaries per environmental variable, from the basis spline summaries of
+ the lagged environmental variable.
+}
 \description{
-Lag the env data
+Lag the environmental data.
 }

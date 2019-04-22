@@ -2,10 +2,20 @@
 % Please edit documentation in R/forecasting.R
 \name{truncpoly}
 \alias{truncpoly}
-\title{Truncates poly}
+\title{Truncates poly. Creates a modified b-spline basis.}
 \usage{
 truncpoly(x = NULL, degree = 6, maxobs = NULL, minobs = NULL)
 }
+\arguments{
+\item{x}{Vector of weekly observation dates.}
+
+\item{degree}{Degree passed to splines::bs().}
+
+\item{maxobs}{Date of the last known value.}
+
+\item{minobs}{Date of the first known value.}
+}
 \description{
-Truncates poly
+The modified basis splines are used to capture any long term trends per
+geographic group.
 }

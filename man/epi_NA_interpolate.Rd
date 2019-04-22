@@ -2,13 +2,23 @@
 % Please edit documentation in R/cleaners_helpers.R
 \name{epi_NA_interpolate}
 \alias{epi_NA_interpolate}
-\title{Interpolates missing epi data}
+\title{Interpolates missing epi data.}
 \usage{
 epi_NA_interpolate(epi_data, quo_casefield, quo_groupfield)
 }
+\arguments{
+\item{epi_data}{Input data tibble with case counts in casefield, grouping
+field groupfield, and date column "obs_date".}
+
+\item{quo_casefield}{Quosure of user given casefield to run_epidemia().}
+
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+}
 \value{
-To fill in
+Same data as epi_data with new interpolated case field,
+  cases_epidemiar.
 }
 \description{
-Interpolates missing epi data
+Interpolates missing epi data.
 }

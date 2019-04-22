@@ -2,10 +2,31 @@
 % Please edit documentation in R/forecasting.R
 \name{anomalize_env}
 \alias{anomalize_env}
-\title{Convert environmental data into anomalies}
+\title{Convert environmental data into anomalies.}
 \usage{
 anomalize_env(env_fc, quo_groupfield, env_variables_used, ncores)
 }
+\arguments{
+\item{env_fc}{Environmental data formatted for forecasting by env_format_fc().}
+
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+
+\item{env_variables_used}{List of environmental variables that were used in
+the modeling.}
+
+\item{ncores}{The number of physical cores to use in parallel processing, set
+in fc_control$ncores, else the max of the number of physical core available
+minus 1, or 1 core.}
+}
+\value{
+Environmental dataset in same format as env_fc but with the residuals
+ from a GAM with geographic unit and cyclical cubic regression spline on day
+ of year per geographic group in place of the original raw values.
+}
 \description{
-Convert environmental data into anomalies
+Raw environmental values are not used in modeling, but rather their
+anomalies, departures for the historical "normal". We are looking at the
+influence of deviation from normal in the environmental factors to help
+explain deviations from normal in the human cases.
 }

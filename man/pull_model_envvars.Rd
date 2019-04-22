@@ -2,10 +2,29 @@
 % Please edit documentation in R/forecasting.R
 \name{pull_model_envvars}
 \alias{pull_model_envvars}
-\title{Pull only model env variables}
+\title{Pull only model env variables.}
 \usage{
 pull_model_envvars(env_data, quo_obsfield, fc_control)
 }
+\arguments{
+\item{env_data}{Daily environmental data for the same groupfields and date
+range as the epidemiological data. It may contain extra data (other
+districts or date ranges). The data must be in long format (one row for each
+date and environmental variable combination), and must start at absolutel
+minimum \code{laglen} (in \code{fc_control}) days before epi_data for
+forecasting.}
+
+\item{quo_obsfield}{Quosure of user given field name of the environmental data
+variables}
+
+\item{fc_control}{Parameters for forecasting, including which environmental
+variable to include and any geographic clusters.}
+}
+\value{
+List of environmental variables that were used in the
+ modeling (had to be both listed in model variables input file and present the
+ env_data dataset).
+}
 \description{
-Pull only model env variables
+Pull only model env variables.
 }

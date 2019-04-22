@@ -1,10 +1,17 @@
 #Data Cleaning and Helper function
 
 ## Data prep & cleaning functions
-#interpolate NA data -- new case field -- cases_epidemiar & val_epidemiar
-#' Interpolates missing epi data
+
+#' Interpolates missing epi data.
 #'
-#' @return To fill in
+#' @param epi_data Input data tibble with case counts in casefield, grouping
+#'   field groupfield, and date column "obs_date".
+#' @param quo_casefield Quosure of user given casefield to run_epidemia().
+#' @param quo_groupfield Quosure of the user given geographic grouping field to
+#'   run_epidemia().
+#'
+#' @return Same data as epi_data with new interpolated case field,
+#'   cases_epidemiar.
 #'
 #'
 epi_NA_interpolate <- function(epi_data, quo_casefield, quo_groupfield){
@@ -18,7 +25,20 @@ epi_NA_interpolate <- function(epi_data, quo_casefield, quo_groupfield){
     dplyr::ungroup()
 }
 
-#' Interpolates missing env data
+#' Interpolates missing environmental data.
+#'
+#' @param env_data Input data tibble with environmental data: geographic
+#'   groupings in groupfield, environmental variable identified in obsfield, and
+#'   data values in valuefield. Contains a date column "obs_date".
+#' @param quo_obsfield Quosure of the user given field that holds the
+#'   environmental variable identifiers/names/IDs.
+#' @param quo_valuefield Quosure of the user given field that holds the
+#'   environmental variable observation value.
+#' @param quo_groupfield Quosure of the user given geographic grouping field to
+#'   run_epidemia().
+#'
+#' @return Same data as env_data, with new interpolated field, val_epidemiar, of
+#'   the environmental variable data.
 #'
 env_NA_interpolate <- function(env_data, quo_obsfield, quo_valuefield, quo_groupfield){
   env_data %>%
@@ -38,7 +58,19 @@ env_NA_interpolate <- function(env_data, quo_obsfield, quo_valuefield, quo_group
 
 
 #Helper functions
-#' Create a named list
+#' Create a named list.
+#'
+#' Creates a named list from the user given items. Will preserve the names of
+#' items that already have names.
+#'
+#' @param ... List of objects, named or not, to be included in the fully named
+#'   list.
+#'
+#' @examples
+#' a <- list("a", "aa", "aaa")
+#' b <- data.frame(x = 1:4, y = 5:8)
+#' create_named_list(a, b, c = rep(1:4))
+#'
 #' @export
 #'
 create_named_list <- function(...){
@@ -63,7 +95,8 @@ create_named_list <- function(...){
 
 #' Mode
 #'
-#' Calculate the mode of a set of values, for numeric or character/factor data. In ties, returns the first tied value.
+#' Calculate the mode of a set of values, for numeric or character/factor data.
+#' In ties, returns the first tied value.
 #'
 #' @param x A vector.
 #' @param na.rm Logical indicating whether \code{NA} values should be excluded.

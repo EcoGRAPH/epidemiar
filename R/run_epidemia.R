@@ -128,7 +128,7 @@ run_epidemia <- function(epi_data,
                          env_ref_data,
                          env_info){
 
-  #dplyr programming steps for passing of field names
+  # dplyr programming steps for passing of field names
   # note: will return quo_name of "" if field argument was not given, so this can happen before input checks
   quo_casefield <- rlang::enquo(casefield)
   quo_popfield <- rlang::enquo(populationfield)
@@ -136,25 +136,56 @@ run_epidemia <- function(epi_data,
   quo_obsfield <- rlang::enquo(obsfield)
   quo_valuefield <- rlang::enquo(valuefield)
 
-  #perform checks of all input data
-  # input_check(epi_data,
-  #             quo_casefield,
-  #             quo_populationfield,
-  #             inc_per,
-  #             quo_groupfield,
-  #             week_type,
-  #             report_period,
-  #             ed_summary_period,
-  #             ed_method,
-  #             ed_control,
-  #             env_data,
-  #             quo_obsfield,
-  #             quo_valuefield,
-  #             forecast_future,
-  #             fc_control,
-  #             env_ref_data,
-  #             env_info)
-  #
+
+  # Input checks.
+    #?better to set default as NULL and test for NULL instead of hasArg()?
+  # 1. Test for critical inputs
+  # This will not check if they've assigned the right thing to the argument, or got the argument order correct if not explicit argument declarations
+  # But, no other checks can really proceed if things are missing
+  nec_flds <- c(casefield, groupfield, obsfield, valuefield, populationfield)
+    #populationfield eventually to be non necessary, but as of right now, things are reported in incidence, so population is critical
+  nec_data <- c(epi_data, env_data, env_ref_data, env_info)
+  nec_cntls <- c(week_type, fc_control) #ed_control can be NULL if ed_method == None.
+    # rest has defaults
+    # Note: only checking if control list exists, nothing about what is in the list (later check)
+  #combine all necessary items
+  necessary <- c(nec_flds, nec_data, nec_cntls)
+  #initialize missing info msgs & flag
+  missing_msgs <- "Missing critical arguments. Please make sure the following are included:"
+  missing_flag <- FALSE
+  #loop through all necessary fields, checking if argument exists, collecting list of missing
+  for (arg_name in necessary){
+    if (!hasArg(arg_name)){
+      missing_flag <- TRUE
+      missing_list <- paste(missing_msgs, arg_name, sep = "\n")
+    }
+  }
+  # 2. More input checking
+  check_results <- input_check(epi_data,
+                               quo_casefield,
+                               quo_populationfield,
+                               inc_per,
+                               quo_groupfield,
+                               week_type,
+                               report_period,
+                               ed_summary_period,
+                               ed_method,
+                               ed_control,
+                               env_data,
+                               quo_obsfield,
+                               quo_valuefield,
+                               forecast_future,
+                               fc_control,
+                               env_ref_data,
+                               env_info)
+  #if warnings, just give message and continue
+  if (check_results$warn_flag){
+    message(warn_msgs)
+  }
+  #if errors, stop and return error messages
+  if (check_results$err_flag){
+    stop(err_msgs)
+  }
 
   #create alphabetical list of unique groups
   #must remain in alpha order for early detection using surveillance package to capture results properly

@@ -156,7 +156,7 @@ run_epidemia <- function(epi_data = NULL,
   for (nse_fld in nec_nse_flds){
     if(rlang::quo_is_missing(nse_fld)){
       missing_flag <- TRUE
-      missing_msgs <- paste0(missing_msgs, nse_fld, sep = "\n")
+      missing_msgs <- paste0(missing_msgs, rlang::quo_name(nse_fld), sep = "\n")
     }
   }
   for (arg_name in necessary){

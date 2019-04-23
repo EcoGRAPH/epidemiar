@@ -141,7 +141,7 @@ run_epidemia <- function(epi_data = NULL,
   # 1. Test for critical inputs
   # This will not check if they've assigned the right thing to the argument, or got the argument order correct if not explicit argument declarations
   # But, no other checks can really proceed if things are missing
-  nec_nse_flds <- c(quo_casefield, quo_groupfield, quo_obsfield, quo_valuefield, quo_populationfield)
+  nec_nse_flds <- c(quo_casefield, quo_groupfield, quo_obsfield, quo_valuefield, quo_popfield)
     #populationfield eventually to be non necessary, but as of right now, things are reported in incidence, so population is critical
   nec_data <- c(epi_data, env_data, env_ref_data, env_info)
   nec_cntls <- c(week_type, fc_control) #ed_control can be NULL if ed_method == None.

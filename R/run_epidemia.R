@@ -150,24 +150,24 @@ run_epidemia <- function(epi_data = NULL,
   #combine all necessary items
   necessary <- c(nec_data, nec_cntls)
   #initialize missing info msgs & flag
-  missing_msgs <- "Missing critical argument. Please make sure the following is included:"
+  missing_msgs <- ""
   missing_flag <- FALSE
   #loop through all necessary fields, checking if argument exists, collecting list of missing
   for (nse_fld in nec_nse_flds){
     if(rlang::quo_is_missing(nse_fld)){
       missing_flag <- TRUE
-      missing_msgs <- cat(missing_msgs, nse_fld, sep = "\n")
+      missing_msgs <- paste0(missing_msgs, nse_fld, sep = "\n")
     }
   }
   for (arg_name in necessary){
     if (!hasArg(arg_name)){
       missing_flag <- TRUE
-      missing_msgs <- cat(missing_msgs, arg_name, sep = "\n")
+      missing_msgs <- paste0(missing_msgs, arg_name, sep = "\n")
     }
   }
   #if missing, stop and give error message
   if (missing_flag){
-    stop(missing_msgs)
+    stop("Missing critical argument. Please make sure the following is included: ", missing_msgs)
   }
   # 2. More input checking
   check_results <- input_check(epi_data,

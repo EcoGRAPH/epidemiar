@@ -42,7 +42,11 @@ run_event_detection <- function(epi_fc_data, quo_popfield, inc_per,
 
     ed_far_res <- run_no_detection(epi_fc_data, quo_groupfield, report_dates)
 
-  } else stop("Early Detection/Warning method not supported")
+  } else {
+    #default/unknown run as None
+    message("Early Detection/Warning method not recognized, running as 'None'.")
+    ed_far_res <- run_no_detection(epi_fc_data, quo_groupfield, report_dates)
+  }
 }
 
 #' Run the Farrington early detection algorithm

@@ -143,12 +143,10 @@ run_epidemia <- function(epi_data = NULL,
   # But, no other checks can really proceed if things are missing
   nec_nse_flds <- c(quo_casefield, quo_groupfield, quo_obsfield, quo_valuefield, quo_popfield)
     #populationfield eventually to be non necessary, but as of right now, things are reported in incidence, so population is critical
-  nec_data <- c(epi_data, env_data, env_ref_data, env_info)
-  nec_cntls <- c(week_type, fc_control) #ed_control can be NULL if ed_method == None.
+  necessary <- create_named_list(epi_data, env_data, env_ref_data, env_info, week_type, fc_control)
+    #ed_control can be NULL if ed_method == None.
     # rest has defaults
-    # Note: only checking if control list exists, nothing about what is in the list (later check)
-  #combine all necessary items
-  necessary <- c(nec_data, nec_cntls)
+    # Note: only checking if control list exists, nothing about what is in the list (later checks)
   #initialize missing info msgs & flag
   missing_msgs <- ""
   missing_flag <- FALSE
@@ -159,10 +157,10 @@ run_epidemia <- function(epi_data = NULL,
       missing_msgs <- paste0(missing_msgs, rlang::quo_name(nse_fld), sep = "\n")
     }
   }
-  for (arg_name in necessary){
-    if (!hasArg(arg_name)){
+  for (arg in seq_along(necessary)){
+    if (is.null(necessary[[arg]])){
       missing_flag <- TRUE
-      missing_msgs <- paste0(missing_msgs, arg_name, sep = "\n")
+      missing_msgs <- paste0(missing_msgs, names(necessary[arg]), sep = "\n")
     }
   }
   #if missing, stop and give error message
@@ -172,7 +170,7 @@ run_epidemia <- function(epi_data = NULL,
   # 2. More input checking
   check_results <- input_check(epi_data,
                                quo_casefield,
-                               quo_populationfield,
+                               quo_popfield,
                                inc_per,
                                quo_groupfield,
                                week_type,
@@ -189,11 +187,11 @@ run_epidemia <- function(epi_data = NULL,
                                env_info)
   #if warnings, just give message and continue
   if (check_results$warn_flag){
-    message(warn_msgs)
+    message(check_results$warn_msgs)
   }
   #if errors, stop and return error messages
   if (check_results$err_flag){
-    stop(err_msgs)
+    stop(check_results$err_msgs)
   }
 
   #create alphabetical list of unique groups

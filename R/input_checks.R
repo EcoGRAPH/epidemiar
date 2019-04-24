@@ -83,7 +83,7 @@ input_check <- function(epi_data,
 
   # Also collect any warning messages to display
   warn_flag <- FALSE
-  warn_msgs <- ""
+  warn_msgs <- "Warning messages:\n"
 
 
   # Existing & Types --------------------------------------------------------
@@ -93,19 +93,6 @@ input_check <- function(epi_data,
   if (!is.numeric(inc_per) || inc_per <= 0){
     err_flag <- TRUE
     err_msgs <- paste(err_msgs, "'inc_per' must be numeric and a positive number.\n")
-  }
-  # week_type
-  # Potential code replace, but do not currently use match.args in functions that use week_type
-  # tryCatch({
-  #   match.arg(week_type, c("ISO", "CDC"))
-  # },
-  # error = function(e){
-  #   err_flag <- TRUE
-  #   err_msgs <- paste(err_msgs, "'week_type' must be matchable to either 'ISO' or 'CDC'.\n")
-  # })
-  if (!week_type %in% c("ISO", "CDC")){
-    err_flag <- TRUE
-    err_msgs <- paste(err_msgs, "'week_type' must be 'ISO' for WHO ISO8601 weeks or 'CDC' for US epiweeks.\n")
   }
 
 
@@ -198,10 +185,10 @@ input_check <- function(epi_data,
   # has reference_method
   if(!"reference_method" %in% colnames(env_info)){
     err_flag <- TRUE
-    err_msgs <- paste(err_msgs, "There must be a column 'reference_method' in 'env_info' for how to summarize values from daily to weekly ('sum' or 'mean'.\n")
+    err_msgs <- paste(err_msgs, "There must be a column 'reference_method' in 'env_info' for how to summarize values from daily to weekly ('sum' or 'mean').\n")
   }
 
-  # Dates & Lengths of Report Sections --------------------------------------
+  # Lengths of Report Sections --------------------------------------
 
   #special flag for all dates
   rpt_len_flag <- FALSE
@@ -275,42 +262,44 @@ input_check <- function(epi_data,
     } else {
       #does have obsfield,
       #check that model variables exist in env data and env ref data
-      #pull variables from model info input
-      model_vars <- fc_control$env_vars %>% dplyr::pull(!!quo_obsfield)
-      #pull variables in env data
-      env_in_data <- env_data %>% dplyr::pull(!!quo_obsfield) %>% unique()
-      #pull variables in env ref data
-      env_in_ref <- env_ref_data %>% dplyr::pull(!!quo_obsfield) %>% unique()
 
-      if (!all(model_vars %in% env_in_data)){
-        err_flag <- TRUE
-        err_msgs <- paste(err_msgs, "Model variable(s) given in 'fc_control$env_vars' is/are missing from 'env_data':\n",
-                        model_vars[which(!model_vars %in% env_in_data)])
-      }
-      if (!all(model_vars %in% env_in_ref)){
-        err_flag <- TRUE
-        err_msgs <- paste(err_msgs, "Model variable(s) given in 'fc_control$env_vars' is/are missing from 'env_ref_data':\n",
-                        model_vars[which(!model_vars %in% env_in_ref)])
-      }
-    }
+      #but only if no other problems so far, since that could cause errors in the checks below
+      if (!err_flag){
+
+        #pull variables from model info input
+        model_vars <- fc_control$env_vars %>% dplyr::pull(!!quo_obsfield)
+        #pull variables in env data
+        env_in_data <- env_data %>% dplyr::pull(!!quo_obsfield) %>% unique()
+        #pull variables in env ref data
+        env_in_ref <- env_ref_data %>% dplyr::pull(!!quo_obsfield) %>% unique()
+
+        if (!all(model_vars %in% env_in_data)){
+          err_flag <- TRUE
+          err_msgs <- paste(err_msgs, "Model variable(s) given in 'fc_control$env_vars' is/are missing from 'env_data':\n",
+                            model_vars[which(!model_vars %in% env_in_data)], "\n")
+        }
+        if (!all(model_vars %in% env_in_ref)){
+          err_flag <- TRUE
+          err_msgs <- paste(err_msgs, "Model variable(s) given in 'fc_control$env_vars' is/are missing from 'env_ref_data':\n",
+                            model_vars[which(!model_vars %in% env_in_ref)], "\n")
+        }
+      } #end err_flag
+    } #end else obsfield
 
     #clusters
-    #cluster flag
-    cluster_flag = FALSE
     # has groupfield
     if(!rlang::quo_name(quo_groupfield) %in% colnames(fc_control$clusters)){
       err_flag <- TRUE
       err_msgs <- paste(err_msgs, "There must be a column ", rlang::quo_name(quo_groupfield), ", in 'fc_control$clusters'.\n")
-      cluster_flag <- TRUE
     }
     # has cluster_id
     if(!"cluster_id" %in% colnames(fc_control$clusters)){
       err_flag <- TRUE
       err_msgs <- paste(err_msgs, "There must be a column 'cluster_id' in 'fc_control$clusters'.\n")
-      cluster_flag <- TRUE
     }
     #now check that all geographic groupings from epi data have a cluster assigned
-    if (!cluster_flag){
+    #as long as no previous errors
+    if (!err_flag){
       #groupings in cluster info
       model_cl <- fc_control$clusters %>% dplyr::pull(!!quo_groupfield)
       #groupings in epidemiological data
@@ -319,7 +308,7 @@ input_check <- function(epi_data,
       if (!all(groups_epi %in% model_cl)){
         err_flag <- TRUE
         err_msgs <- paste(err_msgs, "Geographic groupings present in the epidemiological data are missing in 'fc_control$clusters':\n",
-                        model_vars[which(!groups_epi %in% model_cl)])
+                          groups_epi[which(!groups_epi %in% model_cl)])
       }
       #Don't need to check environmental data. Extra env data for other groupings not in epidemiological data are just ignored.
     }
@@ -327,36 +316,44 @@ input_check <- function(epi_data,
     #lag_length
     #already checked existance and numeric/integer type
     #check that enough environmental data exists for lag length selected
-    #subset to env variables as dictated by the model
-    env_model_data <- pull_model_envvars(env_data, quo_obsfield, fc_control)
-    #get earliest dates available
-    env_start_dts <- env_model_data %>% dplyr::group_by(!!quo_obsfield) %>% summarize(start_dt = min(obs_date))
-    #date needed by laglength and first epidemiological data date
-    need_dt <- min(epi_data$obs_date) - as.difftime(fc_control$lag_length, units = "days")
-    #all env dates equal or before needed date?
-    if (!all(env_start_dts$start_dt <= need_dt)){
-      err_flag <- TRUE
-      err_msgs <- paste(err_msgs, "Not enough environmental data for a lag length of ", fc_control$lag_length,
-                      "\n and epidemiological start date ", min(epi_data$obs_date), " for variables:\n",
-                      env_start_dts[which(!env_start_dts$start_dt <= need_dt),])
 
-    }
+    #but only if no other problems so far, since that could cause errors in the checks below
+    if (!err_flag){
+      #subset to env variables as dictated by the model
+      env_model_data <- pull_model_envvars(env_data, quo_obsfield, fc_control)
+      #get earliest dates available
+      env_start_dts <- env_model_data %>% dplyr::group_by(!!quo_obsfield) %>% summarize(start_dt = min(obs_date))
+      #date needed by laglength and first epidemiological data date
+      need_dt <- min(epi_data$obs_date) - as.difftime(fc_control$lag_length, units = "days")
+      #all env dates equal or before needed date?
+      if (!all(env_start_dts$start_dt <= need_dt)){
+        err_flag <- TRUE
+        err_msgs <- paste(err_msgs, "Not enough environmental data for a lag length of ", fc_control$lag_length,
+                          "days.\n Epidemiological start is", min(epi_data$obs_date),
+                          "therefore environmental data is needed starting", need_dt, "for variables:\n",
+                          env_start_dts[which(!env_start_dts$start_dt <= need_dt),1])
+
+      }
+    } #end err_flag
 
   } #end fc flag
 
   # ed_method & ed_control
-  # if Farrington, then controls for Farrington
-  #w = 4, reweight = TRUE, weightsThreshold = 2.58, trend = TRUE, pThresholdTrend = 0, populationOffset = TRUE, noPeriods = 10, pastWeeksNotIncluded = 4, thresholdMethod = "nbPlugin"
-  #allow b
-  #actually, all have defaults in farringtonFlexible() and can be missing
+
   if (ed_method == "Farrington"){
+
+    # if Farrington, then check for controls for Farrington
+    #w = 4, reweight = TRUE, weightsThreshold = 2.58, trend = TRUE, pThresholdTrend = 0, populationOffset = TRUE, noPeriods = 10, pastWeeksNotIncluded = 4, thresholdMethod = "nbPlugin"
+    #allow b
+
+    #actually, all have defaults in farringtonFlexible() and can be missing
     if (is.null(ed_control)){
       #warning if missing though
       warn_flag <- TRUE
-      warn_msgs <- paste(warn_msgs, "Warning: Early Detection controls not found, running with package defaults.\n")
+      warn_msgs <- paste(warn_msgs, "Warning: Early Detection controls not found, running with surveillance package defaults.\n")
     }
   }
-  #do not need to check for not Farrington, as default inside of event_detection is None.
+
 
 
   ## Return

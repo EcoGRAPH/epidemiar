@@ -4,11 +4,13 @@
 \alias{run_epidemia}
 \title{Run EPIDEMIA forecast models and early detection algorithm.}
 \usage{
-run_epidemia(epi_data, casefield, populationfield, inc_per = 1000,
-  groupfield, week_type = c("ISO", "CDC"), report_period = 26,
-  ed_summary_period = 4, ed_method = c("Farrington", "None"),
-  ed_control = NULL, env_data, obsfield, valuefield,
-  forecast_future = 4, fc_control = NULL, env_ref_data, env_info)
+run_epidemia(epi_data = NULL, casefield = NULL,
+  populationfield = NULL, inc_per = 1000, groupfield = NULL,
+  week_type = c("ISO", "CDC"), report_period = 26,
+  ed_summary_period = 4, ed_method = c("None", "Farrington"),
+  ed_control = NULL, env_data = NULL, obsfield = NULL,
+  valuefield = NULL, forecast_future = 4, fc_control = NULL,
+  env_ref_data = NULL, env_info = NULL)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date

@@ -31,6 +31,8 @@ run_event_detection <- function(epi_fc_data, quo_popfield, inc_per,
 
   #only supporting Farrington Improved method from Surveillance right now,
   #leaving option open for expanding later
+  #Note: using exact matches, which can because of match.arg() at beginning on run_epidemia()
+
   if (ed_method == "Farrington") {
 
     ed_far_res <- run_farrington(epi_fc_data, quo_popfield, inc_per,
@@ -42,11 +44,8 @@ run_event_detection <- function(epi_fc_data, quo_popfield, inc_per,
 
     ed_far_res <- run_no_detection(epi_fc_data, quo_groupfield, report_dates)
 
-  } else {
-    #default/unknown run as None
-    message("Early Detection/Warning method not recognized, running as 'None'.")
-    ed_far_res <- run_no_detection(epi_fc_data, quo_groupfield, report_dates)
   }
+
 }
 
 #' Run the Farrington early detection algorithm

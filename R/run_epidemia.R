@@ -118,7 +118,7 @@ run_epidemia <- function(epi_data = NULL,
                          week_type = c("ISO", "CDC"),
                          report_period = 26,
                          ed_summary_period = 4,
-                         ed_method = c("Farrington", "None"),
+                         ed_method = c("None", "Farrington"),
                          ed_control = NULL,
                          env_data = NULL,
                          obsfield = NULL,
@@ -128,33 +128,43 @@ run_epidemia <- function(epi_data = NULL,
                          env_ref_data = NULL,
                          env_info = NULL){
 
+
+  # Non-standard evaluation quosures ----------------------------------------
+
   # dplyr programming steps for passing of field names
-  # note: will return quo_name of "" if field argument was not given, so this can happen before input checks
   quo_casefield <- rlang::enquo(casefield)
   quo_popfield <- rlang::enquo(populationfield)
   quo_groupfield <- rlang::enquo(groupfield)
   quo_obsfield <- rlang::enquo(obsfield)
   quo_valuefield <- rlang::enquo(valuefield)
 
+  #Note: if field name does not exist in any dataset, enquo() will throw an error.
 
-  # Input checks.
+
+  # Preparing: Input checking -----------------------------------------------
+
   # 1. Test for critical inputs
   # This will not check if they've assigned the right thing to the argument, or got the argument order correct if not explicit argument declarations
   # But, no other checks can really proceed if things are missing
-  nec_nse_flds <- c(quo_casefield, quo_groupfield, quo_obsfield, quo_valuefield, quo_popfield)
-    #populationfield eventually to be non necessary, but as of right now, things are reported in incidence, so population is critical
-  necessary <- create_named_list(epi_data, env_data, env_ref_data, env_info, week_type, fc_control)
-    #ed_control can be NULL if ed_method == None.
-    # rest has defaults
-    # Note: only checking if control list exists, nothing about what is in the list (later checks)
+  # NSE is a little tricky.
+  #can't test directly on fields-to-be-enquo'd because it'll try to evaluate them, and complain that the object (actually field name) doesn't exist
+  #naming the quosures AS the input fields to create more meaningful error messages if the items are missing
+  #populationfield eventually to be non necessary, but as of right now, things are reported in incidence, so population is critical
+  nec_nse <- list(casefield = quo_casefield, groupfield = quo_groupfield, obsfield = quo_obsfield,
+                  valuefield = quo_valuefield, populationfield = quo_popfield)
+  necessary <- create_named_list(epi_data, env_data, env_ref_data, env_info, fc_control)
+  #ed_control can be NULL if ed_method == None.
+  # rest has defaults
+  # Note: only checking if control list exists, nothing about what is in the list (later checks)
   #initialize missing info msgs & flag
   missing_msgs <- ""
   missing_flag <- FALSE
   #loop through all necessary fields, checking if argument exists, collecting list of missing
-  for (nse_fld in nec_nse_flds){
-    if(rlang::quo_is_missing(nse_fld)){
+  for (nse in seq_along(nec_nse)){
+    #testing if quosure was created on NULL object.
+    if(rlang::quo_is_null(nec_nse[[nse]])){
       missing_flag <- TRUE
-      missing_msgs <- paste0(missing_msgs, rlang::quo_name(nse_fld), sep = "\n")
+      missing_msgs <- paste0(missing_msgs, names(nec_nse[nse]), sep = "\n")
     }
   }
   for (arg in seq_along(necessary)){
@@ -165,9 +175,37 @@ run_epidemia <- function(epi_data = NULL,
   }
   #if missing, stop and give error message
   if (missing_flag){
-    stop("Missing critical argument. Please make sure the following is included: ", missing_msgs)
+    stop("Missing critical argument(s). Please make sure the following is/are included:\n", missing_msgs)
   }
-  # 2. More input checking
+
+  # 2. match.arg for arguments with options
+  #Note: using message() instead of warning() to get message to appear right away
+  ed_method <- tryCatch({
+    match.arg(ed_method, c("None", "Farrington"))
+  }, error = function(e){
+    message("Warning: Given 'ed_method' does not match 'None' or 'Farrington', running as 'None'.")
+    "None"
+  }, finally = {
+    if (length(ed_method) > 1){
+      #if ed_method was missing at run_epidemia() call, got assigned c("None", "Farrington")
+      message("Warning: 'ed_method' was missing, running as 'None'.")
+      #no return, because in match.arg() it will take the first item, which is "None".
+    }
+  })
+  week_type <- tryCatch({
+    match.arg(week_type, c("ISO", "CDC"))
+  }, error = function(e){
+    message("Warning: Given 'week_type' does not match 'ISO' or 'CDC', running as 'ISO'.")
+    "ISO"
+  }, finally = {
+    if (length(week_type) > 1){
+      #if week_type was missing at run_epidemia() call, got assigned c("ISO", "CDC")
+      message("Warning: 'week_type' was missing, running as 'ISO'.")
+      #no return, because in match.arg() it will take the first item, which is "ISO".
+    }
+  })
+
+  # 3. More input checking
   check_results <- input_check(epi_data,
                                quo_casefield,
                                quo_popfield,
@@ -189,10 +227,16 @@ run_epidemia <- function(epi_data = NULL,
   if (check_results$warn_flag){
     message(check_results$warn_msgs)
   }
-  #if errors, stop and return error messages
+  #if then if errors, stop and return error messages
   if (check_results$err_flag){
+    #prevent possible truncation of all error messages
+    options(warning.length = 4000L)
     stop(check_results$err_msgs)
   }
+
+
+
+  # Preparing: generating listings and date sets ----------------------------
 
   #create alphabetical list of unique groups
   #must remain in alpha order for early detection using surveillance package to capture results properly
@@ -225,18 +269,23 @@ run_epidemia <- function(epi_data = NULL,
   report_dates$ed_sum$seq <- report_dates$ed_sum %>% {seq.Date(.$min, .$max, "week")}
 
 
-  ## Data checks and cleaning
+
+  # Preparing: data checks for NA and interpolation -------------------------
+
   #check for NAs and interpolate as necessary
-  #cases_epidemiar field name from data cleaning (epi)
+  #Note: cases_epidemiar is field name returned (epi)
   epi_data <- epi_NA_interpolate(epi_data, quo_casefield, quo_groupfield) %>%
     #and sort by alphabetical groupfield
     dplyr::arrange(!!quo_groupfield, obs_date)
-  #val_epidemiar field name from data cleaning (env)
+  #Note: val_epidemiar is field name returned (env)
   env_data <- env_NA_interpolate(env_data, quo_obsfield, quo_valuefield, quo_groupfield) %>%
     #and sort by alphabetical groupfield
     dplyr::arrange(!!quo_groupfield, !!quo_obsfield, obs_date)
 
-  ## Set up output report data format
+
+
+  # Set up output report data format ----------------------------------------
+
   #create observed data series
   obs_res <- epi_data %>%
     #include only observed data from requested start of report
@@ -250,14 +299,18 @@ run_epidemia <- function(epi_data = NULL,
     dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
 
 
-  ## Forecast
+
+  # Forecasting -------------------------------------------------------------
+
   fc_res_all <- run_forecast(epi_data, quo_popfield, inc_per, quo_groupfield, groupings,
                              env_data, quo_obsfield, quo_valuefield, env_variables,
                              fc_control, env_ref_data, env_info, report_dates, week_type)
 
 
-  ## Early detection
-  #need to calculate early detection on existing epi data & FUTURE FORECASTED results
+
+  # Event detection ---------------------------------------------------------
+
+  #need to calculate event detection on existing epi data & FUTURE FORECASTED results
   future_fc <- fc_res_all$fc_epi %>%
     #get future forecasted results ONLY
     dplyr::filter(obs_date %in% report_dates$forecast$seq)
@@ -266,7 +319,7 @@ run_epidemia <- function(epi_data = NULL,
     dplyr::mutate(cases_epidemiar = ifelse(!rlang::are_na(cases_epidemiar),
                                            cases_epidemiar,
                                            fc_cases)) %>%
-    #will be lost by end, but need for early detection methods using surveillance::sts objects
+    #will be lost by end, but need for event detection methods using surveillance::sts objects
     epidemiar::add_datefields() %>%
     #arrange (for viewing/checking)
     dplyr::arrange(!!quo_groupfield, obs_date)
@@ -278,11 +331,17 @@ run_epidemia <- function(epi_data = NULL,
                                 ed_method, ed_control, report_dates)
 
 
+
+  # Combining forecast and event detection results --------------------------
+
   ## Combine epi datasets
   epi_res <- dplyr::bind_rows(obs_res, fc_res_all$fc_res, ed_res)
   #add week fields
   modeling_results_data <- epidemiar::add_datefields(epi_res, week_type)
 
+
+
+  # Format other data for report --------------------------------------------
 
   ## Prep Environmental Data for report
   #using extended environmental data from forecast functions
@@ -315,7 +374,9 @@ run_epidemia <- function(epi_data = NULL,
   #regression object for future other use or troubleshooting
   regression_object <- fc_res_all$reg_obj
 
-  #collect results
+
+  # Collect all results -----------------------------------------------------
+
   all_results <- create_named_list(summary_data,
                                    epi_summary,
                                    modeling_results_data,

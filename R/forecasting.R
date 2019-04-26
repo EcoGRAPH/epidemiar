@@ -913,14 +913,17 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                                cluster=cl,
                                control=mgcv::gam.control(trace=FALSE))
 
-  # shut down cluster
-  parallel::stopCluster(cl)
-
   #output prediction (through req_date)
   cluster_preds <- mgcv::predict.bam(cluster_regress,
                                      newdata = epi_lag %>% dplyr::filter(obs_date <= req_date),
                                      se.fit = TRUE,       # included for backwards compatibility
-                                     type="response")
+                                     type="response",
+                                     #block.size=50000,
+                                     cluster=cl)
+
+  # shut down cluster
+  parallel::stopCluster(cl)
+
 
   #remove distributed lag summaries and bspline basis, which are no longer helpful
   band_names <- grep("bandsum_*", colnames(epi_lag), value = TRUE)

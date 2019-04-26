@@ -669,20 +669,18 @@ anomalize_env <- function(env_fc, quo_groupfield, env_variables_used, ncores) {
   # note: brittle on column position until rewrite
   for (curcol in 4:ncol(env_fc)) {
 
-    cl <- parallel::makeCluster(ncores)
-
     #if more than one geographic area
     if (nlevels(group_factor) > 1){
       tempbam <- mgcv::bam(env_fc[,curcol] ~ group_factor + s(doy, bs="cc", fx = TRUE, by=group_factor),
                            data=env_fc,
-                           chunk.size=1000,
-                           cluster=cl)
+                           discrete = TRUE,
+                           nthreads = ncores)
     } else {
       #if only 1 geographic area, then run without group_factor
       tempbam <- mgcv::bam(env_fc[,curcol] ~ s(doy, bs="cc", fx = TRUE),
                            data=env_fc,
-                           chunk.size=1000,
-                           cluster=cl)
+                           discrete = TRUE,
+                           nthreads = ncores)
 
     }
 
@@ -690,7 +688,31 @@ anomalize_env <- function(env_fc, quo_groupfield, env_variables_used, ncores) {
     # but for the moment just replace non-NA observations with their residuals
     env_fc[!is.na(env_fc[,curcol]),curcol] <- tempbam$residuals
 
-    parallel::stopCluster(cl)
+
+
+
+    # cl <- parallel::makeCluster(ncores)
+    #
+    # #if more than one geographic area
+    # if (nlevels(group_factor) > 1){
+    #   tempbam <- mgcv::bam(env_fc[,curcol] ~ group_factor + s(doy, bs="cc", fx = TRUE, by=group_factor),
+    #                        data=env_fc,
+    #                        chunk.size=1000,
+    #                        cluster=cl)
+    # } else {
+    #   #if only 1 geographic area, then run without group_factor
+    #   tempbam <- mgcv::bam(env_fc[,curcol] ~ s(doy, bs="cc", fx = TRUE),
+    #                        data=env_fc,
+    #                        chunk.size=1000,
+    #                        cluster=cl)
+    #
+    # }
+    #
+    # # could perhaps more cleverly be figured out by understanding the na.options of bam,
+    # # but for the moment just replace non-NA observations with their residuals
+    # env_fc[!is.na(env_fc[,curcol]),curcol] <- tempbam$residuals
+    #
+    # parallel::stopCluster(cl)
 
   }
 
@@ -902,27 +924,46 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
                                       bandsums_eq))
   }
 
-  # set up clusters for parallel gam
-  cl <- parallel::makeCluster(ncores)
+  #No parallel, try discrete
 
   # run bam
   #message("Beginning bam on historical epi data")
   cluster_regress <- mgcv::bam(reg_eq, data = epi_known,
                                family=poisson(),
-                               chunk.size=1000,
-                               cluster=cl,
-                               control=mgcv::gam.control(trace=FALSE))
+                               control=mgcv::gam.control(trace=FALSE),
+                               discrete = TRUE,
+                               nthreads = ncores)
 
   #output prediction (through req_date)
   cluster_preds <- mgcv::predict.bam(cluster_regress,
                                      newdata = epi_lag %>% dplyr::filter(obs_date <= req_date),
                                      se.fit = TRUE,       # included for backwards compatibility
                                      type="response",
-                                     #block.size=50000,
-                                     cluster=cl)
+                                     discrete = TRUE,
+                                     n.threads = ncores)
 
-  # shut down cluster
-  parallel::stopCluster(cl)
+
+  # # set up clusters for parallel gam
+  # cl <- parallel::makeCluster(ncores)
+  #
+  # # run bam
+  # #message("Beginning bam on historical epi data")
+  # cluster_regress <- mgcv::bam(reg_eq, data = epi_known,
+  #                              family=poisson(),
+  #                              chunk.size=1000,
+  #                              cluster=cl,
+  #                              control=mgcv::gam.control(trace=FALSE))
+  #
+  # #output prediction (through req_date)
+  # cluster_preds <- mgcv::predict.bam(cluster_regress,
+  #                                    newdata = epi_lag %>% dplyr::filter(obs_date <= req_date),
+  #                                    se.fit = TRUE,       # included for backwards compatibility
+  #                                    type="response",
+  #                                    #block.size=50000,
+  #                                    cluster=cl)
+  #
+  # # shut down cluster
+  # parallel::stopCluster(cl)
 
 
   #remove distributed lag summaries and bspline basis, which are no longer helpful

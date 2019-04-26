@@ -673,13 +673,13 @@ anomalize_env <- function(env_fc, quo_groupfield, env_variables_used, ncores) {
 
     #if more than one geographic area
     if (nlevels(group_factor) > 1){
-      tempbam <- mgcv::bam(env_fc[,curcol] ~ group_factor + s(doy, bs="cc", by=group_factor),
+      tempbam <- mgcv::bam(env_fc[,curcol] ~ group_factor + s(doy, bs="cc", fx = TRUE, by=group_factor),
                            data=env_fc,
                            chunk.size=1000,
                            cluster=cl)
     } else {
       #if only 1 geographic area, then run without group_factor
-      tempbam <- mgcv::bam(env_fc[,curcol] ~ s(doy, bs="cc"),
+      tempbam <- mgcv::bam(env_fc[,curcol] ~ s(doy, bs="cc", fx = TRUE),
                            data=env_fc,
                            chunk.size=1000,
                            cluster=cl)
@@ -891,14 +891,14 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   #different versions if multiple geographic area groupings or not
   if (n_groupings > 1){
     reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
-                                      "+s(doy, bs=\"cc\", by=",
+                                      "+s(doy, bs=\"cc\", fx = TRUE, by=",
                                       rlang::quo_name(quo_groupfield),
                                       ") + ",
                                       rlang::quo_name(quo_groupfield), "+",
                                       bandsums_eq))
   } else {
     reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
-                                      "+s(doy, bs=\"cc\") + ",
+                                      "+s(doy, bs=\"cc\", fx = TRUE) + ",
                                       bandsums_eq))
   }
 

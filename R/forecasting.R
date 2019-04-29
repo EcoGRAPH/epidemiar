@@ -101,12 +101,14 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
   if (fit_freq == "once"){
     message("Generating forecasts")
     #for single fit, call with last week (and subfunction has switch to return all)
-    forereg_return <- forecast_regression(epi_lag, quo_groupfield, groupings,
+    forereg_return <- forecast_regression(epi_lag,
+                                          quo_groupfield,
+                                          groupings,
                                           env_variables_used,
+                                          report_dates,
                                           req_date = report_dates$full$max,
                                           ncores,
-                                          fit_freq,
-                                          rpt_start = report_dates$full$min)
+                                          fit_freq)
     preds_catch <- forereg_return$date_preds
     reg_obj <- forereg_return$cluster_regress
 
@@ -118,8 +120,11 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
     for (w in seq_along(report_dates$full$seq)){
       message("Forecasting week ", w, " starting at ", Sys.time())
       dt <- report_dates$full$seq[w]
-      forereg_return <- forecast_regression(epi_lag, quo_groupfield, groupings,
+      forereg_return <- forecast_regression(epi_lag,
+                                            quo_groupfield,
+                                            groupings,
                                             env_variables_used,
+                                            report_dates,
                                             req_date = dt,
                                             ncores,
                                             fit_freq)
@@ -829,13 +834,18 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 #'reg_obj: The regression object from modeling.
 #'
 #'
-forecast_regression <- function(epi_lag, quo_groupfield, groupings,
-                                env_variables_used, req_date, ncores,
-                                fit_freq, rpt_start){
+forecast_regression <- function(epi_lag,
+                                quo_groupfield,
+                                groupings,
+                                env_variables_used,
+                                report_dates,
+                                req_date,
+                                ncores,
+                                fit_freq){
 
   if (fit_freq == "once"){
     #single fits use all the data available
-    last_known_date <- req_date
+    last_known_date <-  report_dates$known$max
   } else if (fit_freq == "week"){
     # for "week" model fits, forecasts are done knowing up to just before that date
     last_known_date <- req_date - lubridate::as.difftime(1, units = "days")
@@ -939,7 +949,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   if (fit_freq == "once"){
     #for single model fit, this has all the data we need, just trim to report dates
     date_preds <- epi_preds %>%
-      filter(obs_date >= rpt_start)
+      filter(obs_date >=  report_dates$full$min)
   } else if (fit_freq == "week"){
     #prediction of interest are last ones (equiv to req_date) per groupfield
     date_preds <- epi_preds %>%

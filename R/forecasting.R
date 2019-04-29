@@ -101,12 +101,14 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
   if (fit_freq == "once"){
     message("Generating forecasts")
     #for single fit, call with last week (and subfunction has switch to return all)
-    forereg_return <- forecast_regression(epi_lag, quo_groupfield, groupings,
+    forereg_return <- forecast_regression(epi_lag,
+                                          quo_groupfield,
+                                          groupings,
                                           env_variables_used,
+                                          report_dates,
                                           req_date = report_dates$full$max,
                                           ncores,
-                                          fit_freq,
-                                          rpt_start = report_dates$full$min)
+                                          fit_freq)
     preds_catch <- forereg_return$date_preds
     reg_obj <- forereg_return$cluster_regress
 
@@ -118,8 +120,11 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
     for (w in seq_along(report_dates$full$seq)){
       message("Forecasting week ", w, " starting at ", Sys.time())
       dt <- report_dates$full$seq[w]
-      forereg_return <- forecast_regression(epi_lag, quo_groupfield, groupings,
+      forereg_return <- forecast_regression(epi_lag,
+                                            quo_groupfield,
+                                            groupings,
                                             env_variables_used,
+                                            report_dates,
                                             req_date = dt,
                                             ncores,
                                             fit_freq)
@@ -671,13 +676,13 @@ anomalize_env <- function(env_fc, quo_groupfield, env_variables_used, ncores) {
 
     #if more than one geographic area
     if (nlevels(group_factor) > 1){
-      tempbam <- mgcv::bam(env_fc[,curcol] ~ group_factor + s(doy, bs="cc", fx = TRUE, by=group_factor),
+      tempbam <- mgcv::bam(env_fc[,curcol] ~ group_factor + s(doy, bs="cc", by=group_factor),
                            data=env_fc,
                            discrete = TRUE,
                            nthreads = ncores)
     } else {
       #if only 1 geographic area, then run without group_factor
-      tempbam <- mgcv::bam(env_fc[,curcol] ~ s(doy, bs="cc", fx = TRUE),
+      tempbam <- mgcv::bam(env_fc[,curcol] ~ s(doy, bs="cc"),
                            data=env_fc,
                            discrete = TRUE,
                            nthreads = ncores)
@@ -688,9 +693,7 @@ anomalize_env <- function(env_fc, quo_groupfield, env_variables_used, ncores) {
     # but for the moment just replace non-NA observations with their residuals
     env_fc[!is.na(env_fc[,curcol]),curcol] <- tempbam$residuals
 
-
-
-
+    ## OLD parallel
     # cl <- parallel::makeCluster(ncores)
     #
     # #if more than one geographic area
@@ -851,13 +854,18 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 #'reg_obj: The regression object from modeling.
 #'
 #'
-forecast_regression <- function(epi_lag, quo_groupfield, groupings,
-                                env_variables_used, req_date, ncores,
-                                fit_freq, rpt_start){
+forecast_regression <- function(epi_lag,
+                                quo_groupfield,
+                                groupings,
+                                env_variables_used,
+                                report_dates,
+                                req_date,
+                                ncores,
+                                fit_freq){
 
   if (fit_freq == "once"){
     #single fits use all the data available
-    last_known_date <- req_date
+    last_known_date <-  report_dates$known$max
   } else if (fit_freq == "week"){
     # for "week" model fits, forecasts are done knowing up to just before that date
     last_known_date <- req_date - lubridate::as.difftime(1, units = "days")
@@ -906,21 +914,20 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   }
 
   #filter to known
-  epi_known <- epi_lag %>%
-    dplyr::filter(known == 1)
+  epi_known <- epi_lag %>% dplyr::filter(known == 1)
 
   #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create expression to give to modeling function
   #different versions if multiple geographic area groupings or not
   if (n_groupings > 1){
     reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
-                                      "+s(doy, bs=\"cc\", fx = TRUE, by=",
+                                      "+s(doy, bs=\"cc\", by=",
                                       rlang::quo_name(quo_groupfield),
                                       ") + ",
                                       rlang::quo_name(quo_groupfield), "+",
                                       bandsums_eq))
   } else {
     reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
-                                      "+s(doy, bs=\"cc\", fx = TRUE) + ",
+                                      "+s(doy, bs=\"cc\") + ",
                                       bandsums_eq))
   }
 
@@ -983,7 +990,7 @@ forecast_regression <- function(epi_lag, quo_groupfield, groupings,
   if (fit_freq == "once"){
     #for single model fit, this has all the data we need, just trim to report dates
     date_preds <- epi_preds %>%
-      filter(obs_date >= rpt_start)
+      filter(obs_date >= report_dates$full$min)
   } else if (fit_freq == "week"){
     #prediction of interest are last ones (equiv to req_date) per groupfield
     date_preds <- epi_preds %>%

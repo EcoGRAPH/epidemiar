@@ -5,7 +5,7 @@
 \title{Run forecast regression}
 \usage{
 forecast_regression(epi_lag, quo_groupfield, groupings, env_variables_used,
-  req_date, ncores, fit_freq, rpt_start)
+  report_dates, req_date, ncores, fit_freq)
 }
 \arguments{
 \item{epi_lag}{Epidemiological dataset with basis spline summaries of the
@@ -19,6 +19,10 @@ run_epidemia().}
 \item{env_variables_used}{List of environmental variables that were used in
 the modeling.}
 
+\item{report_dates}{Internally generated set of report date information: min,
+max, list of dates for full report, known epidemiological data period,
+forecast period, and early detection period.}
+
 \item{req_date}{The end date of requested forecast regression. When fit_freq
 == "once", this is the last date of the full report, the end date of the
 forecast period.}
@@ -31,12 +35,6 @@ minus 1, or 1 core.}
 model - once for the whole report, or every week of the report. Unless
 otherwise needed, the value should be "once", as weekly drastically
 increases processing time.}
-
-\item{rpt_start}{The start date of the requested forecast regression which is
-the earliest date that will be included in the report. Calculated as
-subtracting the number of weeks of known epidemiological period to show
-(which is report_period - forecast_future) from the date of the last known
-epidemiological data.}
 }
 \value{
 Named list containing:

@@ -13,6 +13,9 @@ input_check(epi_data, quo_casefield, quo_popfield, inc_per, quo_groupfield,
 \item{epi_data}{Epidemiological data with case numbers per week, with date
 field "obs_date".}
 
+\item{quo_casefield}{Quosure of user given field containing the disease case
+counts.}
+
 \item{quo_popfield}{Quosure of user-given field containing population values.}
 
 \item{inc_per}{Number for what unit of population the incidence should be
@@ -30,8 +33,8 @@ dates listed are LAST day of week).}
 The \code{report_period} minus \code{forecast_future} is the number of weeks
 of past (known) data that will be included.}
 
-\item{ed_summary_period}{The number of weeks that will be considered the "early
-detection period". It will count back from the week of last known
+\item{ed_summary_period}{The number of weeks that will be considered the
+"early detection period". It will count back from the week of last known
 epidemiological data.}
 
 \item{ed_method}{Which method for early detection should be used ("Farrington"
@@ -68,9 +71,10 @@ display on timeseries in reports.}
 method (e.g. sum or mean), report labels, etc.}
 }
 \value{
-Returns a flag if there were any errors, plus accompanying error messages.
-Also returns a flag and messages for warnings, as well.
+Returns a flag if there were any errors, plus accompanying error
+ messages. Also returns a flag and messages for warnings, as well.
 }
 \description{
-Function does basic existance checks and variety of logic checks on input data to run_epidemia().
+Function does basic existance checks and variety of logic checks on input data
+to run_epidemia().
 }

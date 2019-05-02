@@ -808,6 +808,9 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 #'@param groupings A unique list of the geographic groupings (from groupfield).
 #'@param env_variables_used List of environmental variables that were used in
 #'  the modeling.
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
 #'@param req_date The end date of requested forecast regression. When fit_freq
 #'  == "once", this is the last date of the full report, the end date of the
 #'  forecast period.
@@ -818,11 +821,6 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 #'  model - once for the whole report, or every week of the report. Unless
 #'  otherwise needed, the value should be "once", as weekly drastically
 #'  increases processing time.
-#'@param rpt_start The start date of the requested forecast regression which is
-#'  the earliest date that will be included in the report. Calculated as
-#'  subtracting the number of weeks of known epidemiological period to show
-#'  (which is report_period - forecast_future) from the date of the last known
-#'  epidemiological data.
 #'
 #'@return Named list containing:
 #'date_preds: Full forecasted resulting dataset.

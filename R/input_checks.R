@@ -1,10 +1,12 @@
-#' Functions to check input to epidemiar
+#'Functions to check input to epidemiar
 #'
-#' Function does basic existance checks and variety of logic checks on input data to run_epidemia().
+#'Function does basic existance checks and variety of logic checks on input data
+#'to run_epidemia().
 #'
 #'@param epi_data Epidemiological data with case numbers per week, with date
 #'  field "obs_date".
-#'
+#'@param quo_casefield Quosure of user given field containing the disease case
+#'  counts.
 #'@param quo_popfield Quosure of user-given field containing population values.
 #'@param inc_per Number for what unit of population the incidence should be
 #'  reported in, e.g. incidence rate of 3 per 1000 people.
@@ -17,8 +19,8 @@
 #'@param report_period The number of weeks that the entire report will cover.
 #'  The \code{report_period} minus \code{forecast_future} is the number of weeks
 #'  of past (known) data that will be included.
-#'@param ed_summary_period The number of weeks that will be considered the "early
-#'  detection period". It will count back from the week of last known
+#'@param ed_summary_period The number of weeks that will be considered the
+#'  "early detection period". It will count back from the week of last known
 #'  epidemiological data.
 #'@param ed_method Which method for early detection should be used ("Farrington"
 #'  is only current option, or "None").
@@ -47,8 +49,8 @@
 #'
 #'
 #'
-#'@return Returns a flag if there were any errors, plus accompanying error messages.
-#'Also returns a flag and messages for warnings, as well.
+#'@return Returns a flag if there were any errors, plus accompanying error
+#'  messages. Also returns a flag and messages for warnings, as well.
 #'
 #'
 #'

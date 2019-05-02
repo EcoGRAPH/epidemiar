@@ -674,28 +674,23 @@ anomalize_env <- function(env_fc, quo_groupfield, env_variables_used, ncores) {
   # note: brittle on column position until rewrite
   for (curcol in 4:ncol(env_fc)) {
 
-    cl <- parallel::makeCluster(ncores)
-
     #if more than one geographic area
     if (nlevels(group_factor) > 1){
       tempbam <- mgcv::bam(env_fc[,curcol] ~ group_factor + s(doy, bs="cc", by=group_factor),
                            data=env_fc,
-                           chunk.size=1000,
-                           cluster=cl)
+                           discrete = TRUE,
+                           nthreads = ncores)
     } else {
       #if only 1 geographic area, then run without group_factor
       tempbam <- mgcv::bam(env_fc[,curcol] ~ s(doy, bs="cc"),
                            data=env_fc,
-                           chunk.size=1000,
-                           cluster=cl)
-
+                           discrete = TRUE,
+                           nthreads = ncores)
     }
 
     # could perhaps more cleverly be figured out by understanding the na.options of bam,
     # but for the moment just replace non-NA observations with their residuals
     env_fc[!is.na(env_fc[,curcol]),curcol] <- tempbam$residuals
-
-    parallel::stopCluster(cl)
 
   }
 
@@ -894,8 +889,7 @@ forecast_regression <- function(epi_lag,
   }
 
   #filter to known
-  epi_known <- epi_lag %>%
-    dplyr::filter(known == 1)
+  epi_known <- epi_lag %>% dplyr::filter(known == 1)
 
   #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create expression to give to modeling function
   #different versions if multiple geographic area groupings or not
@@ -912,26 +906,23 @@ forecast_regression <- function(epi_lag,
                                       bandsums_eq))
   }
 
-  # set up clusters for parallel gam
-  cl <- parallel::makeCluster(ncores)
 
   # run bam
+  # Using discrete = TRUE was much faster than using parallel with bam.
   #message("Beginning bam on historical epi data")
   cluster_regress <- mgcv::bam(reg_eq, data = epi_known,
                                family=poisson(),
-                               chunk.size=1000,
-                               cluster=cl,
-                               control=mgcv::gam.control(trace=FALSE))
+                               control=mgcv::gam.control(trace=FALSE),
+                               discrete = TRUE,
+                               nthreads = ncores)
 
   #output prediction (through req_date)
   cluster_preds <- mgcv::predict.bam(cluster_regress,
                                      newdata = epi_lag %>% dplyr::filter(obs_date <= req_date),
                                      se.fit = TRUE,       # included for backwards compatibility
                                      type="response",
-                                     cluster = cl)
-
-  # shut down cluster
-  parallel::stopCluster(cl)
+                                     discrete = TRUE,
+                                     n.threads = ncores)
 
 
   #remove distributed lag summaries and bspline basis, which are no longer helpful
@@ -951,7 +942,7 @@ forecast_regression <- function(epi_lag,
   if (fit_freq == "once"){
     #for single model fit, this has all the data we need, just trim to report dates
     date_preds <- epi_preds %>%
-      filter(obs_date >=  report_dates$full$min)
+      filter(obs_date >= report_dates$full$min)
   } else if (fit_freq == "week"){
     #prediction of interest are last ones (equiv to req_date) per groupfield
     date_preds <- epi_preds %>%

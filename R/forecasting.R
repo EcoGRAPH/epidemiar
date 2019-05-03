@@ -113,7 +113,8 @@ run_forecast <- function(epi_data,
                                    report_dates,
                                    req_date = report_dates$full$max,
                                    ncores,
-                                   fit_freq = "once")
+                                   fit_freq = "once",
+                                   model_run)
 
     model_run_only <- create_named_list(env_variables_used,
                                         env_dt_ranges,
@@ -138,7 +139,8 @@ run_forecast <- function(epi_data,
                                           report_dates,
                                           req_date = report_dates$full$max,
                                           ncores,
-                                          fit_freq)
+                                          fit_freq,
+                                          model_run)
     preds_catch <- forereg_return$date_preds
     reg_obj <- forereg_return$cluster_regress
 
@@ -157,7 +159,8 @@ run_forecast <- function(epi_data,
                                             report_dates,
                                             req_date = dt,
                                             ncores,
-                                            fit_freq)
+                                            fit_freq,
+                                            model_run)
 
       dt_preds <- forereg_return$date_preds
       preds_catch <- rbind(preds_catch, as.data.frame(dt_preds))

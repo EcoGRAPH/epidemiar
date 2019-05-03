@@ -347,8 +347,8 @@ run_epidemia <- function(epi_data = NULL,
       env_info)
 
     #if a model run, forecast result contains regression object
-    model_results <- create_named_list(model_obj = fc_res_all$reg_obj,
-                                       model_info = model_meta)
+    model_results <- list(model_obj = fc_res_all$reg_obj,
+                          model_info = model_meta)
 
     return(model_results)
 

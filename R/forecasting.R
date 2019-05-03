@@ -37,6 +37,9 @@
 #'@param week_type String indicating the standard (WHO ISO-8601 or CDC epi
 #'  weeks) that the weeks of the year in epidemiological and environmental
 #'  reference data use ["ISO" or "CDC"].
+#'@param model_run TRUE/FALSE flag for whether to only generate the model
+#'  regression object plus metadata. This model can be cached and used later on
+#'  its own, skipping a large portion of the slow calculations for future runs.
 #'
 #'@return Named list containing:
 #'fc_epi: Full forecasted resulting dataset.
@@ -856,10 +859,14 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 #'  model - once for the whole report, or every week of the report. Unless
 #'  otherwise needed, the value should be "once", as weekly drastically
 #'  increases processing time.
+#'@param model_run TRUE/FALSE flag for whether to only generate the model
+#'  regression object plus metadata. This model can be cached and used later on
+#'  its own, skipping a large portion of the slow calculations for future runs.
 #'
 #'@return Named list containing:
 #'date_preds: Full forecasted resulting dataset.
 #'reg_obj: The regression object from modeling.
+#'Unless model_run is TRUE, in which case only the regression object is returned.
 #'
 #'
 forecast_regression <- function(epi_lag,
@@ -869,7 +876,8 @@ forecast_regression <- function(epi_lag,
                                 report_dates,
                                 req_date,
                                 ncores,
-                                fit_freq){
+                                fit_freq,
+                                model_run){
 
   if (fit_freq == "once"){
     #single fits use all the data available

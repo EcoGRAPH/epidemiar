@@ -92,6 +92,27 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
                                 env_fc, env_variables_used, laglen = fc_control$lag_length)
 
 
+  # If only model_run, then return to run_epidemia() here
+  if (model_run){
+    model_run_result <- forecast_regression(epi_lag,
+                                   quo_groupfield,
+                                   groupings,
+                                   env_variables_used,
+                                   report_dates,
+                                   req_date = report_dates$full$max,
+                                   ncores,
+                                   fit_freq = "once")
+
+    model_run_only <- create_named_list(env_variables_used,
+                                        env_dt_ranges,
+                                        reg_obj = model_run_result)
+    return(model_run_only)
+  }
+
+
+
+
+
   #Split regression call depending on {once|week} model fit frequency
   # default "once"
   if (!is.null(fc_control$fit_freq)) {
@@ -139,7 +160,6 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
   } else stop("Model fit frequency unknown") #shouldn't happen with default "once"
 
 
-
   # Interval calculation - experimental
   preds_catch <- preds_catch %>%
     dplyr::mutate(fc_cases = fit,
@@ -156,9 +176,12 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
     dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
 
   # return list with res and other needed items
-  fc_res_full <- create_named_list(fc_epi = preds_catch, fc_res,
-                                   env_data_extd, env_variables_used,
-                                   env_dt_ranges, reg_obj)
+  fc_res_full <- create_named_list(fc_epi = preds_catch,
+                                   fc_res,
+                                   env_data_extd,
+                                   env_variables_used,
+                                   env_dt_ranges,
+                                   reg_obj)
 }
 
 #forecasting helper functions
@@ -913,6 +936,13 @@ forecast_regression <- function(epi_lag,
                                control=mgcv::gam.control(trace=FALSE),
                                discrete = TRUE,
                                nthreads = ncores)
+
+
+  # If model run, return regression object to run_forecast() at this point
+  if (model_run){
+    return(cluster_regress)
+  }
+
 
   #output prediction (through req_date)
   cluster_preds <- mgcv::predict.bam(cluster_regress,

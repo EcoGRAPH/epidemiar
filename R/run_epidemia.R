@@ -21,7 +21,7 @@
 #'  numbers over time (unquoted field name). Used to calculated incidence. Also
 #'  optionally used in Farrington method for populationOffset.
 #'@param inc_per Number for what unit of population the incidence should be
-#'    reported in, e.g. incidence rate of 3 per 1000 people.
+#'  reported in, e.g. incidence rate of 3 per 1000 people.
 #'@param groupfield The column name of the field for district or geographic area
 #'  unit division names of epidemiological AND environmental data (unquoted
 #'  field name). If there are no groupings (all one area), user should give a
@@ -33,8 +33,8 @@
 #'@param report_period The number of weeks that the entire report will cover.
 #'  The \code{report_period} minus \code{forecast_future} is the number of weeks
 #'  of past (known) data that will be included.
-#'@param ed_summary_period The number of weeks that will be considered the "early
-#'  detection period". It will count back from the week of last known
+#'@param ed_summary_period The number of weeks that will be considered the
+#'  "early detection period". It will count back from the week of last known
 #'  epidemiological data.
 #'@param ed_method Which method for early detection should be used ("Farrington"
 #'  is only current option, or "None").
@@ -60,6 +60,9 @@
 #'  display on timeseries in reports.
 #'@param env_info Lookup table for environmental data - reference creation
 #'  method (e.g. sum or mean), report labels, etc.
+#'@param model_run TRUE/FALSE flag for whether to only generate the model
+#'  regression object plus metadata. This model can be cached and used later on
+#'  its own, skipping a large portion of the slow calculations for future runs.
 #'
 #'
 #'
@@ -97,8 +100,14 @@
 #'  statistical investigation of the model, and is usually not saved (very large
 #'  object).
 #'
-#' For more details see the vignette on the output data:
-#' \code{vignette("output-report-data", package = "epidemiar")}
+#'  For more details see the vignette on the output data:
+#'  \code{vignette("output-report-data", package = "epidemiar")}
+#'
+#'  However, if \code{model_run = TRUE}, the function returns a list of two
+#'  objects. The first, \code{model_obj} is the regression object from whichever
+#'  model is being run. There is also \code{model_info} which has details on the
+#'  parameters used to create the model, similar to \code{params_meta} in a full
+#'  run.
 #'
 #'@examples "See model_forecast_script in epidemiar-demo for full example:
 #'https://github.com/EcoGRAPH/epidemiar-demo"
@@ -126,7 +135,8 @@ run_epidemia <- function(epi_data = NULL,
                          forecast_future = 4,
                          fc_control = NULL,
                          env_ref_data = NULL,
-                         env_info = NULL){
+                         env_info = NULL,
+                         model_run = FALSE){
 
 
   # Non-standard evaluation quosures ----------------------------------------
@@ -302,9 +312,47 @@ run_epidemia <- function(epi_data = NULL,
 
   # Forecasting -------------------------------------------------------------
 
-  fc_res_all <- run_forecast(epi_data, quo_popfield, inc_per, quo_groupfield, groupings,
-                             env_data, quo_obsfield, quo_valuefield, env_variables,
-                             fc_control, env_ref_data, env_info, report_dates, week_type)
+  fc_res_all <- run_forecast(epi_data,
+                             quo_popfield,
+                             inc_per,
+                             quo_groupfield,
+                             groupings,
+                             env_data,
+                             quo_obsfield,
+                             quo_valuefield,
+                             env_variables,
+                             fc_control,
+                             env_ref_data,
+                             env_info,
+                             report_dates,
+                             week_type,
+                             model_run)
+
+  #if we are only generating the model, then end here
+  if (model_run){
+    message("Model run only")
+
+    fieldnames <- list(casefield = quo_name(quo_casefield),
+                       populationfield = quo_name(quo_popfield),
+                       groupfield = quo_name(quo_groupfield),
+                       obsfield = quo_name(quo_obsfield),
+                       valuefield = quo_name(quo_valuefield))
+    model_meta <- create_named_list(
+      fieldnames,
+      week_type,
+      groupings,
+      env_variables_used = fc_res_all$env_variables_used,
+      env_dt_ranges = fc_res_all$env_dt_ranges,
+      known_epi_range = report_dates$known,
+      env_info)
+
+    #if a model run, forecast result contains regression object
+    model_results <- create_named_list(model_obj = fc_res_all$reg_obj,
+                                       model_info = model_meta)
+
+    return(model_results)
+
+  }
 
 
 

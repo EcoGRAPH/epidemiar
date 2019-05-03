@@ -49,9 +49,21 @@
 #'env_dt_ranges: Date ranges of the input environmental data.
 #'reg_obj: The regression object from modeling.
 #'
-run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupings,
-                         env_data, quo_obsfield, quo_valuefield, env_variables,
-                         fc_control, env_ref_data, env_info, report_dates, week_type){
+run_forecast <- function(epi_data,
+                         quo_popfield,
+                         inc_per,
+                         quo_groupfield,
+                         groupings,
+                         env_data,
+                         quo_obsfield,
+                         quo_valuefield,
+                         env_variables,
+                         fc_control,
+                         env_ref_data,
+                         env_info,
+                         report_dates,
+                         week_type,
+                         model_run){
   message("Preparing for forecasting")
 
   #set up default parallel processing number of cores to use number
@@ -108,9 +120,6 @@ run_forecast <- function(epi_data, quo_popfield, inc_per, quo_groupfield, groupi
                                         reg_obj = model_run_result)
     return(model_run_only)
   }
-
-
-
 
 
   #Split regression call depending on {once|week} model fit frequency

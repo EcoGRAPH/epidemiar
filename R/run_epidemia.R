@@ -63,7 +63,9 @@
 #'@param model_run TRUE/FALSE flag for whether to only generate the model
 #'  regression object plus metadata. This model can be cached and used later on
 #'  its own, skipping a large portion of the slow calculations for future runs.
-#'
+#'@param model_obj Regression object built from a model_run = TRUE run of
+#'  run_epidemia(). Using the prebuilt model will significantly save on
+#'  processing time, but will need to be updated periodically.
 #'
 #'
 #'@return Returns a suite of summary and report data.
@@ -136,7 +138,8 @@ run_epidemia <- function(epi_data = NULL,
                          fc_control = NULL,
                          env_ref_data = NULL,
                          env_info = NULL,
-                         model_run = FALSE){
+                         model_run = FALSE,
+                         model_obj = NULL){
 
 
   # Non-standard evaluation quosures ----------------------------------------
@@ -232,7 +235,8 @@ run_epidemia <- function(epi_data = NULL,
                                forecast_future,
                                fc_control,
                                env_ref_data,
-                               env_info)
+                               env_info,
+                               model_obj)
   #if warnings, just give message and continue
   if (check_results$warn_flag){
     message(check_results$warn_msgs)
@@ -326,7 +330,8 @@ run_epidemia <- function(epi_data = NULL,
                              env_info,
                              report_dates,
                              week_type,
-                             model_run)
+                             model_run,
+                             model_obj)
 
   #if we are only generating the model, then end here
   if (model_run){

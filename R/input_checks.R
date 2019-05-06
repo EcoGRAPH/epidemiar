@@ -46,7 +46,9 @@
 #'  display on timeseries in reports.
 #'@param env_info Lookup table for environmental data - reference creation
 #'  method (e.g. sum or mean), report labels, etc.
-#'
+#'@param model_obj Regression object built from a model_run = TRUE run of
+#'  run_epidemia(). Using the prebuilt model will significantly save on
+#'  processing time, but will need to be updated periodically.
 #'
 #'
 #'@return Returns a flag if there were any errors, plus accompanying error
@@ -71,7 +73,8 @@ input_check <- function(epi_data,
                         forecast_future,
                         fc_control,
                         env_ref_data,
-                        env_info){
+                        env_info,
+                        model_obj){
 
   # Want ALL data checks to happen, whether or not error happen before the end of the tests.
   # Want to collect all errors, and return all of them to console

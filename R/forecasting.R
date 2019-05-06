@@ -40,6 +40,10 @@
 #'@param model_run TRUE/FALSE flag for whether to only generate the model
 #'  regression object plus metadata. This model can be cached and used later on
 #'  its own, skipping a large portion of the slow calculations for future runs.
+#'@param model_obj Regression object built from a model_run = TRUE run of
+#'  run_epidemia(). Using the prebuilt model will significantly save on
+#'  processing time, but will need to be updated periodically.
+#'
 #'
 #'@return Named list containing:
 #'fc_epi: Full forecasted resulting dataset.
@@ -51,6 +55,7 @@
 #'  env_data dataset)
 #'env_dt_ranges: Date ranges of the input environmental data.
 #'reg_obj: The regression object from modeling.
+#'
 #'
 run_forecast <- function(epi_data,
                          quo_popfield,
@@ -66,7 +71,9 @@ run_forecast <- function(epi_data,
                          env_info,
                          report_dates,
                          week_type,
-                         model_run){
+                         model_run,
+                         model_obj){
+
   message("Preparing for forecasting")
 
   #set up default parallel processing number of cores to use number
@@ -143,7 +150,8 @@ run_forecast <- function(epi_data,
                                           req_date = report_dates$full$max,
                                           ncores,
                                           fit_freq,
-                                          model_run)
+                                          model_run,
+                                          model_obj)
     preds_catch <- forereg_return$date_preds
     reg_obj <- forereg_return$cluster_regress
 
@@ -163,7 +171,8 @@ run_forecast <- function(epi_data,
                                             req_date = dt,
                                             ncores,
                                             fit_freq,
-                                            model_run)
+                                            model_run,
+                                            model_obj)
 
       dt_preds <- forereg_return$date_preds
       preds_catch <- rbind(preds_catch, as.data.frame(dt_preds))
@@ -877,7 +886,8 @@ forecast_regression <- function(epi_lag,
                                 req_date,
                                 ncores,
                                 fit_freq,
-                                model_run){
+                                model_run,
+                                model_obj){
 
   if (fit_freq == "once"){
     #single fits use all the data available
@@ -887,6 +897,14 @@ forecast_regression <- function(epi_lag,
     last_known_date <- req_date - lubridate::as.difftime(1, units = "days")
   }
 
+  #number of clusters
+  n_clusters <- nlevels(epi_lag$cluster_id)
+  #number of geographic area groupings
+  n_groupings <- epi_lag %>% pull(!!quo_groupfield) %>% nlevels()
+
+
+  ## Set up data
+
   #mark known or not
   epi_lag <- epi_lag %>%
     dplyr::mutate(known = ifelse(obs_date <= last_known_date, 1, 0))
@@ -894,22 +912,6 @@ forecast_regression <- function(epi_lag,
   # ensure that quo_name(quo_groupfield) is a factor - gam/bam will fail if given a character,
   # which is unusual among regression functions, which typically just coerce into factors.
   epi_lag <- epi_lag %>% dplyr::mutate(!!rlang::quo_name(quo_groupfield) := factor(!!quo_groupfield))
-
-  #number of clusters
-  n_clusters <- nlevels(epi_lag$cluster_id)
-  #number of geographic area groupings
-  n_groupings <- epi_lag %>% pull(!!quo_groupfield) %>% nlevels()
-
-  #create variable bandsummaries equation piece
-  #  e.g. 'bandsummaries_{var1} * cluster_id' for however many env var bandsummaries there are
-  bandsums_list <- grep("bandsum_*", colnames(epi_lag), value = TRUE)
-  bandsums_cl_list <- paste0(bandsums_list, "*cluster_id")
-  #need variant without known multiplication if <= 1 clusters
-  if (n_clusters > 1) {
-    bandsums_eq <- glue::glue_collapse(bandsums_cl_list, sep =" + ")
-  } else {
-    bandsums_eq <- glue::glue_collapse(bandsums_list, sep = " + ")
-  }
 
   # create a doy field so that we can use a cyclical spline
   epi_lag <- dplyr::mutate(epi_lag, doy = as.numeric(format(obs_date, "%j")))
@@ -919,50 +921,74 @@ forecast_regression <- function(epi_lag,
                                       degree=6,
                                       maxobs=max(epi_lag$obs_date[epi_lag$known==1], na.rm=TRUE)))
 
-  # get list of modbspline reserved variables and format for inclusion into model
-  modb_list <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)
-  # variant depending on >1 geographic area groupings
-  if (n_groupings > 1){
-    modb_list_grp <- paste(modb_list, "*", rlang::quo_name(quo_groupfield))
-    modb_eq <- glue::glue_collapse(modb_list_grp, sep = " + ")
+
+
+  ## If model_obj is NOT given, then create model / run regression
+  if (is.null(model_obj)){
+
+    #create variable bandsummaries equation piece
+    #  e.g. 'bandsummaries_{var1} * cluster_id' for however many env var bandsummaries there are
+    bandsums_list <- grep("bandsum_*", colnames(epi_lag), value = TRUE)
+    bandsums_cl_list <- paste0(bandsums_list, "*cluster_id")
+    #need variant without known multiplication if <= 1 clusters
+    if (n_clusters > 1) {
+      bandsums_eq <- glue::glue_collapse(bandsums_cl_list, sep =" + ")
+    } else {
+      bandsums_eq <- glue::glue_collapse(bandsums_list, sep = " + ")
+    }
+
+    # get list of modbspline reserved variables and format for inclusion into model
+    modb_list <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)
+    # variant depending on >1 geographic area groupings
+    if (n_groupings > 1){
+      modb_list_grp <- paste(modb_list, "*", rlang::quo_name(quo_groupfield))
+      modb_eq <- glue::glue_collapse(modb_list_grp, sep = " + ")
+    } else {
+      modb_eq <- glue::glue_collapse(modb_list, sep = " + ")
+    }
+
+    #filter to known
+    epi_known <- epi_lag %>% dplyr::filter(known == 1)
+
+    #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create expression to give to modeling function
+    #different versions if multiple geographic area groupings or not
+    if (n_groupings > 1){
+      reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
+                                        "+s(doy, bs=\"cc\", by=",
+                                        rlang::quo_name(quo_groupfield),
+                                        ") + ",
+                                        rlang::quo_name(quo_groupfield), "+",
+                                        bandsums_eq))
+    } else {
+      reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
+                                        "+s(doy, bs=\"cc\") + ",
+                                        bandsums_eq))
+    }
+
+
+    # run bam
+    # Using discrete = TRUE was much faster than using parallel with bam.
+    #message("Beginning bam on historical epi data")
+    cluster_regress <- mgcv::bam(reg_eq, data = epi_known,
+                                 family=poisson(),
+                                 control=mgcv::gam.control(trace=FALSE),
+                                 discrete = TRUE,
+                                 nthreads = ncores)
+
+    #end if is.null model_obj
   } else {
-    modb_eq <- glue::glue_collapse(modb_list, sep = " + ")
+    #if model_obj given, then use that as cluster_regress
+    cluster_regress <- model_obj
   }
 
-  #filter to known
-  epi_known <- epi_lag %>% dplyr::filter(known == 1)
 
-  #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create expression to give to modeling function
-  #different versions if multiple geographic area groupings or not
-  if (n_groupings > 1){
-    reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
-                                      "+s(doy, bs=\"cc\", by=",
-                                      rlang::quo_name(quo_groupfield),
-                                      ") + ",
-                                      rlang::quo_name(quo_groupfield), "+",
-                                      bandsums_eq))
-  } else {
-    reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
-                                      "+s(doy, bs=\"cc\") + ",
-                                      bandsums_eq))
-  }
-
-
-  # run bam
-  # Using discrete = TRUE was much faster than using parallel with bam.
-  #message("Beginning bam on historical epi data")
-  cluster_regress <- mgcv::bam(reg_eq, data = epi_known,
-                               family=poisson(),
-                               control=mgcv::gam.control(trace=FALSE),
-                               discrete = TRUE,
-                               nthreads = ncores)
-
-
-  # If model run, return regression object to run_forecast() at this point
+  ## If model run, return regression object to run_forecast() at this point
   if (model_run){
     return(cluster_regress)
   }
 
+
+  ## Create predictions from either newly generated model, or given one
 
   #output prediction (through req_date)
   cluster_preds <- mgcv::predict.bam(cluster_regress,

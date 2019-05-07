@@ -897,12 +897,6 @@ forecast_regression <- function(epi_lag,
     last_known_date <- req_date - lubridate::as.difftime(1, units = "days")
   }
 
-  #number of clusters
-  n_clusters <- nlevels(epi_lag$cluster_id)
-  #number of geographic area groupings
-  n_groupings <- epi_lag %>% pull(!!quo_groupfield) %>% nlevels()
-
-
   ## Set up data
 
   #mark known or not
@@ -912,6 +906,11 @@ forecast_regression <- function(epi_lag,
   # ensure that quo_name(quo_groupfield) is a factor - gam/bam will fail if given a character,
   # which is unusual among regression functions, which typically just coerce into factors.
   epi_lag <- epi_lag %>% dplyr::mutate(!!rlang::quo_name(quo_groupfield) := factor(!!quo_groupfield))
+  #number of geographic area groupings
+  n_groupings <- epi_lag %>% pull(!!quo_groupfield) %>% nlevels()
+
+  #number of clusters
+  n_clusters <- nlevels(epi_lag$cluster_id)
 
   # create a doy field so that we can use a cyclical spline
   epi_lag <- dplyr::mutate(epi_lag, doy = as.numeric(format(obs_date, "%j")))

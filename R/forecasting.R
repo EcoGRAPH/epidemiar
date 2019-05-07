@@ -106,8 +106,13 @@ run_forecast <- function(epi_data,
   env_fc <- env_format_fc(env_data_extd, quo_groupfield, quo_obsfield)
   epi_fc <- epi_format_fc(epi_data_extd, quo_groupfield, fc_control)
 
-  # anomalizing the environ data
-  env_fc <- anomalize_env(env_fc, quo_groupfield, env_variables_used, ncores)
+  # anomalizing the environ data if wanted. DEFAULT IS TRUE for backwards compatibility.
+  if (is.null(fc_control[["anom_env"]])){
+    fc_control$anom_env <- TRUE
+  }
+  if (fc_control$anom_env){
+    env_fc <- anomalize_env(env_fc, quo_groupfield, env_variables_used, ncores)
+  }
 
   # create the lags
   epi_lag <- lag_environ_to_epi(epi_fc, quo_groupfield, groupings,

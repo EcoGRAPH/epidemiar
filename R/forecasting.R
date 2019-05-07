@@ -72,7 +72,7 @@ run_forecast <- function(epi_data,
                          report_dates,
                          week_type,
                          model_run,
-                         model_obj){
+                         model_obj = NULL){
 
   message("Preparing for forecasting")
 
@@ -124,7 +124,8 @@ run_forecast <- function(epi_data,
                                    req_date = report_dates$full$max,
                                    ncores,
                                    fit_freq = "once",
-                                   model_run)
+                                   model_run,
+                                   model_obj = NULL)
 
     model_run_only <- create_named_list(env_variables_used,
                                         env_dt_ranges,
@@ -151,7 +152,7 @@ run_forecast <- function(epi_data,
                                           ncores,
                                           fit_freq,
                                           model_run,
-                                          model_obj)
+                                          model_obj = NULL)
     preds_catch <- forereg_return$date_preds
     reg_obj <- forereg_return$cluster_regress
 
@@ -172,7 +173,7 @@ run_forecast <- function(epi_data,
                                             ncores,
                                             fit_freq,
                                             model_run,
-                                            model_obj)
+                                            model_obj = NULL)
 
       dt_preds <- forereg_return$date_preds
       preds_catch <- rbind(preds_catch, as.data.frame(dt_preds))

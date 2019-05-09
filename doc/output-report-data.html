@@ -10,9 +10,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<meta name="author" content="Dawn M. Nekorchuk" />
 
-<meta name="date" content="2019-03-13" />
 
 <title>Output Data</title>
 
@@ -31,13 +29,15 @@
 
 
 <h1 class="title toc-ignore">Output Data</h1>
-<h4 class="author"><em>Dawn M. Nekorchuk</em></h4>
-<h4 class="date"><em>2019-03-13</em></h4>
+<h4 class="author"><em><div style="white-space: pre-line;">Dawn Nekorchuk, Michael Wimberly, and EPIDEMIA Team Members
+Department of Geography and Environmental Sustainability, University of Oklahoma
+<a href="mailto:dawn.nekorchuk@ou.edu">dawn.nekorchuk@ou.edu</a>; <a href="mailto:mcwimberly@ou.edu">mcwimberly@ou.edu</a></div></em></h4>
+<h4 class="date"><em>Updated May 09, 2019</em></h4>
 
 
 
-<div id="epidemiar-output-dataset" class="section level1">
-<h1>Epidemiar Output Dataset</h1>
+<div id="epidemiar-output-dataset---full-run" class="section level1">
+<h1>Epidemiar Output Dataset - Full Run</h1>
 <p>The results of <code>run_epidemia()</code> is a named list of the following datasets or objects:</p>
 <ol style="list-style-type: decimal">
 <li><code>summary_data</code></li>
@@ -116,7 +116,23 @@
 </div>
 <div id="regression_object" class="section level2">
 <h2><code>regression_object</code></h2>
-<p>This is the regression object from the general additive model (GAM, parallelized with BAM) regression. This is only for additional statistical investigation of the model, and is usually not saved (large object).</p>
+<p>This is the regression object from the general additive model (bam()) regression. This is generally only for additional statistical investigation of the model, and is usually not saved (large object).</p>
+</div>
+</div>
+<div id="epidemiar-output-dataset---model-only-run" class="section level1">
+<h1>Epidemiar Output Dataset - Model Only Run</h1>
+<p>The results of <code>run_epidemiar(..., model_run = TRUE)</code> is only the regression object (model) plus some metadata information about what was used to generate the model. Once a model has been generated, it can be fed back into <code>run_epidemiar(..., model_obj = {regression object})</code> for faster predictions rather than regenerating the model on each run. Determining the balance on how old of a model is still useful is heavily dependent on the specific dataset.</p>
+<ol style="list-style-type: decimal">
+<li><code>model_obj</code></li>
+<li><code>model_info</code></li>
+</ol>
+<div id="model_obj" class="section level2">
+<h2><code>model_obj</code></h2>
+<p>The output regression object from the <code>bam()</code> general additive model regression call.</p>
+</div>
+<div id="model_info" class="section level2">
+<h2><code>model_info</code></h2>
+<p>A list of dates, settings, and relevant parameters that <code>run_epidemiar()</code> was called with. Very similar to <code>params_meta</code> of a full run.</p>
 </div>
 </div>
 

@@ -1,12 +1,25 @@
 ---
 title: "Output Data"
-author: "Dawn M. Nekorchuk"
-date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Output Data}
+author: |
+  | Dawn Nekorchuk, Michael Wimberly, and EPIDEMIA Team Members
+  | Department of Geography and Environmental Sustainability, University of Oklahoma
+  | dawn.nekorchuk@ou.edu; mcwimberly@ou.edu
+date: "Updated `r format(Sys.time(), '%B %d, %Y')`"
+output:
+  rmarkdown::html_vignette:
+    fig_caption: yes
+  pdf_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '2'
+vignette: |
+  %\VignetteIndexEntry{Output Data} 
+  %\VignetteEncoding{UTF-8} 
   %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include = FALSE}
@@ -16,7 +29,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Epidemiar Output Dataset
+# Epidemiar Output Dataset - Full Run
 
 The results of `run_epidemia()` is a named list of the following datasets or objects:
 
@@ -85,7 +98,21 @@ These data are the recent (during the early detection period) differences (anoma
 This lists dates, settings, and parameters that `run_epidemiar()` was called with.
 
 ## `regression_object`
-This is the regression object from the general additive model (GAM, parallelized with BAM) regression. This is only for additional statistical investigation of the model, and is usually not saved (large object).
+This is the regression object from the general additive model (bam()) regression. This is generally only for additional statistical investigation of the model, and is usually not saved (large object).
 
+
+# Epidemiar Output Dataset - Model Only Run
+
+The results of `run_epidemiar(..., model_run = TRUE)` is only the regression object (model) plus some metadata information about what was used to generate the model. 
+Once a model has been generated, it can be fed back into `run_epidemiar(..., model_obj = {regression object})` for faster predictions rather than regenerating the model on each run. Determining the balance on how old of a model is still useful is heavily dependent on the specific dataset. 
+
+1. `model_obj`
+2. `model_info`
+
+## `model_obj`
+The output regression object from the `bam()` general additive model regression call. 
+
+## `model_info`
+A list of dates, settings, and relevant parameters that `run_epidemiar()` was called with. Very similar to `params_meta` of a full run. 
 
 

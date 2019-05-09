@@ -6,18 +6,20 @@ author: |
   | dawn.nekorchuk@ou.edu; mcwimberly@ou.edu
 date: "Updated `r format(Sys.time(), '%B %d, %Y')`"
 output:
+  rmarkdown::html_vignette:
+    fig_caption: yes
   html_document:
     df_print: paged
     toc: yes
     toc_depth: '2'
-  rmarkdown::html_vignette:
-    fig_caption: yes
   pdf_document:
     number_sections: yes
     toc: yes
     toc_depth: 2
 vignette: |
-  %\VignetteIndexEntry{Overview} %\VignetteEncoding{UTF-8} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Overview} 
+  %\VignetteEncoding{UTF-8} 
+  %\VignetteEngine{knitr::rmarkdown}
 ---
 
 ```{r setup, include = FALSE}

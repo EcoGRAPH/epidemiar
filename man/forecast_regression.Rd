@@ -39,6 +39,10 @@ increases processing time.}
 \item{model_run}{TRUE/FALSE flag for whether to only generate the model
 regression object plus metadata. This model can be cached and used later on
 its own, skipping a large portion of the slow calculations for future runs.}
+
+\item{model_obj}{Regression object built from a model_run = TRUE run of
+run_epidemia(). Using the prebuilt model will significantly save on
+processing time, but will need to be updated periodically.}
 }
 \value{
 Named list containing:

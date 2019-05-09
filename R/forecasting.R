@@ -55,6 +55,7 @@
 #'  env_data dataset)
 #'env_dt_ranges: Date ranges of the input environmental data.
 #'reg_obj: The regression object from modeling.
+#'Unless model_run is TRUE, in which case only the regression object is returned.
 #'
 #'
 run_forecast <- function(epi_data,
@@ -877,6 +878,9 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 #'@param model_run TRUE/FALSE flag for whether to only generate the model
 #'  regression object plus metadata. This model can be cached and used later on
 #'  its own, skipping a large portion of the slow calculations for future runs.
+#'@param model_obj Regression object built from a model_run = TRUE run of
+#'  run_epidemia(). Using the prebuilt model will significantly save on
+#'  processing time, but will need to be updated periodically.
 #'
 #'@return Named list containing:
 #'date_preds: Full forecasted resulting dataset.

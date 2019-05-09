@@ -77,6 +77,7 @@ env_variables_used: list of environmental variables that were used in the
  env_data dataset)
 env_dt_ranges: Date ranges of the input environmental data.
 reg_obj: The regression object from modeling.
+Unless model_run is TRUE, in which case only the regression object is returned.
 }
 \description{
 Runs the forecast modeling

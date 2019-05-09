@@ -5,7 +5,7 @@
 \title{Run forecast regression}
 \usage{
 forecast_regression(epi_lag, quo_groupfield, groupings, env_variables_used,
-  report_dates, req_date, ncores, fit_freq)
+  report_dates, req_date, ncores, fit_freq, model_run, model_obj = NULL)
 }
 \arguments{
 \item{epi_lag}{Epidemiological dataset with basis spline summaries of the
@@ -35,11 +35,16 @@ minus 1, or 1 core.}
 model - once for the whole report, or every week of the report. Unless
 otherwise needed, the value should be "once", as weekly drastically
 increases processing time.}
+
+\item{model_run}{TRUE/FALSE flag for whether to only generate the model
+regression object plus metadata. This model can be cached and used later on
+its own, skipping a large portion of the slow calculations for future runs.}
 }
 \value{
 Named list containing:
 date_preds: Full forecasted resulting dataset.
 reg_obj: The regression object from modeling.
+Unless model_run is TRUE, in which case only the regression object is returned.
 }
 \description{
 Run forecast regression

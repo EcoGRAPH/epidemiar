@@ -6,7 +6,8 @@
 \usage{
 run_forecast(epi_data, quo_popfield, inc_per, quo_groupfield, groupings,
   env_data, quo_obsfield, quo_valuefield, env_variables, fc_control,
-  env_ref_data, env_info, report_dates, week_type)
+  env_ref_data, env_info, report_dates, week_type, model_run,
+  model_obj = NULL)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date
@@ -56,6 +57,14 @@ forecast period, and early detection period.}
 \item{week_type}{String indicating the standard (WHO ISO-8601 or CDC epi
 weeks) that the weeks of the year in epidemiological and environmental
 reference data use ["ISO" or "CDC"].}
+
+\item{model_run}{TRUE/FALSE flag for whether to only generate the model
+regression object plus metadata. This model can be cached and used later on
+its own, skipping a large portion of the slow calculations for future runs.}
+
+\item{model_obj}{Regression object built from a model_run = TRUE run of
+run_epidemia(). Using the prebuilt model will significantly save on
+processing time, but will need to be updated periodically.}
 }
 \value{
 Named list containing:

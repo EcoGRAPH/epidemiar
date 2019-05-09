@@ -7,7 +7,7 @@
 input_check(epi_data, quo_casefield, quo_popfield, inc_per, quo_groupfield,
   week_type, report_period, ed_summary_period, ed_method, ed_control,
   env_data, quo_obsfield, quo_valuefield, forecast_future, fc_control,
-  env_ref_data, env_info)
+  env_ref_data, env_info, model_obj)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date
@@ -69,6 +69,10 @@ display on timeseries in reports.}
 
 \item{env_info}{Lookup table for environmental data - reference creation
 method (e.g. sum or mean), report labels, etc.}
+
+\item{model_obj}{Regression object built from a model_run = TRUE run of
+run_epidemia(). Using the prebuilt model will significantly save on
+processing time, but will need to be updated periodically.}
 }
 \value{
 Returns a flag if there were any errors, plus accompanying error

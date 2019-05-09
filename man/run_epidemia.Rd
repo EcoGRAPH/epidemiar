@@ -10,7 +10,8 @@ run_epidemia(epi_data = NULL, casefield = NULL,
   ed_summary_period = 4, ed_method = c("None", "Farrington"),
   ed_control = NULL, env_data = NULL, obsfield = NULL,
   valuefield = NULL, forecast_future = 4, fc_control = NULL,
-  env_ref_data = NULL, env_info = NULL)
+  env_ref_data = NULL, env_info = NULL, model_run = FALSE,
+  model_obj = NULL)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date
@@ -40,8 +41,8 @@ dates listed are LAST day of week).}
 The \code{report_period} minus \code{forecast_future} is the number of weeks
 of past (known) data that will be included.}
 
-\item{ed_summary_period}{The number of weeks that will be considered the "early
-detection period". It will count back from the week of last known
+\item{ed_summary_period}{The number of weeks that will be considered the
+"early detection period". It will count back from the week of last known
 epidemiological data.}
 
 \item{ed_method}{Which method for early detection should be used ("Farrington"
@@ -76,6 +77,14 @@ display on timeseries in reports.}
 
 \item{env_info}{Lookup table for environmental data - reference creation
 method (e.g. sum or mean), report labels, etc.}
+
+\item{model_run}{TRUE/FALSE flag for whether to only generate the model
+regression object plus metadata. This model can be cached and used later on
+its own, skipping a large portion of the slow calculations for future runs.}
+
+\item{model_obj}{Regression object built from a model_run = TRUE run of
+run_epidemia(). Using the prebuilt model will significantly save on
+processing time, but will need to be updated periodically.}
 }
 \value{
 Returns a suite of summary and report data.
@@ -112,8 +121,14 @@ Returns a suite of summary and report data.
  statistical investigation of the model, and is usually not saved (very large
  object).
 
-For more details see the vignette on the output data:
-\code{vignette("output-report-data", package = "epidemiar")}
+ For more details see the vignette on the output data:
+ \code{vignette("output-report-data", package = "epidemiar")}
+
+ However, if \code{model_run = TRUE}, the function returns a list of two
+ objects. The first, \code{model_obj} is the regression object from whichever
+ model is being run. There is also \code{model_info} which has details on the
+ parameters used to create the model, similar to \code{params_meta} in a full
+ run.
 }
 \description{
 The Epidemic Prognosis Incorporating Disease and Environmental Monitoring for

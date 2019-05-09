@@ -6,16 +6,16 @@ author: |
   | dawn.nekorchuk@ou.edu; mcwimberly@ou.edu
 date: "Updated `r format(Sys.time(), '%B %d, %Y')`"
 output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '2'
   rmarkdown::html_vignette:
     fig_caption: yes
   pdf_document:
     number_sections: yes
     toc: yes
     toc_depth: 2
-  html_document:
-    df_print: paged
-    toc: yes
-    toc_depth: '2'
 vignette: |
   %\VignetteIndexEntry{Overview} %\VignetteEncoding{UTF-8} %\VignetteEngine{knitr::rmarkdown}
 ---
@@ -116,7 +116,7 @@ To account for seasonality in each geographic group, a cyclical cubic regression
 
 The rates of environmentally-mediated infectious diseases can be influenced by the environmental factors via a range of potential mechanisms, e.g. affecting the abundance and life cycle of disease vectors. The influences on disease generally lags behind the changes in the environmental covariates. 
 
-In our modeling, the **anomalies** of the environmental covariates are used as factors. We are looking at the influence of deviation from normal in the environmental factors to help explain deviations from normal in the human cases. The variables were transformed by taking the residuals from a GAM with geographic unit and cyclical cubic regression spline on day of year per geographic group: $geo + s(doy, bs="cc", by=geo)$
+In our modeling, the **anomalies** of the environmental covariates are used as factors (by default - this can be changed by setting `fc_control$anom_env = FALSE`) . We are looking at the influence of deviation from normal in the environmental factors to help explain deviations from normal in the human cases. The variables were transformed by taking the residuals from a GAM with geographic unit and cyclical cubic regression spline on day of year per geographic group: $geo + s(doy, bs="cc", by=geo)$
 
 In the modeling controls, the user selects the maximum number of days in the past (lag length, _l_) to consider interactions.  Each geographic group and week is associated with environmental anomaly values on the day the week began, up to the lag length, _l_, so that each group-week has a _l_-day history. A distributed lag basis is created with the natural cubic splines function (ns, splines library), including intercept, with knots at 25%, 50%, and 75% of the lag length. The 5 basis functions that result are multiplied by each group's history, so that there are just 5 summary statistics, instead of _l_, for every combination of group, week, and environmental anomaly covariate. 
 

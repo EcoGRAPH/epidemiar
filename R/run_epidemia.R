@@ -139,7 +139,9 @@ run_epidemia <- function(epi_data = NULL,
                          env_ref_data = NULL,
                          env_info = NULL,
                          model_run = FALSE,
-                         model_obj = NULL){
+                         model_obj = NULL,
+                         model_cached = NULL,
+                         model_choice = c("poisson-gam", "negbin")){
 
 
   # Non-standard evaluation quosures ----------------------------------------

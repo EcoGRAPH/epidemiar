@@ -121,10 +121,13 @@ input_check <- function(epi_data,
     err_flag <- TRUE
     err_msgs <- paste(err_msgs, "There must be a column ", rlang::quo_name(quo_groupfield), ", in the epidemiological dataset, 'epi_data'.\n")
   }
-  # has populationfield (for now, future may allow for optional)
-  if(!rlang::quo_name(quo_popfield) %in% colnames(epi_data)){
-    err_flag <- TRUE
-    err_msgs <- paste(err_msgs, "There must be a column ", rlang::quo_name(quo_popfield), ", in the epidemiological dataset, 'epi_data'.\n")
+  # has populationfield, but only if given as it is optional
+  #testing if quosure was created on NULL object.
+  if(!rlang::quo_is_null(quo_popfield)){
+    if(!rlang::quo_name(quo_popfield) %in% colnames(epi_data)){
+      err_flag <- TRUE
+      err_msgs <- paste(err_msgs, "The specified column ", rlang::quo_name(quo_popfield), ", for population must be in the in the epidemiological dataset, 'epi_data'.\n")
+    }
   }
 
 

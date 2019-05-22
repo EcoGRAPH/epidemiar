@@ -218,3 +218,27 @@ calc_env_anomalies <- function(env_ts, quo_groupfield, quo_obsfield, report_date
     dplyr::summarize(anom_ed_mean = mean(anom, na.rm = TRUE)) %>%
     dplyr::ungroup()
 }
+
+## Chooses the appropriate function to return the results in the desired form
+#' Chooses the functoin to calculate the epidemiological value to be shown as result, and on the reports.
+#'
+#'@param model_choice
+#'@param value_type
+#'
+#' @return A function.
+#'
+pick_value_fx <- function(model_choice, value_type){
+
+  #if m_c, if v_t clauses, returning function
+
+  fx <- function(cases) {
+    cases
+  }
+
+  fx <- function(cases, pop, inc_per){
+    cases / pop * inc_per
+  }
+
+  #...
+  #how work with NSE???
+  }

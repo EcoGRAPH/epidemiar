@@ -161,12 +161,10 @@ run_epidemia <- function(epi_data = NULL,
   # 1. Test for critical inputs
   # This will not check if they've assigned the right thing to the argument, or got the argument order correct if not explicit argument declarations
   # But, no other checks can really proceed if things are missing
-  # NSE is a little tricky.
-  #can't test directly on fields-to-be-enquo'd because it'll try to evaluate them, and complain that the object (actually field name) doesn't exist
+  # NSE is a little tricky: can't test directly on fields-to-be-enquo'd because it'll try to evaluate them, and complain that the object (actually field name) doesn't exist
   #naming the quosures AS the input fields to create more meaningful error messages if the items are missing
-  #populationfield eventually to be non necessary, but as of right now, things are reported in incidence, so population is critical
   nec_nse <- list(casefield = quo_casefield, groupfield = quo_groupfield, obsfield = quo_obsfield,
-                  valuefield = quo_valuefield, populationfield = quo_popfield)
+                  valuefield = quo_valuefield)
   necessary <- create_named_list(epi_data, env_data, env_ref_data, env_info, fc_control)
   #ed_control can be NULL if ed_method == None.
   # rest has defaults

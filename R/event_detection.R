@@ -18,31 +18,51 @@
 #'@param report_dates Internally generated set of report date information: min,
 #'  max, list of dates for full report, known epidemiological data period,
 #'  forecast period, and early detection period.
+#'@param vt From match.arg evaluation of fc_control$value_type, whether to return
+#'  epidemiological report values in "incidence" (default) or "cases".
+#'@param mc From match.arg evaluation of model_choice. Reserved for future overrides on value_type depending on
+#'  model choice selection.
+
 #'
 #'@return Returns a list of three generated series:
 #' "ed" : early detection alerts (ed period of most recent epi data)
 #' "ew" : early warning alerts (forecast/future portion)
 #' "thresh" : threshold values per week
 #'
-run_event_detection <- function(epi_fc_data, quo_popfield, inc_per,
-                                quo_groupfield, groupings,
-                                ed_method, ed_control, report_dates){
+run_event_detection <- function(epi_fc_data,
+                                quo_popfield,
+                                inc_per,
+                                quo_groupfield,
+                                groupings,
+                                ed_method,
+                                ed_control,
+                                report_dates,
+                                vt,
+                                mc){
   message("Running early detection")
 
   #only supporting Farrington Improved method from Surveillance right now,
   #leaving option open for expanding later
   #Note: using exact matches, which can because of match.arg() at beginning on run_epidemia()
 
-  if (ed_method == "Farrington") {
+  if (ed_method == "farrington") {
 
-    ed_far_res <- run_farrington(epi_fc_data, quo_popfield, inc_per,
-                                 quo_groupfield, groupings,
-                                 ed_control, report_dates)
+    ed_far_res <- run_farrington(epi_fc_data,
+                                 quo_popfield,
+                                 inc_per,
+                                 quo_groupfield,
+                                 groupings,
+                                 ed_control,
+                                 report_dates,
+                                 vt,
+                                 mc)
     return(ed_far_res)
 
-  } else if (ed_method == "None") {
+  } else if (ed_method == "none") {
 
-    ed_far_res <- run_no_detection(epi_fc_data, quo_groupfield, report_dates)
+    ed_far_res <- run_no_detection(epi_fc_data,
+                                   quo_groupfield,
+                                   report_dates)
 
   }
 
@@ -63,15 +83,26 @@ run_event_detection <- function(epi_fc_data, quo_popfield, inc_per,
 #'@param report_dates Internally generated set of report date information: min,
 #'  max, list of dates for full report, known epidemiological data period,
 #'  forecast period, and early detection period.
+#'@param vt From match.arg evaluation of fc_control$value_type, whether to return
+#'  epidemiological report values in "incidence" (default) or "cases".
+#'@param mc From match.arg evaluation of model_choice. Reserved for future overrides on value_type depending on
+#'  model choice selection.
+
 #'
 #'@return Returns a list of three generated series from the Farrington algorithm:
 #' "ed" : early detection alerts (ed period of most recent epi data)
 #' "ew" : early warning alerts (forecast/future portion)
 #' "thresh" : threshold values per week
 #'
-run_farrington <- function(epi_fc_data, quo_popfield, inc_per,
-                           quo_groupfield, groupings,
-                           ed_control, report_dates){
+run_farrington <- function(epi_fc_data,
+                           quo_popfield,
+                           inc_per,
+                           quo_groupfield,
+                           groupings,
+                           ed_control,
+                           report_dates,
+                           vt,
+                           mc){
   ## Make sts objects
   #check about population offset
   # did the user set population offset
@@ -80,11 +111,20 @@ run_farrington <- function(epi_fc_data, quo_popfield, inc_per,
     if (ed_control[["populationOffset"]] == TRUE){
       #if so, did they give the population field
       if (!is.null(quo_popfield)){
-        epi_stss <- make_stss(epi_fc_data, quo_popfield, quo_groupfield, groupings)
+        epi_stss <- make_stss(epi_fc_data,
+                              quo_popfield,
+                              quo_groupfield,
+                              groupings)
       } else stop("Population offset is TRUE, but population field not given")
-    } else epi_stss <- make_stss(epi_fc_data, quo_popfield = NULL, quo_groupfield, groupings) #popoffset is FALSE, so no pop to sts
-  } else epi_stss <- make_stss(epi_fc_data, quo_popfield = NULL, quo_groupfield, groupings) #if null, default is false, so pop = NULL
-  #though note that pop is still a required field atm, so this path will fail later in early detection
+      #<<>> add to earlier input checks so fails early rather than later
+    } else epi_stss <- make_stss(epi_fc_data,
+                                 quo_popfield = NULL,
+                                 quo_groupfield,
+                                 groupings) #popoffset is FALSE, so no pop to sts
+  } else epi_stss <- make_stss(epi_fc_data,
+                               quo_popfield = NULL,
+                               quo_groupfield,
+                               groupings) #if null, default is false, so pop = NULL
 
   ## Set up new control list for Farrington (using their names)
   far_control <- list()
@@ -164,9 +204,15 @@ run_farrington <- function(epi_fc_data, quo_popfield, inc_per,
   }
 
   #results into output report data form
-  far_res <- stss_res_to_output_data(stss_res_list = far_res_list, epi_fc_data,
-                                     quo_popfield, inc_per,
-                                     quo_groupfield, groupings, report_dates)
+  far_res <- stss_res_to_output_data(stss_res_list = far_res_list,
+                                     epi_fc_data,
+                                     quo_popfield,
+                                     inc_per,
+                                     quo_groupfield,
+                                     groupings,
+                                     report_dates,
+                                     vt,
+                                     mc)
 
   far_res
 }
@@ -198,7 +244,7 @@ make_stss <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings){
       #sts() likes matrices
       as.matrix()
     #if population field given, get population
-    #only is passed in when popoffset = TRUE & population field is given
+    #only is passed in when popoffset = TRUE & population field is given #<<pop>>
     if (!is.null(quo_popfield)){
       g_pop <- dplyr::select(g_df, !!quo_popfield) %>%
         #sts() likes matrices
@@ -234,15 +280,26 @@ make_stss <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings){
 #'@param report_dates Internally generated set of report date information: min,
 #'  max, list of dates for full report, known epidemiological data period,
 #'  forecast period, and early detection period.
+#'@param vt From match.arg evaluation of fc_control$value_type, whether to return
+#'  epidemiological report values in "incidence" (default) or "cases".
+#'@param mc From match.arg evaluation of model_choice. Reserved for future overrides on value_type depending on
+#'  model choice selection.
+
 #'
 #'@return Returns a list of three series from the Farrington sts result output:
 #' "ed" : early detection alerts (ed period of most recent epi data)
 #' "ew" : early warning alerts (forecast/future portion)
 #' "thresh" : threshold values per week
 #'
-stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
-                                    quo_popfield, inc_per,
-                                    quo_groupfield, groupings, report_dates){
+stss_res_to_output_data <- function(stss_res_list,
+                                    epi_fc_data,
+                                    quo_popfield,
+                                    inc_per,
+                                    quo_groupfield,
+                                    groupings,
+                                    report_dates,
+                                    vt,
+                                    mc){
   #take results of a surveillance event detection and reshape to output data format
   #stss to dfs
   stss_res_dfs <- lapply(stss_res_list, surveillance::as.data.frame)
@@ -257,7 +314,7 @@ stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
     #and convert to character for joining
     dplyr::mutate(!!rlang::quo_name(quo_groupfield) := as.character(!!quo_groupfield))
 
-  #recover population (for incidence calculations), not present if popoffset was FALSE
+  #recover population (for incidence calculations), not present if popoffset was FALSE #<<pop>>
   stss_res_flat <- stss_res_flat %>%
     dplyr::left_join(epi_fc_data %>%
                        dplyr::select(!!quo_groupfield, !!quo_popfield, obs_date),
@@ -292,7 +349,13 @@ stss_res_to_output_data <- function(stss_res_list, epi_fc_data,
   ed_thresh_res <- stss_res_flat %>%
     dplyr::mutate(series = "thresh",
                   obs_date = epoch,
-                  value = upperbound / !!quo_popfield * inc_per, #Incidence, from stss & epi_fc_data
+                  value = calc_return_value(cases = upperbound,
+                                            c_quo_tf = FALSE,
+                                            q_pop = quo_popfield,
+                                            inc_per,
+                                            vt,
+                                            mc),
+                  #value = upperbound / !!quo_popfield * inc_per, #Incidence, from stss & epi_fc_data
                   lab = "Alert Threshold",
                   upper = NA,
                   lower = NA) %>%

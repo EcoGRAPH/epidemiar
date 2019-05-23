@@ -220,25 +220,38 @@ calc_env_anomalies <- function(env_ts, quo_groupfield, quo_obsfield, report_date
 }
 
 ## Chooses the appropriate function to return the results in the desired form
-#' Chooses the functoin to calculate the epidemiological value to be shown as result, and on the reports.
+#' Calculate the epidemiological value to be shown as result, and on the reports.
 #'
-#'@param model_choice
-#'@param value_type
+#'@param cases Field containing case counts, if a quosure, c_quo_tf should be TRUE.
+#'@param c_quo_tf Binary T/F if case field is a quosure rather than a column name.
+#'@param inc_per Number for what unit of population the incidence should be
+#'  reported in, e.g. incidence rate of 3 per 1000 people. Parameter ignored if
+#'  vt == "cases" ("incidence" is default, if not set).
+#'@param vt From match.arg evaluation of fc_control$value_type, whether to return
+#'  epidemiological report values in "incidence" (default) or "cases".
+#'@param mc From match.arg evaluation of model_choice. Reserved for future overrides on value_type depending on
+#'  model choice selection.
 #'
-#' @return A function.
+#'@return Epidemiolgical return values, either in cases or incidence, depending
+#'  on user settings.
 #'
-pick_value_fx <- function(model_choice, value_type){
-
-  #if m_c, if v_t clauses, returning function
-
-  fx <- function(cases) {
-    cases
-  }
-
-  fx <- function(cases, pop, inc_per){
-    cases / pop * inc_per
-  }
-
-  #...
-  #how work with NSE???
-  }
+calc_return_value <- function(cases,
+                              c_quo_tf = FALSE,
+                              q_pop = NULL,
+                              inc_per,
+                              vt,
+                              mc){
+  dplyr::case_when(
+    #if reporting in case counts
+    #if quosure, evaluate
+    vt == "cases" & c_quo_tf ~ !!cases,
+    #otherwise given case field directly
+    vt == "cases" ~ cases,
+    #if incidence and case field quosure
+    vt == "incidence" & c_quo_tf ~ !!cases / !!q_pop * inc_per
+    #if incidence
+    vt == "incidence" ~ cases / !!q_pop * inc_per,
+    #otherwise
+    TRUE ~ NA_real_
+  )
+}

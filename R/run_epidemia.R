@@ -21,7 +21,8 @@
 #'  numbers over time (unquoted field name). Used to calculated incidence. Also
 #'  optionally used in Farrington method for populationOffset.
 #'@param inc_per Number for what unit of population the incidence should be
-#'  reported in, e.g. incidence rate of 3 per 1000 people.
+#'  reported in, e.g. incidence rate of 3 per 1000 people. Parameter ignored if
+#'  fc_control$value_type == "cases" ("incidence" is default, if not set).
 #'@param groupfield The column name of the field for district or geographic area
 #'  unit division names of epidemiological AND environmental data (unquoted
 #'  field name). If there are no groupings (all one area), user should give a
@@ -36,8 +37,8 @@
 #'@param ed_summary_period The number of weeks that will be considered the
 #'  "early detection period". It will count back from the week of last known
 #'  epidemiological data.
-#'@param ed_method Which method for early detection should be used ("Farrington"
-#'  is only current option, or "None").
+#'@param ed_method Which method for early detection should be used ("farrington"
+#'  is only current option, or "none").
 #'@param ed_control All parameters for early detection algorithm, passed through
 #'  to that subroutine.
 #'@param env_data Daily environmental data for the same groupfields and date
@@ -63,9 +64,27 @@
 #'@param model_run TRUE/FALSE flag for whether to only generate the model
 #'  regression object plus metadata. This model can be cached and used later on
 #'  its own, skipping a large portion of the slow calculations for future runs.
-#'@param model_obj Regression object built from a model_run = TRUE run of
-#'  run_epidemia(). Using the prebuilt model will significantly save on
-#'  processing time, but will need to be updated periodically.
+#'@param model_obj Deprecated, use model_cached if possible. Regression object
+#'  built from a model_run = TRUE run of run_epidemia(). Using the prebuilt
+#'  model will significantly save on processing time, but will need to be
+#'  updated periodically.
+#'@param model_cached The output of a previous model_run = TRUE run of
+#'  run_epidemia() that produces a model (regression object) and metadata. The
+#'  metadata will be used for input checking and validation. Using a prebuilt
+#'  model saves on processing time, but will need to be updated periodically.
+#'@param model_choice Critical argument to choose the type of model to generate.
+#'  The options are versions that the EPIDEMIA team has used for forecasting.
+#'  The first supported options is "poisson-gam" ("p") which is the original
+#'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
+#'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
+#'  TRUE for using the anomalies of environmental variables rather than their
+#'  raw values. The second option is "negbin" ("n") which is a negative binomial
+#'  regression using glm, with no external seasonality terms - letting the
+#'  natural cyclical behavior of the environmental variables fill that role. The
+#'  default for fc_control$anom_env is FALSE and uses the actual observation
+#'  values in the modeling. The fc_control$anom_env can be overruled by the user
+#'  providing a value, but this is not recommended unless you are doing
+#'  comparisons.
 #'
 #'
 #'@return Returns a suite of summary and report data.
@@ -129,7 +148,7 @@ run_epidemia <- function(epi_data = NULL,
                          week_type = c("ISO", "CDC"),
                          report_period = 26,
                          ed_summary_period = 4,
-                         ed_method = c("None", "Farrington"),
+                         ed_method = c("none", "farrington"),
                          ed_control = NULL,
                          env_data = NULL,
                          obsfield = NULL,
@@ -141,7 +160,7 @@ run_epidemia <- function(epi_data = NULL,
                          model_run = FALSE,
                          model_obj = NULL,
                          model_cached = NULL,
-                         model_choice = c("poisson-gam", "negbin")){
+                         model_choice = c("poisson-bam", "negbin")){
 
 
   # Non-standard evaluation quosures ----------------------------------------
@@ -193,18 +212,40 @@ run_epidemia <- function(epi_data = NULL,
 
   # 2. match.arg for arguments with options
   #Note: using message() instead of warning() to get message to appear right away
-  ed_method <- tryCatch({
-    match.arg(ed_method, c("None", "Farrington"))
+
+  #model_choice = c("poisson-bam", "negbin")
+  model_choice <- tryCatch({
+    #tolower to capture upper and lower case user-input variations since match.arg is case sensitive
+    #but must only try function if ed_method is not null (i.e. was given)
+    match.arg(ifelse(!is.null(model_choice), tolower(model_choice), model_choice), c("poisson-bam", "negbin"))
   }, error = function(e){
-    message("Warning: Given 'ed_method' does not match 'None' or 'Farrington', running as 'None'.")
+    message("Warning: Given 'model_choice' does not match 'poisson-bam' or 'negbin', running as 'poisson-bam'.")
+    "poisson-bam"
+  }, finally = {
+    if (length(model_choice) > 1){
+      #if model_choice was missing at run_epidemia() call, got assigned c("poisson-bam", "negbin")
+      message("Warning: 'model_choice' was missing, running as 'poisson-bam'.")
+      #no return, because in match.arg() it will take the first item, which is "poisson-bam".
+    }
+  })
+
+  #ed_method = c("none", "farrington")
+  ed_method <- tryCatch({
+    #tolower to capture upper and lower case user-input variations since match.arg is case sensitive
+    #but must only try function if ed_method is not null (i.e. was given)
+    match.arg(ifelse(!is.null(ed_method), tolower(ed_method), ed_method), c("none", "farrington"))
+  }, error = function(e){
+    message("Warning: Given 'ed_method' does not match 'none' or 'farrington', running as 'none'.")
     "None"
   }, finally = {
     if (length(ed_method) > 1){
-      #if ed_method was missing at run_epidemia() call, got assigned c("None", "Farrington")
-      message("Warning: 'ed_method' was missing, running as 'None'.")
-      #no return, because in match.arg() it will take the first item, which is "None".
+      #if ed_method was missing at run_epidemia() call, got assigned c("none", "farrington")
+      message("Warning: 'ed_method' was missing, running as 'none'.")
+      #no return, because in match.arg() it will take the first item, which is "none".
     }
   })
+
+  #week_type = c("ISO", "CDC")
   week_type <- tryCatch({
     match.arg(week_type, c("ISO", "CDC"))
   }, error = function(e){
@@ -236,7 +277,8 @@ run_epidemia <- function(epi_data = NULL,
                                fc_control,
                                env_ref_data,
                                env_info,
-                               model_obj)
+                               model_cached,
+                               model_choice)
   #if warnings, just give message and continue
   if (check_results$warn_flag){
     message(check_results$warn_msgs)
@@ -259,7 +301,8 @@ run_epidemia <- function(epi_data = NULL,
   env_variables <- dplyr::pull(env_data, !!quo_obsfield) %>% unique() %>% sort()
 
   ## Create report date information - for passing to interval functions, and report output
-  #REM: report_period is full # of weeks of report.  forecast_future is how many of those weeks should be in the future.
+  #REM: report_period is full # of weeks of report.  forecast_future is how many
+  #of those weeks should be in the future.
   #full report
   report_dates <- list(full = list(min = max(epi_data$obs_date, na.rm = TRUE) -
                                      lubridate::as.difftime((report_period - forecast_future - 1),
@@ -273,12 +316,14 @@ run_epidemia <- function(epi_data = NULL,
                              max = max(epi_data$obs_date, na.rm = TRUE))
   report_dates$known$seq <- report_dates$known %>% {seq.Date(.$min, .$max, "week")}
   #forecast period
-  report_dates$forecast <- list(min = report_dates$known$max + lubridate::as.difftime(1, units = "weeks"),
+  report_dates$forecast <- list(min = report_dates$known$max +
+                                  lubridate::as.difftime(1, units = "weeks"),
                                 #could calculate from forecast_future, but already done so in $full
                                 max = report_dates$full$max)
   report_dates$forecast$seq <- report_dates$forecast %>% {seq.Date(.$min, .$max, "week")}
   #early detection summary period (ED runs over full report, this is for summary in defined ED period)
-  report_dates$ed_sum <- list(min = report_dates$known$max - lubridate::as.difftime(ed_summary_period - 1, units = "weeks"),
+  report_dates$ed_sum <- list(min = report_dates$known$max -
+                                lubridate::as.difftime(ed_summary_period - 1, units = "weeks"),
                               max = report_dates$known$max)
   report_dates$ed_sum$seq <- report_dates$ed_sum %>% {seq.Date(.$min, .$max, "week")}
 
@@ -300,13 +345,28 @@ run_epidemia <- function(epi_data = NULL,
 
   # Set up output report data format ----------------------------------------
 
+  #User selection if return type should be in case counts or incidence (default)
+  #using tolower() to handle case sensitivity of match.arg
+  #but must only call tolower() on it if value_type was given (i.e. not null)
+  #if null, it will default to the first value "incidence"
+  fc_control$value_type <- match.arg(ifelse(!is.null(fc_control[["value_type"]]),
+                                            tolower(fc_control[["value_type"]]),
+                                            fc_control[["value_type"]]),
+                                     c("incidence", "cases"))
+
   #create observed data series
   obs_res <- epi_data %>%
     #include only observed data from requested start of report
     dplyr::filter(obs_date >= report_dates$full$min) %>%
     dplyr::mutate(series = "obs",
-                  #INCIDENCE; also note use of original not interpolated cases
-                  value = !!quo_casefield / !!quo_popfield * inc_per,
+                  value = calc_return_value(cases = quo_casefield,
+                                            c_quo_tf = TRUE,
+                                            q_pop = quo_popfield,
+                                            inc_per,
+                                            vt = fc_control$value_type,
+                                            mc = model_choice),
+                  #note use of original not interpolated cases
+                  #value = !!quo_casefield / !!quo_popfield * inc_per,
                   lab = "Observed",
                   upper = NA,
                   lower = NA) %>%
@@ -331,7 +391,9 @@ run_epidemia <- function(epi_data = NULL,
                              report_dates,
                              week_type,
                              model_run,
-                             model_obj)
+                             model_obj,
+                             model_cached,
+                             model_choice)
 
   #if we are only generating the model, then end here
   if (model_run){
@@ -342,14 +404,15 @@ run_epidemia <- function(epi_data = NULL,
                        groupfield = quo_name(quo_groupfield),
                        obsfield = quo_name(quo_obsfield),
                        valuefield = quo_name(quo_valuefield))
-    model_meta <- create_named_list(
-      fieldnames,
-      week_type,
-      groupings,
-      env_variables_used = fc_res_all$env_variables_used,
-      env_dt_ranges = fc_res_all$env_dt_ranges,
-      known_epi_range = report_dates$known,
-      env_info)
+
+    model_meta <- create_named_list(fieldnames,
+                                    week_type,
+                                    groupings,
+                                    env_variables_used = fc_res_all$env_variables_used,
+                                    env_dt_ranges = fc_res_all$env_dt_ranges,
+                                    known_epi_range = report_dates$known,
+                                    env_info,
+                                    date_created = Sys.Date())
 
     #if a model run, forecast result contains regression object
     model_results <- list(model_obj = fc_res_all$reg_obj,
@@ -379,10 +442,15 @@ run_epidemia <- function(epi_data = NULL,
 
   #run event detection on combined dataset
   ed_res <- run_event_detection(epi_fc_data = obs_fc_epi,
-                                quo_popfield, inc_per,
-                                quo_groupfield, groupings,
-                                ed_method, ed_control, report_dates)
-
+                                quo_popfield,
+                                inc_per,
+                                quo_groupfield,
+                                groupings,
+                                ed_method,
+                                ed_control,
+                                report_dates,
+                                vt = fc_control$value_type,
+                                mc = model_choice)
 
 
   # Combining forecast and event detection results --------------------------
@@ -398,20 +466,30 @@ run_epidemia <- function(epi_data = NULL,
 
   ## Prep Environmental Data for report
   #using extended environmental data from forecast functions
-  environ_timeseries <- environ_report_format(env_ext_data = fc_res_all$env_data_extd, env_ref_data,
-                                              quo_groupfield, quo_obsfield,
-                                              env_used = fc_res_all$env_variables_used, env_info,
-                                              week_type, report_dates)
+  environ_timeseries <- environ_report_format(env_ext_data = fc_res_all$env_data_extd,
+                                              env_ref_data,
+                                              quo_groupfield,
+                                              quo_obsfield,
+                                              env_used = fc_res_all$env_variables_used,
+                                              env_info,
+                                              week_type,
+                                              report_dates)
 
   ##Environmental Anomaly Data (during ED period)
   environ_anomalies <- calc_env_anomalies(env_ts = environ_timeseries,
-                                          quo_groupfield, quo_obsfield, report_dates)
+                                          quo_groupfield,
+                                          quo_obsfield,
+                                          report_dates)
 
   ## Calculate Early Detection and Early Warning summary data
-  summary_data <- create_summary_data(ed_res, quo_groupfield, report_dates)
+  summary_data <- create_summary_data(ed_res,
+                                      quo_groupfield,
+                                      report_dates)
 
   ## Calculate epidemiological (incidence) summary
-  epi_summary <- create_epi_summary(obs_res, quo_groupfield, report_dates)
+  epi_summary <- create_epi_summary(obs_res,
+                                    quo_groupfield,
+                                    report_dates)
 
   ## Parameters and metadata that might be useful in report generation
   # all of these may not be needed
@@ -420,10 +498,15 @@ run_epidemia <- function(epi_data = NULL,
                      groupfield = quo_name(quo_groupfield),
                      obsfield = quo_name(quo_obsfield),
                      valuefield = quo_name(quo_valuefield))
-  params_meta <- create_named_list(fieldnames, week_type, ed_method, groupings,
+
+  params_meta <- create_named_list(fieldnames,
+                                   week_type,
+                                   ed_method,
+                                   groupings,
                                    env_variables_used = fc_res_all$env_variables_used,
                                    env_dt_ranges = fc_res_all$env_dt_ranges,
-                                   report_dates, env_info)
+                                   report_dates,
+                                   env_info)
   #regression object for future other use or troubleshooting
   regression_object <- fc_res_all$reg_obj
 

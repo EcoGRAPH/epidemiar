@@ -40,10 +40,28 @@
 #'@param model_run TRUE/FALSE flag for whether to only generate the model
 #'  regression object plus metadata. This model can be cached and used later on
 #'  its own, skipping a large portion of the slow calculations for future runs.
-#'@param model_obj Regression object built from a model_run = TRUE run of
-#'  run_epidemia(). Using the prebuilt model will significantly save on
-#'  processing time, but will need to be updated periodically.
-#'
+#'@param model_obj Deprecated, use model_cached if possible. Regression object
+#'  built from a model_run = TRUE run of run_epidemia(). Using the prebuilt
+#'  model will significantly save on processing time, but will need to be
+#'  updated periodically.
+#'@param model_cached The output of a previous model_run = TRUE run of
+#'  run_epidemia() that produces a model (regression object) and metadata. The
+#'  metadata will be used for input checking and validation. Using a prebuilt
+#'  model saves on processing time, but will need to be updated periodically.
+#'@param model_choice Critical argument to choose the type of model to generate.
+#'  The options are versions that the EPIDEMIA team has used for forecasting.
+#'  The first supported options is "poisson-gam" ("p") which is the original
+#'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
+#'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
+#'  TRUE for using the anomalies of environmental variables rather than their
+#'  raw values. The second option is "negbin" ("n") which is a negative binomial
+#'  regression using glm, with no external seasonality terms - letting the
+#'  natural cyclical behavior of the environmental variables fill that role. The
+#'  default for fc_control$anom_env is FALSE and uses the actual observation
+#'  values in the modeling. The fc_control$anom_env can be overruled by the user
+#'  providing a value, but this is not recommended unless you are doing
+#'  comparisons.
+#'  #'
 #'
 #'@return Named list containing:
 #'fc_epi: Full forecasted resulting dataset.
@@ -73,7 +91,9 @@ run_forecast <- function(epi_data,
                          report_dates,
                          week_type,
                          model_run,
-                         model_obj = NULL){
+                         model_obj = NULL,
+                         model_cached,
+                         model_choice){
 
   message("Preparing for forecasting")
 
@@ -98,26 +118,48 @@ run_forecast <- function(epi_data,
     dplyr::summarize(start_dt = min(obs_date), end_dt = max(obs_date))
 
   # extend data into future, for future forecast portion
-  env_data_extd <- extend_env_future(env_data, quo_groupfield, groupings, quo_obsfield, quo_valuefield,
-                                     env_ref_data, env_info, env_variables_used, report_dates, week_type)
-  epi_data_extd <- extend_epi_future(epi_data, quo_popfield, quo_groupfield,
-                                     groupings, report_dates)
+  env_data_extd <- extend_env_future(env_data,
+                                     quo_groupfield,
+                                     groupings,
+                                     quo_obsfield,
+                                     quo_valuefield,
+                                     env_ref_data,
+                                     env_info,
+                                     env_variables_used,
+                                     report_dates,
+                                     week_type)
+  epi_data_extd <- extend_epi_future(epi_data,
+                                     quo_popfield,
+                                     quo_groupfield,
+                                     groupings,
+                                     report_dates)
 
   # format the data for forecasting algorithm
-  env_fc <- env_format_fc(env_data_extd, quo_groupfield, quo_obsfield)
-  epi_fc <- epi_format_fc(epi_data_extd, quo_groupfield, fc_control)
+  env_fc <- env_format_fc(env_data_extd,
+                          quo_groupfield,
+                          quo_obsfield)
+  epi_fc <- epi_format_fc(epi_data_extd,
+                          quo_groupfield,
+                          fc_control)
 
   # anomalizing the environ data if wanted. DEFAULT IS TRUE for backwards compatibility.
   if (is.null(fc_control[["anom_env"]])){
     fc_control$anom_env <- TRUE
   }
   if (fc_control$anom_env){
-    env_fc <- anomalize_env(env_fc, quo_groupfield, env_variables_used, ncores)
+    env_fc <- anomalize_env(env_fc,
+                            quo_groupfield,
+                            env_variables_used,
+                            ncores)
   }
 
   # create the lags
-  epi_lag <- lag_environ_to_epi(epi_fc, quo_groupfield, groupings,
-                                env_fc, env_variables_used, laglen = fc_control$lag_length)
+  epi_lag <- lag_environ_to_epi(epi_fc,
+                                quo_groupfield,
+                                groupings,
+                                env_fc,
+                                env_variables_used,
+                                laglen = fc_control$lag_length)
 
 
   # If only model_run, then return to run_epidemia() here
@@ -200,10 +242,29 @@ run_forecast <- function(epi_data,
   # extract fc series into report format
   fc_res <- preds_catch %>%
     dplyr::mutate(series = "fc",
-                  value = fc_cases / !!quo_popfield * inc_per,
+                  value = calc_return_value(cases = fc_cases,
+                                            c_quo_tf = FALSE,
+                                            q_pop = quo_popfield,
+                                            inc_per,
+                                            vt = fc_control$value_type,
+                                            mc = model_choice),
                   lab = "Forecast Trend",
-                  upper = fc_cases_upr / !!quo_popfield * inc_per,
-                  lower = fc_cases_lwr / !!quo_popfield * inc_per) %>%
+                  upper = calc_return_value(cases = fc_cases_upr,
+                                            c_quo_tf = FALSE,
+                                            q_pop = quo_popfield,
+                                            inc_per,
+                                            vt = fc_control$value_type,
+                                            mc = model_choice),
+                  lower = calc_return_value(cases = fc_cases_lwr,
+                                            c_quo_tf = FALSE,
+                                            q_pop = quo_popfield,
+                                            inc_per,
+                                            vt = fc_control$value_type,
+                                            mc = model_choice)
+                  #value = fc_cases / !!quo_popfield * inc_per,
+                  #upper = fc_cases_upr / !!quo_popfield * inc_per,
+                  #lower = fc_cases_lwr / !!quo_popfield * inc_per
+                  ) %>%
     dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
 
   # return list with res and other needed items

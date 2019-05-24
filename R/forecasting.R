@@ -154,6 +154,7 @@ run_forecast <- function(epi_data,
       TRUE ~ FALSE)
   }
   if (fc_control$anom_env){
+    message("Anomalizing the environmental variables.")
     env_fc <- anomalize_env(env_fc,
                             quo_groupfield,
                             env_variables_used,

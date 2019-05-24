@@ -7,11 +7,12 @@
 run_epidemia(epi_data = NULL, casefield = NULL,
   populationfield = NULL, inc_per = 1000, groupfield = NULL,
   week_type = c("ISO", "CDC"), report_period = 26,
-  ed_summary_period = 4, ed_method = c("None", "Farrington"),
+  ed_summary_period = 4, ed_method = c("none", "farrington"),
   ed_control = NULL, env_data = NULL, obsfield = NULL,
   valuefield = NULL, forecast_future = 4, fc_control = NULL,
   env_ref_data = NULL, env_info = NULL, model_run = FALSE,
-  model_obj = NULL)
+  model_obj = NULL, model_cached = NULL,
+  model_choice = c("poisson-bam", "negbin"))
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date
@@ -25,7 +26,8 @@ numbers over time (unquoted field name). Used to calculated incidence. Also
 optionally used in Farrington method for populationOffset.}
 
 \item{inc_per}{Number for what unit of population the incidence should be
-reported in, e.g. incidence rate of 3 per 1000 people.}
+reported in, e.g. incidence rate of 3 per 1000 people. Parameter ignored if
+fc_control$value_type == "cases" ("incidence" is default, if not set).}
 
 \item{groupfield}{The column name of the field for district or geographic area
 unit division names of epidemiological AND environmental data (unquoted
@@ -45,8 +47,8 @@ of past (known) data that will be included.}
 "early detection period". It will count back from the week of last known
 epidemiological data.}
 
-\item{ed_method}{Which method for early detection should be used ("Farrington"
-is only current option, or "None").}
+\item{ed_method}{Which method for early detection should be used ("farrington"
+is only current option, or "none").}
 
 \item{ed_control}{All parameters for early detection algorithm, passed through
 to that subroutine.}
@@ -82,9 +84,29 @@ method (e.g. sum or mean), report labels, etc.}
 regression object plus metadata. This model can be cached and used later on
 its own, skipping a large portion of the slow calculations for future runs.}
 
-\item{model_obj}{Regression object built from a model_run = TRUE run of
-run_epidemia(). Using the prebuilt model will significantly save on
-processing time, but will need to be updated periodically.}
+\item{model_obj}{Deprecated, use model_cached if possible. Regression object
+built from a model_run = TRUE run of run_epidemia(). Using the prebuilt
+model will significantly save on processing time, but will need to be
+updated periodically.}
+
+\item{model_cached}{The output of a previous model_run = TRUE run of
+run_epidemia() that produces a model (regression object) and metadata. The
+metadata will be used for input checking and validation. Using a prebuilt
+model saves on processing time, but will need to be updated periodically.}
+
+\item{model_choice}{Critical argument to choose the type of model to generate.
+The options are versions that the EPIDEMIA team has used for forecasting.
+The first supported options is "poisson-gam" ("p") which is the original
+epidemiar model: a Poisson regression using bam (for large data GAMs), with
+a smoothed cyclical for seasonality. The default for fc_control$anom_env is
+TRUE for using the anomalies of environmental variables rather than their
+raw values. The second option is "negbin" ("n") which is a negative binomial
+regression using glm, with no external seasonality terms - letting the
+natural cyclical behavior of the environmental variables fill that role. The
+default for fc_control$anom_env is FALSE and uses the actual observation
+values in the modeling. The fc_control$anom_env can be overruled by the user
+providing a value, but this is not recommended unless you are doing
+comparisons.}
 }
 \value{
 Returns a suite of summary and report data.

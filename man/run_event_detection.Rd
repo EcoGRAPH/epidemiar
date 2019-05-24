@@ -5,7 +5,7 @@
 \title{Main subfunction for running event detection algorithm.}
 \usage{
 run_event_detection(epi_fc_data, quo_popfield, inc_per, quo_groupfield,
-  groupings, ed_method, ed_control, report_dates)
+  groupings, ed_method, ed_control, report_dates, vt, mc)
 }
 \arguments{
 \item{epi_fc_data}{Internal pass of epidemiological data complete with future
@@ -30,6 +30,12 @@ to that subroutine.}
 \item{report_dates}{Internally generated set of report date information: min,
 max, list of dates for full report, known epidemiological data period,
 forecast period, and early detection period.}
+
+\item{vt}{From match.arg evaluation of fc_control$value_type, whether to return
+epidemiological report values in "incidence" (default) or "cases".}
+
+\item{mc}{From match.arg evaluation of model_choice. Reserved for future overrides on value_type depending on
+model choice selection.}
 }
 \value{
 Returns a list of three generated series:

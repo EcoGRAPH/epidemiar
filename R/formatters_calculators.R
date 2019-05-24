@@ -224,6 +224,7 @@ calc_env_anomalies <- function(env_ts, quo_groupfield, quo_obsfield, report_date
 #'
 #'@param cases Field containing case counts, if a quosure, c_quo_tf should be TRUE.
 #'@param c_quo_tf Binary T/F if case field is a quosure rather than a column name.
+#'@param q_pop Quosure of user-given field containing population values.
 #'@param inc_per Number for what unit of population the incidence should be
 #'  reported in, e.g. incidence rate of 3 per 1000 people. Parameter ignored if
 #'  vt == "cases" ("incidence" is default, if not set).

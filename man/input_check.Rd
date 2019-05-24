@@ -7,7 +7,7 @@
 input_check(epi_data, quo_casefield, quo_popfield, inc_per, quo_groupfield,
   week_type, report_period, ed_summary_period, ed_method, ed_control,
   env_data, quo_obsfield, quo_valuefield, forecast_future, fc_control,
-  env_ref_data, env_info, model_obj)
+  env_ref_data, env_info, model_cached, model_choice)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date
@@ -70,9 +70,24 @@ display on timeseries in reports.}
 \item{env_info}{Lookup table for environmental data - reference creation
 method (e.g. sum or mean), report labels, etc.}
 
-\item{model_obj}{Regression object built from a model_run = TRUE run of
-run_epidemia(). Using the prebuilt model will significantly save on
-processing time, but will need to be updated periodically.}
+\item{model_cached}{The output of a previous model_run = TRUE run of
+run_epidemia() that produces a model (regression object) and metadata. The
+metadata will be used for input checking and validation. Using a prebuilt
+model saves on processing time, but will need to be updated periodically.}
+
+\item{model_choice}{Critical argument to choose the type of model to generate.
+The options are versions that the EPIDEMIA team has used for forecasting.
+The first supported options is "poisson-gam" ("p") which is the original
+epidemiar model: a Poisson regression using bam (for large data GAMs), with
+a smoothed cyclical for seasonality. The default for fc_control$anom_env is
+TRUE for using the anomalies of environmental variables rather than their
+raw values. The second option is "negbin" ("n") which is a negative binomial
+regression using glm, with no external seasonality terms - letting the
+natural cyclical behavior of the environmental variables fill that role. The
+default for fc_control$anom_env is FALSE and uses the actual observation
+values in the modeling. The fc_control$anom_env can be overruled by the user
+providing a value, but this is not recommended unless you are doing
+comparisons.}
 }
 \value{
 Returns a flag if there were any errors, plus accompanying error

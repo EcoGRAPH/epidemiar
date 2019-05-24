@@ -214,10 +214,13 @@ run_epidemia <- function(epi_data = NULL,
   #Note: using message() instead of warning() to get message to appear right away
 
   #model_choice = c("poisson-bam", "negbin")
+  #tolower to capture upper and lower case user-input variations since match.arg is case sensitive
+  #but must only try function if ed_method is not null (i.e. was given)
+  if (!is.null(model_choice)){
+    model_choice <- tolower(model_choice)
+  }
   model_choice <- tryCatch({
-    #tolower to capture upper and lower case user-input variations since match.arg is case sensitive
-    #but must only try function if ed_method is not null (i.e. was given)
-    match.arg(ifelse(!is.null(model_choice), tolower(model_choice), model_choice), c("poisson-bam", "negbin"))
+    match.arg(model_choice, c("poisson-bam", "negbin"))
   }, error = function(e){
     message("Warning: Given 'model_choice' does not match 'poisson-bam' or 'negbin', running as 'poisson-bam'.")
     "poisson-bam"
@@ -230,13 +233,16 @@ run_epidemia <- function(epi_data = NULL,
   })
 
   #ed_method = c("none", "farrington")
+  #tolower to capture upper and lower case user-input variations since match.arg is case sensitive
+  #but must only try function if ed_method is not null (i.e. was given)
+  if (!is.null(ed_method)){
+    ed_method <- tolower(ed_method)
+  }
   ed_method <- tryCatch({
-    #tolower to capture upper and lower case user-input variations since match.arg is case sensitive
-    #but must only try function if ed_method is not null (i.e. was given)
-    match.arg(ifelse(!is.null(ed_method), tolower(ed_method), ed_method), c("none", "farrington"))
+    match.arg(ed_method, c("none", "farrington"))
   }, error = function(e){
     message("Warning: Given 'ed_method' does not match 'none' or 'farrington', running as 'none'.")
-    "None"
+    "none"
   }, finally = {
     if (length(ed_method) > 1){
       #if ed_method was missing at run_epidemia() call, got assigned c("none", "farrington")
@@ -349,9 +355,10 @@ run_epidemia <- function(epi_data = NULL,
   #using tolower() to handle case sensitivity of match.arg
   #but must only call tolower() on it if value_type was given (i.e. not null)
   #if null, it will default to the first value "incidence"
-  fc_control$value_type <- match.arg(ifelse(!is.null(fc_control[["value_type"]]),
-                                            tolower(fc_control[["value_type"]]),
-                                            fc_control[["value_type"]]),
+  if (!is.null(fc_control[["value_type"]])){
+    fc_control$value_type <- tolower(fc_control[["value_type"]])
+  }
+  fc_control$value_type <- match.arg(fc_control[["value_type"]],
                                      c("incidence", "cases"))
 
   #create observed data series

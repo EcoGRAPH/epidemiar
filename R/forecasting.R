@@ -61,7 +61,7 @@
 #'  values in the modeling. The fc_control$anom_env can be overruled by the user
 #'  providing a value, but this is not recommended unless you are doing
 #'  comparisons.
-#'  #'
+#'
 #'
 #'@return Named list containing:
 #'fc_epi: Full forecasted resulting dataset.
@@ -92,7 +92,7 @@ run_forecast <- function(epi_data,
                          week_type,
                          model_run,
                          model_obj = NULL,
-                         model_cached,
+                         model_cached = NULL,
                          model_choice){
 
   message("Preparing for forecasting")
@@ -180,7 +180,9 @@ run_forecast <- function(epi_data,
                                    ncores,
                                    fit_freq = "once",
                                    model_run,
-                                   model_obj)
+                                   model_obj,
+                                   model_cached,
+                                   model_choice)
 
     model_run_only <- create_named_list(env_variables_used,
                                         env_dt_ranges,
@@ -207,7 +209,9 @@ run_forecast <- function(epi_data,
                                           ncores,
                                           fit_freq,
                                           model_run,
-                                          model_obj)
+                                          model_obj,
+                                          model_cached,
+                                          model_choice)
     preds_catch <- forereg_return$date_preds
     reg_obj <- forereg_return$cluster_regress
 
@@ -228,7 +232,9 @@ run_forecast <- function(epi_data,
                                             ncores,
                                             fit_freq,
                                             model_run,
-                                            model_obj)
+                                            model_obj,
+                                            model_cached,
+                                            model_choice)
 
       dt_preds <- forereg_return$date_preds
       preds_catch <- rbind(preds_catch, as.data.frame(dt_preds))
@@ -955,9 +961,27 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 #'@param model_run TRUE/FALSE flag for whether to only generate the model
 #'  regression object plus metadata. This model can be cached and used later on
 #'  its own, skipping a large portion of the slow calculations for future runs.
-#'@param model_obj Regression object built from a model_run = TRUE run of
-#'  run_epidemia(). Using the prebuilt model will significantly save on
-#'  processing time, but will need to be updated periodically.
+#'@param model_obj Deprecated, use model_cached if possible. Regression object
+#'  built from a model_run = TRUE run of run_epidemia(). Using the prebuilt
+#'  model will significantly save on processing time, but will need to be
+#'  updated periodically.
+#'@param model_cached The output of a previous model_run = TRUE run of
+#'  run_epidemia() that produces a model (regression object) and metadata. The
+#'  metadata will be used for input checking and validation. Using a prebuilt
+#'  model saves on processing time, but will need to be updated periodically.
+#'@param model_choice Critical argument to choose the type of model to generate.
+#'  The options are versions that the EPIDEMIA team has used for forecasting.
+#'  The first supported options is "poisson-gam" ("p") which is the original
+#'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
+#'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
+#'  TRUE for using the anomalies of environmental variables rather than their
+#'  raw values. The second option is "negbin" ("n") which is a negative binomial
+#'  regression using glm, with no external seasonality terms - letting the
+#'  natural cyclical behavior of the environmental variables fill that role. The
+#'  default for fc_control$anom_env is FALSE and uses the actual observation
+#'  values in the modeling. The fc_control$anom_env can be overruled by the user
+#'  providing a value, but this is not recommended unless you are doing
+#'  comparisons.
 #'
 #'@return Named list containing:
 #'date_preds: Full forecasted resulting dataset.
@@ -974,7 +998,9 @@ forecast_regression <- function(epi_lag,
                                 ncores,
                                 fit_freq,
                                 model_run,
-                                model_obj = NULL){
+                                model_obj = NULL,
+                                model_cached = NULL,
+                                model_choice){
 
   if (fit_freq == "once"){
     #single fits use all the data available

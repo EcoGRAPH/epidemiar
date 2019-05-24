@@ -248,7 +248,7 @@ calc_return_value <- function(cases,
     #otherwise given case field directly
     vt == "cases" ~ cases,
     #if incidence and case field quosure
-    vt == "incidence" & c_quo_tf ~ !!cases / !!q_pop * inc_per
+    vt == "incidence" & c_quo_tf ~ !!cases / !!q_pop * inc_per,
     #if incidence
     vt == "incidence" ~ cases / !!q_pop * inc_per,
     #otherwise

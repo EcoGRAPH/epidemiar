@@ -872,15 +872,24 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
                                                          c(rlang::quo_name(quo_groupfield), "obs_date")))
   } #end pivot loop
 
-  # set up distributed lag basis functions (creates 5 basis functions)
-  lagframe <- data.frame(x = seq(from = 1, to = laglen, by = 1))
+  # # set up distributed lag basis functions (creates 5 basis functions)
+  # lagframe <- data.frame(x = seq(from = 1, to = laglen, by = 1))
+  # alpha <- 1/4
+  # distlagfunc <- splines::ns(lagframe$x, intercept = TRUE,
+  #                            knots = quantile(lagframe$x,
+  #                                             probs=seq(from = alpha, to = 1 - alpha,
+  #                                                       by = alpha),
+  #                                             na.rm = TRUE))
+  # dlagdeg <- pracma::size(distlagfunc)[2]
+
+  # set up distributed lag basis functions (creates 7 basis functions)
   alpha <- 1/4
-  distlagfunc <- splines::ns(lagframe$x, intercept = TRUE,
-                             knots = quantile(lagframe$x,
-                                              probs=seq(from = alpha, to = 1 - alpha,
-                                                        by = alpha),
-                                              na.rm = TRUE))
-  dlagdeg <- pracma::size(distlagfunc)[2]
+  distlagfunc <- bs(x=seq(from=1, to=laglen, by=1), intercept=TRUE,
+                    knots=quantile(seq(from=1, to=laglen, by=1),
+                                   probs=seq(from=alpha, to=1-alpha, by=alpha),
+                                   na.rm=TRUE))
+  dlagdeg <- ncol(distlagfunc)
+
 
   # create actual distributed lag summaries
   for (curvar in env_variables_used){

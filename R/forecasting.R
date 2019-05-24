@@ -142,9 +142,16 @@ run_forecast <- function(epi_data,
                           quo_groupfield,
                           fc_control)
 
-  # anomalizing the environ data if wanted. DEFAULT IS TRUE for backwards compatibility.
+  # anomalizing the environ data, if requested.
+  #For backwards compatibility, poisson-gam default is TRUE.
+  #Default for negbin is FALSE
   if (is.null(fc_control[["anom_env"]])){
-    fc_control$anom_env <- TRUE
+    #fc_control$anom_env <- TRUE
+    fc_control$anom_env <- dplyr::case_when(
+      mc == "poisson-gam" ~ TRUE,
+      mc == "negbin" ~ FALSE,
+      #should never occur, but if it does, default to FALSE
+      TRUE ~ FALSE)
   }
   if (fc_control$anom_env){
     env_fc <- anomalize_env(env_fc,

@@ -360,18 +360,20 @@ run_epidemia <- function(epi_data = NULL,
   }
   fc_control$value_type <- match.arg(fc_control[["value_type"]],
                                      c("incidence", "cases"))
+  #in future, override here if necessary based on model choice
 
   #create observed data series
   obs_res <- epi_data %>%
     #include only observed data from requested start of report
     dplyr::filter(obs_date >= report_dates$full$min) %>%
     dplyr::mutate(series = "obs",
-                  value = calc_return_value(cases = quo_casefield,
-                                            c_quo_tf = TRUE,
-                                            q_pop = quo_popfield,
-                                            inc_per,
-                                            vt = fc_control$value_type,
-                                            mc = model_choice),
+                  value = dplyr::case_when(
+                    #if reporting in case counts
+                    fc_control$value_type == "cases" ~ !!quo_casefield,
+                    #if incidence
+                    fc_control$value_type == "incidence" ~ !!quo_casefield / !!quo_popfield * inc_per,
+                    #otherwise
+                    TRUE ~ NA_real_),
                   #note use of original not interpolated cases
                   #value = !!quo_casefield / !!quo_popfield * inc_per,
                   lab = "Observed",

@@ -256,25 +256,28 @@ run_forecast <- function(epi_data,
   # extract fc series into report format
   fc_res <- preds_catch %>%
     dplyr::mutate(series = "fc",
-                  value = calc_return_value(cases = fc_cases,
-                                            c_quo_tf = FALSE,
-                                            q_pop = quo_popfield,
-                                            inc_per,
-                                            vt = fc_control$value_type,
-                                            mc = model_choice),
+                  value = dplyr::case_when(
+                    #if reporting in case counts
+                    fc_control$value_type == "cases" ~ fc_cases
+                    #if incidence
+                    fc_control$value_type == "incidence" ~ fc_cases / !!quo_popfield * inc_per,
+                    #otherwise
+                    TRUE ~ NA_real_),
                   lab = "Forecast Trend",
-                  upper = calc_return_value(cases = fc_cases_upr,
-                                            c_quo_tf = FALSE,
-                                            q_pop = quo_popfield,
-                                            inc_per,
-                                            vt = fc_control$value_type,
-                                            mc = model_choice),
-                  lower = calc_return_value(cases = fc_cases_lwr,
-                                            c_quo_tf = FALSE,
-                                            q_pop = quo_popfield,
-                                            inc_per,
-                                            vt = fc_control$value_type,
-                                            mc = model_choice)
+                  upper = dplyr::case_when(
+                    #if reporting in case counts
+                    fc_control$value_type == "cases" ~ fc_cases_upr,
+                    #if incidence
+                    fc_control$value_type == "incidence" ~ fc_cases_upr / !!quo_popfield * inc_per,
+                    #otherwise
+                    TRUE ~ NA_real_),
+                  lower = dplyr::case_when(
+                    #if reporting in case counts
+                    fc_control$value_type == "cases" ~ fc_cases_lwr,
+                    #if incidence
+                    fc_control$value_type == "incidence" ~ fc_cases_lwr / !!quo_popfield * inc_per,
+                    #otherwise
+                    TRUE ~ NA_real_)
                   #value = fc_cases / !!quo_popfield * inc_per,
                   #upper = fc_cases_upr / !!quo_popfield * inc_per,
                   #lower = fc_cases_lwr / !!quo_popfield * inc_per

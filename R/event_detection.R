@@ -351,12 +351,13 @@ stss_res_to_output_data <- function(stss_res_list,
   ed_thresh_res <- stss_res_flat %>%
     dplyr::mutate(series = "thresh",
                   obs_date = epoch,
-                  value = calc_return_value(cases = upperbound,
-                                            c_quo_tf = FALSE,
-                                            q_pop = quo_popfield,
-                                            inc_per,
-                                            vt,
-                                            mc),
+                  value = dplyr::case_when(
+                    #if reporting in case counts
+                    fc_control$value_type == "cases" ~ upperbound,
+                    #if incidence
+                    fc_control$value_type == "incidence" ~ upperbound / !!quo_popfield * inc_per,
+                    #otherwise
+                    TRUE ~ NA_real_),
                   #value = upperbound / !!quo_popfield * inc_per, #Incidence, from stss & epi_fc_data
                   lab = "Alert Threshold",
                   upper = NA,

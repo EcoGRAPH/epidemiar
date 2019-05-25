@@ -236,23 +236,26 @@ calc_env_anomalies <- function(env_ts, quo_groupfield, quo_obsfield, report_date
 #'@return Epidemiolgical return values, either in cases or incidence, depending
 #'  on user settings.
 #'
-calc_return_value <- function(cases,
-                              c_quo_tf = FALSE,
-                              q_pop = NULL,
-                              inc_per,
-                              vt,
-                              mc){
-  dplyr::case_when(
-    #if reporting in case counts
-    #if quosure, evaluate
-    vt == "cases" & c_quo_tf ~ !!cases,
-    #otherwise given case field directly
-    vt == "cases" ~ cases,
-    #if incidence and case field quosure
-    vt == "incidence" & c_quo_tf ~ !!cases / !!q_pop * inc_per,
-    #if incidence
-    vt == "incidence" ~ cases / !!q_pop * inc_per,
-    #otherwise
-    TRUE ~ NA_real_
-  )
-}
+# calc_return_value <- function(cases,
+#                               c_quo_tf = FALSE,
+#                               q_pop = NULL,
+#                               inc_per,
+#                               vt,
+#                               mc){
+#   dplyr::case_when(
+#     #if reporting in case counts
+#     #if quosure, evaluate
+#     vt == "cases" & c_quo_tf ~ !!cases,
+#     #otherwise given case field directly
+#     vt == "cases" ~ cases,
+#     #if incidence and case field quosure
+#     vt == "incidence" & c_quo_tf ~ !!cases / !!q_pop * inc_per,
+#     #if incidence
+#     vt == "incidence" ~ cases / !!q_pop * inc_per,
+#     #otherwise
+#     TRUE ~ NA_real_
+#   )
+#   #FAILS.
+#   ##Error: Quosures can only be unquoted within a quasiquotation context.
+#
+# }

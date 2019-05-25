@@ -258,7 +258,7 @@ run_forecast <- function(epi_data,
     dplyr::mutate(series = "fc",
                   value = dplyr::case_when(
                     #if reporting in case counts
-                    fc_control$value_type == "cases" ~ fc_cases
+                    fc_control$value_type == "cases" ~ fc_cases,
                     #if incidence
                     fc_control$value_type == "incidence" ~ fc_cases / !!quo_popfield * inc_per,
                     #otherwise

@@ -193,28 +193,59 @@ run_farrington <- function(epi_fc_data,
     yrdiff <- lubridate::interval(min(epi_fc_data$obs_date), adjdt) %>%
       lubridate::time_length(unit = "years")
 
-    #get the minimum integer year value to feed to Farrington control (cannot round up, must only request data that exists)
+    #get the minimum integer year value to feed to Farrington control
+    #(cannot round up, must only request data that exists)
     far_control[["b"]] <- floor(yrdiff)
 
   } else far_control[["b"]] <- ed_control[["b"]]
 
 
-  #run Farringtons
-  far_res_list <- vector('list', length(epi_stss))
-  for (i in 1:length(epi_stss)){
-    far_res_list[[i]] <- surveillance::farringtonFlexible(epi_stss[[i]], control = far_control)
-  }
+  ## input check / overrides:
+  #do all groups have the same number of weeks? Farrington will error otherwise.
+  wks_diff_grps <- epi_fc_data %>%
+    dplyr::group_by(!!quo_groupfield) %>%
+    dplyr::count() %>%
+    dplyr::pull(n) %>%
+    range() %>% diff()
 
-  #results into output report data form
-  far_res <- stss_res_to_output_data(stss_res_list = far_res_list,
-                                     epi_fc_data,
-                                     quo_popfield,
-                                     inc_per,
-                                     quo_groupfield,
-                                     groupings,
-                                     report_dates,
-                                     vt,
-                                     mc)
+  #only run if b > 0. If 0 full years available (or b=0 requested), then "none"
+  if (far_control[["b"]] < 1) {
+
+    message("Warning: Less than 1 full year of epidemiological data available or requested (ed_control$b). Cannot run Farrington, skipping event detection.")
+    far_res <- run_no_detection(epi_fc_data,
+                                quo_groupfield,
+                                report_dates)
+
+
+  } else if (wks_diff_grps < .Machine$double.eps ^ 0.5){
+    #do all groups have the same number of weeks? Farrington will error otherwise.
+    #using small tolerance rather than == 0.
+    message("Warning: Groups do not have the same number of weeks of epidemiological data. Cannot run Farrington, skipping event detection.")
+    far_res <- run_no_detection(epi_fc_data,
+                                quo_groupfield,
+                                report_dates)
+  }
+  else {
+    #if all okay, then run Farrington
+
+    #run Farringtons
+    far_res_list <- vector('list', length(epi_stss))
+    for (i in 1:length(epi_stss)){
+      far_res_list[[i]] <- surveillance::farringtonFlexible(epi_stss[[i]], control = far_control)
+    }
+
+    #results into output report data form
+    far_res <- stss_res_to_output_data(stss_res_list = far_res_list,
+                                       epi_fc_data,
+                                       quo_popfield,
+                                       inc_per,
+                                       quo_groupfield,
+                                       groupings,
+                                       report_dates,
+                                       vt,
+                                       mc)
+
+  }
 
   far_res
 }

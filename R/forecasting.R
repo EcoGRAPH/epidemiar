@@ -943,7 +943,7 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 #' Run forecast regression
 #'
 #'@param epi_lag Epidemiological dataset with basis spline summaries of the
-#'  lagged environmental data anomalies, as output by lag_environ_to_epi().
+#'  lagged environmental data (or anomalies), as output by lag_environ_to_epi().
 #'@param quo_groupfield Quosure of the user given geographic grouping field to
 #'  run_epidemia().
 #'@param groupings A unique list of the geographic groupings (from groupfield).
@@ -1066,55 +1066,33 @@ forecast_regression <- function(epi_lag,
     #filter to known
     epi_known <- epi_lag %>% dplyr::filter(known == 1)
 
-    #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create expression to give to modeling function
-    #different versions if multiple geographic area groupings or not
-    if (n_groupings > 1){
-      reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
-                                        "+s(doy, bs=\"cc\", by=",
-                                        rlang::quo_name(quo_groupfield),
-                                        ") + ",
-                                        rlang::quo_name(quo_groupfield), "+",
-                                        bandsums_eq))
-    } else {
-      reg_eq <- stats::as.formula(paste("modeledvar ~ ", modb_eq,
-                                        "+s(doy, bs=\"cc\") + ",
-                                        bandsums_eq))
-    }
 
+    # Model building switching point
 
-    # run bam
-    # Using discrete = TRUE was much faster than using parallel with bam.
-    #message("Beginning bam on historical epi data")
-    cluster_regress <- mgcv::bam(reg_eq, data = epi_known,
-                                 family=poisson(),
-                                 control=mgcv::gam.control(trace=FALSE),
-                                 discrete = TRUE,
-                                 nthreads = ncores)
+    cluster_regress <- build_model(model_choice,
+                                   n_clusters,
+                                   quo_groupfield,
+                                   modb_eq,
+                                   bandsums_eq,
+                                   epi_known)
 
-    #end if is.null model_obj
   } else {
-    #if model_obj given, then use that as cluster_regress
+    #if model_obj given, then use that as cluster_regress instead of building a new one (above)
     cluster_regress <- model_obj
   }
-
 
   ## If model run, return regression object to run_forecast() at this point
   if (model_run){
     return(cluster_regress)
   }
 
-
-  ## Create predictions from either newly generated model, or given one
-
-  #output prediction (through req_date)
-  cluster_preds <- mgcv::predict.bam(cluster_regress,
-                                     newdata = epi_lag %>% dplyr::filter(obs_date <= req_date),
-                                     se.fit = TRUE,       # included for backwards compatibility
-                                     type="response",
-                                     discrete = TRUE,
-                                     n.threads = ncores)
+  ## Creating predictions switching point on model choice
+  cluster_preds <- create_predictions(model_choice,
+                                      epi_lag,
+                                      req_date)
 
 
+  ## Clean up
   #remove distributed lag summaries and bspline basis, which are no longer helpful
   band_names <- grep("bandsum_*", colnames(epi_lag), value = TRUE)
   bspl_names <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)
@@ -1144,3 +1122,179 @@ forecast_regression <- function(epi_lag,
                                             cluster_regress)
 }
 
+
+#'Build the appropriate model
+#'
+#'@param model_choice Critical argument to choose the type of model to generate.
+#'  The options are versions that the EPIDEMIA team has used for forecasting.
+#'  The first supported options is "poisson-gam" ("p") which is the original
+#'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
+#'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
+#'  TRUE for using the anomalies of environmental variables rather than their
+#'  raw values. The second option is "negbin" ("n") which is a negative binomial
+#'  regression using glm, with no external seasonality terms - letting the
+#'  natural cyclical behavior of the environmental variables fill that role. The
+#'  default for fc_control$anom_env is FALSE and uses the actual observation
+#'  values in the modeling. The fc_control$anom_env can be overruled by the user
+#'  providing a value, but this is not recommended unless you are doing
+#'  comparisons.
+#'@param n_clusters Count of the number of clusters in the model.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param modb_eq Pieces of the regression formula that include the modified
+#'  basis functions to account for long term trend (with or without groupings,
+#'  as appropriate).
+#'@param bandsums_eq Pieces of the regression formula that include the b-spline
+#'  bandsummaries of the environmental factors.
+#'@param epi_known Epidemiological dataset with basis spline summaries of the
+#'  lagged environmental data (or anomalies), with column marking if "known"
+#'  data and groupings converted to factors.
+#'
+#'
+#'@return Regression object
+#'
+#'
+build_model <- function(model_choice,
+                        n_clusters,
+                        quo_groupfield,
+                        modb_eq,
+                        bandsums_eq,
+                        epi_known){
+
+  #POISSON-BAM (set as default in first round input checking)
+  if (model_choice == "poisson-bam"){
+
+    message("Running Poisson model/predictions using bam() and forced cycical.")
+
+    #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create
+    #expression to give to modeling function
+    #different versions if multiple geographic area groupings or not
+    if (n_groupings > 1){
+      reg_eq <- stats::as.formula(paste("modeledvar ~ ",
+                                        rlang::quo_name(quo_groupfield),
+                                        " + s(doy, bs=\"cc\", by=",
+                                        rlang::quo_name(quo_groupfield),
+                                        ") + ",
+                                        modb_eq, " + ",
+                                        bandsums_eq))
+    } else {
+      reg_eq <- stats::as.formula(paste("modeledvar ~ ",
+                                        "s(doy, bs=\"cc\") + ",
+                                        modb_eq, " + ",
+                                        bandsums_eq))
+    }
+
+    # run bam
+    # Using discrete = TRUE was much faster than using parallel with bam.
+    #message("Beginning bam on historical epi data")
+    cluster_regress <- mgcv::bam(reg_eq, data = epi_known,
+                                 family=poisson(),
+                                 control=mgcv::gam.control(trace=FALSE),
+                                 discrete = TRUE,
+                                 nthreads = ncores)
+
+
+} else if (model_choice == "negbin"){
+  #NEGATIVE BINOMIAL using GLM
+
+  message("Running negative binomial model/predictions.")
+
+  #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create
+  #expression to give to modeling function
+  #different versions if multiple geographic area groupings or not
+  #No cycical (as opposed to bam with s())
+  if (n_groupings > 1){
+    reg_eq <- stats::as.formula(paste("modeledvar ~ ",
+                                      rlang::quo_name(quo_groupfield),
+                                      modb_eq, " + ",
+                                      bandsums_eq))
+  } else {
+    reg_eq <- stats::as.formula(paste("modeledvar ~ ",
+                                      modb_eq, " + ",
+                                      bandsums_eq))
+  }
+
+  # run glm
+  cluster_regress <- stats::glm(reg_eq,
+                                data = epi_known,
+                                family = MASS::negative.binomial())
+
+
+} else {
+  #Shouldn't happen, just in case.
+  stop("Error in selecting model choice.")
+}
+} # end build_model()
+
+
+
+#' Create the appropriate predictions/forecasts.
+#'
+#'@param model_choice Critical argument to choose the type of model to generate.
+#'  The options are versions that the EPIDEMIA team has used for forecasting.
+#'  The first supported options is "poisson-gam" ("p") which is the original
+#'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
+#'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
+#'  TRUE for using the anomalies of environmental variables rather than their
+#'  raw values. The second option is "negbin" ("n") which is a negative binomial
+#'  regression using glm, with no external seasonality terms - letting the
+#'  natural cyclical behavior of the environmental variables fill that role. The
+#'  default for fc_control$anom_env is FALSE and uses the actual observation
+#'  values in the modeling. The fc_control$anom_env can be overruled by the user
+#'  providing a value, but this is not recommended unless you are doing
+#'  comparisons.
+#'@param epi_lag Epidemiological dataset with basis spline summaries of the
+#'  lagged environmental data (or anomalies), with groupings as a factor.
+#'@param req_date The end date of requested forecast regression. When fit_freq
+#'  == "once", this is the last date of the full report, the end date of the
+#'  forecast period.
+#'
+#'
+#'@return A dataset from predict() using the regression object generated in
+#'  build_model or a newly created one. The dataset includes the
+#'  predicted/forecast values through the end of the report requested.
+#'
+#'
+create_predictions <- function(model_choice,
+                               epi_lag,
+                               req_date){
+
+  #POISSON-BAM (set as default in first round input checking)
+  if (model_choice == "poisson-bam"){
+
+    message("Running Poisson predictions")
+
+
+    ## Create predictions from either newly generated model, or given one
+
+    #output prediction (through req_date)
+    cluster_preds <- mgcv::predict.bam(cluster_regress,
+                                       newdata = epi_lag %>% dplyr::filter(obs_date <= req_date),
+                                       se.fit = TRUE,       # included for backwards compatibility
+                                       type="response",
+                                       discrete = TRUE,
+                                       n.threads = ncores)
+
+
+
+  } else if (model_choice == "negbin"){
+    #NEGATIVE BINOMIAL using GLM
+
+    message("Running negative binomial predictions")
+
+
+    ## Create predictions from either newly generated model, or given one
+
+    #output prediction (through req_date)
+    cluster_preds <- stats::predict.glm(cluster_regress,
+                                        newdata = epi_lag %>% dplyr::filter(obs_date <= req_date),
+                                        se.fit = TRUE,       # included for backwards compatibility
+                                        type="response")
+
+
+  } else {
+    #Shouldn't happen, just in case.
+    stop("Error in selecting model choice.")
+  }
+
+} #end create_preditions()

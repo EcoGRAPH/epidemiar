@@ -1089,6 +1089,7 @@ forecast_regression <- function(epi_lag,
 
   ## Creating predictions switching point on model choice
   cluster_preds <- create_predictions(model_choice,
+                                      cluster_regress,
                                       epi_lag,
                                       req_date,
                                       ncores)
@@ -1232,7 +1233,7 @@ build_model <- function(model_choice,
 
 
 
-#' Create the appropriate predictions/forecasts.
+#'Create the appropriate predictions/forecasts.
 #'
 #'@param model_choice Critical argument to choose the type of model to generate.
 #'  The options are versions that the EPIDEMIA team has used for forecasting.
@@ -1247,6 +1248,8 @@ build_model <- function(model_choice,
 #'  values in the modeling. The fc_control$anom_env can be overruled by the user
 #'  providing a value, but this is not recommended unless you are doing
 #'  comparisons.
+#'@param cluster_regress The regression object, either the user-supplied one, or
+#'  the one just generated.
 #'@param epi_lag Epidemiological dataset with basis spline summaries of the
 #'  lagged environmental data (or anomalies), with groupings as a factor.
 #'@param req_date The end date of requested forecast regression. When fit_freq
@@ -1262,6 +1265,7 @@ build_model <- function(model_choice,
 #'
 #'
 create_predictions <- function(model_choice,
+                               cluster_regress,
                                epi_lag,
                                req_date,
                                ncores){

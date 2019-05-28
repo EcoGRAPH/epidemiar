@@ -1070,7 +1070,7 @@ forecast_regression <- function(epi_lag,
     # Model building switching point
 
     cluster_regress <- build_model(model_choice,
-                                   n_clusters,
+                                   n_groupings,
                                    quo_groupfield,
                                    modb_eq,
                                    bandsums_eq,
@@ -1138,7 +1138,7 @@ forecast_regression <- function(epi_lag,
 #'  values in the modeling. The fc_control$anom_env can be overruled by the user
 #'  providing a value, but this is not recommended unless you are doing
 #'  comparisons.
-#'@param n_clusters Count of the number of clusters in the model.
+#'@param n_groupings Count of the number of geographic groupings in the model.
 #'@param quo_groupfield Quosure of the user given geographic grouping field to
 #'  run_epidemia().
 #'@param modb_eq Pieces of the regression formula that include the modified
@@ -1155,7 +1155,7 @@ forecast_regression <- function(epi_lag,
 #'
 #'
 build_model <- function(model_choice,
-                        n_clusters,
+                        n_groupings,
                         quo_groupfield,
                         modb_eq,
                         bandsums_eq,

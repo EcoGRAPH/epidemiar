@@ -406,7 +406,7 @@ run_epidemia <- function(epi_data = NULL,
 
   #if we are only generating the model, then end here
   if (model_run){
-    message("Model run only, returning regression object and model information")
+    message("Model run only, returning regression object and model information.")
 
     fieldnames <- list(casefield = quo_name(quo_casefield),
                        populationfield = quo_name(quo_popfield),

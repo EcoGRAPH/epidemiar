@@ -95,7 +95,7 @@ run_forecast <- function(epi_data,
                          model_cached = NULL,
                          model_choice){
 
-  message("Preparing for forecasting")
+  message("Preparing for forecasting...")
 
   #set up default parallel processing number of cores to use number
   #if user-supplied, use that, otherwise create a default number
@@ -154,7 +154,7 @@ run_forecast <- function(epi_data,
       TRUE ~ FALSE)
   }
   if (fc_control$anom_env){
-    message("Anomalizing the environmental variables.")
+    message("Anomalizing the environmental variables...")
     env_fc <- anomalize_env(env_fc,
                             quo_groupfield,
                             env_variables_used,
@@ -199,7 +199,7 @@ run_forecast <- function(epi_data,
   } else fit_freq <- "once"
 
   if (fit_freq == "once"){
-    message("Generating forecasts")
+    message("Generating forecasts...")
     #for single fit, call with last week (and subfunction has switch to return all)
     forereg_return <- forecast_regression(epi_lag,
                                           quo_groupfield,
@@ -1164,7 +1164,7 @@ build_model <- function(model_choice,
   #POISSON-BAM (set as default in first round input checking)
   if (model_choice == "poisson-bam"){
 
-    message("Running Poisson model/predictions using bam() and forced cycical.")
+    message("Building Poisson model using bam() and forced cycical...")
 
     #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create
     #expression to give to modeling function
@@ -1186,7 +1186,6 @@ build_model <- function(model_choice,
 
     # run bam
     # Using discrete = TRUE was much faster than using parallel with bam.
-    #message("Beginning bam on historical epi data")
     cluster_regress <- mgcv::bam(reg_eq, data = epi_known,
                                  family=poisson(),
                                  control=mgcv::gam.control(trace=FALSE),
@@ -1197,7 +1196,7 @@ build_model <- function(model_choice,
 } else if (model_choice == "negbin"){
   #NEGATIVE BINOMIAL using GLM
 
-  message("Running negative binomial model/predictions.")
+  message("Building negative binomial model...")
 
   #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create
   #expression to give to modeling function
@@ -1262,7 +1261,7 @@ create_predictions <- function(model_choice,
   #POISSON-BAM (set as default in first round input checking)
   if (model_choice == "poisson-bam"){
 
-    message("Running Poisson predictions")
+    message("Creating Poisson predictions...")
 
 
     ## Create predictions from either newly generated model, or given one
@@ -1280,7 +1279,7 @@ create_predictions <- function(model_choice,
   } else if (model_choice == "negbin"){
     #NEGATIVE BINOMIAL using GLM
 
-    message("Running negative binomial predictions")
+    message("Creating negative binomial predictions...")
 
 
     ## Create predictions from either newly generated model, or given one

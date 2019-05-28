@@ -39,7 +39,7 @@ run_event_detection <- function(epi_fc_data,
                                 report_dates,
                                 vt,
                                 mc){
-  message("Running early detection")
+  #message("Running early detection...")
 
   #only supporting Farrington Improved method from Surveillance right now,
   #leaving option open for expanding later
@@ -47,7 +47,7 @@ run_event_detection <- function(epi_fc_data,
 
   if (ed_method == "farrington") {
 
-    message("Running early detection: Farrington")
+    message("Running early detection: Farrington...")
     ed_far_res <- run_farrington(epi_fc_data,
                                  quo_popfield,
                                  inc_per,
@@ -61,7 +61,7 @@ run_event_detection <- function(epi_fc_data,
 
   } else if (ed_method == "none") {
 
-    message("Skipping early detection")
+    message("Skipping early detection...")
     ed_far_res <- run_no_detection(epi_fc_data,
                                    quo_groupfield,
                                    report_dates)

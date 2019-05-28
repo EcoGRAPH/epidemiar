@@ -1074,7 +1074,8 @@ forecast_regression <- function(epi_lag,
                                    quo_groupfield,
                                    modb_eq,
                                    bandsums_eq,
-                                   epi_known)
+                                   epi_known,
+                                   ncores)
 
   } else {
     #if model_obj given, then use that as cluster_regress instead of building a new one (above)
@@ -1089,7 +1090,8 @@ forecast_regression <- function(epi_lag,
   ## Creating predictions switching point on model choice
   cluster_preds <- create_predictions(model_choice,
                                       epi_lag,
-                                      req_date)
+                                      req_date,
+                                      ncores)
 
 
   ## Clean up
@@ -1149,7 +1151,9 @@ forecast_regression <- function(epi_lag,
 #'@param epi_known Epidemiological dataset with basis spline summaries of the
 #'  lagged environmental data (or anomalies), with column marking if "known"
 #'  data and groupings converted to factors.
-#'
+#'@param ncores The number of physical cores to use in parallel processing, set
+#'  in fc_control$ncores, else the max of the number of physical core available
+#'  minus 1, or 1 core.
 #'
 #'@return Regression object
 #'
@@ -1159,7 +1163,8 @@ build_model <- function(model_choice,
                         quo_groupfield,
                         modb_eq,
                         bandsums_eq,
-                        epi_known){
+                        epi_known,
+                        ncores){
 
   #POISSON-BAM (set as default in first round input checking)
   if (model_choice == "poisson-bam"){
@@ -1247,7 +1252,9 @@ build_model <- function(model_choice,
 #'@param req_date The end date of requested forecast regression. When fit_freq
 #'  == "once", this is the last date of the full report, the end date of the
 #'  forecast period.
-#'
+#'@param ncores The number of physical cores to use in parallel processing, set
+#'  in fc_control$ncores, else the max of the number of physical core available
+#'  minus 1, or 1 core.
 #'
 #'@return A dataset from predict() using the regression object generated in
 #'  build_model or a newly created one. The dataset includes the
@@ -1256,7 +1263,8 @@ build_model <- function(model_choice,
 #'
 create_predictions <- function(model_choice,
                                epi_lag,
-                               req_date){
+                               req_date,
+                               ncores){
 
   #POISSON-BAM (set as default in first round input checking)
   if (model_choice == "poisson-bam"){

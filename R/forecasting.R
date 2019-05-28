@@ -901,10 +901,10 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 
   # set up distributed lag basis functions (creates 7 basis functions)
   alpha <- 1/4
-  distlagfunc <- bs(x=seq(from=1, to=laglen, by=1), intercept=TRUE,
-                    knots=quantile(seq(from=1, to=laglen, by=1),
-                                   probs=seq(from=alpha, to=1-alpha, by=alpha),
-                                   na.rm=TRUE))
+  distlagfunc <- splines::bs(x=seq(from=1, to=laglen, by=1), intercept=TRUE,
+                             knots=quantile(seq(from=1, to=laglen, by=1),
+                                            probs=seq(from=alpha, to=1-alpha, by=alpha),
+                                            na.rm=TRUE))
   dlagdeg <- ncol(distlagfunc)
 
 

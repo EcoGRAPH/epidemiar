@@ -353,9 +353,9 @@ stss_res_to_output_data <- function(stss_res_list,
                   obs_date = epoch,
                   value = dplyr::case_when(
                     #if reporting in case counts
-                    fc_control$value_type == "cases" ~ upperbound,
+                    vt == "cases" ~ upperbound,
                     #if incidence
-                    fc_control$value_type == "incidence" ~ upperbound / !!quo_popfield * inc_per,
+                    vt == "incidence" ~ upperbound / !!quo_popfield * inc_per,
                     #otherwise
                     TRUE ~ NA_real_),
                   #value = upperbound / !!quo_popfield * inc_per, #Incidence, from stss & epi_fc_data

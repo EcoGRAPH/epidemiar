@@ -217,7 +217,7 @@ run_farrington <- function(epi_fc_data,
                                 report_dates)
 
 
-  } else if (wks_diff_grps < .Machine$double.eps ^ 0.5){
+  } else if (wks_diff_grps > .Machine$double.eps ^ 0.5){
     #do all groups have the same number of weeks? Farrington will error otherwise.
     #using small tolerance rather than == 0.
     message("Warning: Groups do not have the same number of weeks of epidemiological data. Cannot run Farrington, skipping event detection.")

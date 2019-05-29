@@ -148,8 +148,8 @@ run_forecast <- function(epi_data,
   if (is.null(fc_control[["anom_env"]])){
     #fc_control$anom_env <- TRUE
     fc_control$anom_env <- dplyr::case_when(
-      mc == "poisson-gam" ~ TRUE,
-      mc == "negbin" ~ FALSE,
+      model_choice == "poisson-gam" ~ TRUE,
+      model_choice == "negbin" ~ FALSE,
       #should never occur, but if it does, default to FALSE
       TRUE ~ FALSE)
   }

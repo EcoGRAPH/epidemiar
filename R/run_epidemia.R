@@ -421,6 +421,9 @@ run_epidemia <- function(epi_data = NULL,
                                     env_dt_ranges = fc_res_all$env_dt_ranges,
                                     known_epi_range = report_dates$known,
                                     env_info,
+                                    value_type = fc_control$value_type,
+                                    model_choice,
+                                    family_args = fc_control$family_args,
                                     date_created = Sys.Date())
 
     #if a model run, forecast result contains regression object
@@ -515,7 +518,11 @@ run_epidemia <- function(epi_data = NULL,
                                    env_variables_used = fc_res_all$env_variables_used,
                                    env_dt_ranges = fc_res_all$env_dt_ranges,
                                    report_dates,
-                                   env_info)
+                                   env_info,
+                                   value_type = fc_control$value_type,
+                                   model_choice,
+                                   family_args = fc_control$family_args,
+                                   date_created = Sys.Date())
   #regression object for future other use or troubleshooting
   regression_object <- fc_res_all$reg_obj
 

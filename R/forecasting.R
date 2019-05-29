@@ -1210,7 +1210,7 @@ build_model <- function(model_choice,
   #No cycical (as opposed to bam with s())
   if (n_groupings > 1){
     reg_eq <- stats::as.formula(paste("modeledvar ~ ",
-                                      rlang::quo_name(quo_groupfield),
+                                      rlang::quo_name(quo_groupfield), " + ",
                                       modb_eq, " + ",
                                       bandsums_eq))
   } else {

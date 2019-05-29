@@ -1222,7 +1222,8 @@ build_model <- function(model_choice,
   # run glm
   cluster_regress <- stats::glm(reg_eq,
                                 data = epi_known,
-                                family = MASS::negative.binomial())
+                                #theta hardcoded temporarily until moved to fc_control$family_args
+                                family = MASS::negative.binomial(theta=2.31))
 
 
 } else {

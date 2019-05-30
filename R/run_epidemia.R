@@ -227,7 +227,7 @@ run_epidemia <- function(epi_data = NULL,
   }, finally = {
     if (length(model_choice) > 1){
       #if model_choice was missing at run_epidemia() call, got assigned c("poisson-bam", "negbin")
-      message("Warning: 'model_choice' was missing, running as 'poisson-bam'.")
+      message("Note: 'model_choice' was missing, running as 'poisson-bam'.")
       #no return, because in match.arg() it will take the first item, which is "poisson-bam".
     }
   })
@@ -246,7 +246,7 @@ run_epidemia <- function(epi_data = NULL,
   }, finally = {
     if (length(ed_method) > 1){
       #if ed_method was missing at run_epidemia() call, got assigned c("none", "farrington")
-      message("Warning: 'ed_method' was missing, running as 'none'.")
+      message("Note: 'ed_method' was missing, running as 'none'.")
       #no return, because in match.arg() it will take the first item, which is "none".
     }
   })
@@ -260,7 +260,7 @@ run_epidemia <- function(epi_data = NULL,
   }, finally = {
     if (length(week_type) > 1){
       #if week_type was missing at run_epidemia() call, got assigned c("ISO", "CDC")
-      message("Warning: 'week_type' was missing, running as 'ISO'.")
+      message("Note: 'week_type' was missing, running as 'ISO'.")
       #no return, because in match.arg() it will take the first item, which is "ISO".
     }
   })

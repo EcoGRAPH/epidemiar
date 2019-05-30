@@ -1045,7 +1045,7 @@ forecast_regression <- function(epi_lag,
     #create variable bandsummaries equation piece
     #  e.g. 'bandsummaries_{var1} * cluster_id' for however many env var bandsummaries there are
     bandsums_list <- grep("bandsum_*", colnames(epi_lag), value = TRUE)
-    bandsums_cl_list <- paste0(bandsums_list, "*cluster_id")
+    bandsums_cl_list <- paste(bandsums_list, ": cluster_id")
     #need variant without known multiplication if <= 1 clusters
     if (n_clusters > 1) {
       bandsums_eq <- glue::glue_collapse(bandsums_cl_list, sep =" + ")
@@ -1057,7 +1057,7 @@ forecast_regression <- function(epi_lag,
     modb_list <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)
     # variant depending on >1 geographic area groupings
     if (n_groupings > 1){
-      modb_list_grp <- paste(modb_list, "*", rlang::quo_name(quo_groupfield))
+      modb_list_grp <- paste(modb_list, ":", rlang::quo_name(quo_groupfield))
       modb_eq <- glue::glue_collapse(modb_list_grp, sep = " + ")
     } else {
       modb_eq <- glue::glue_collapse(modb_list, sep = " + ")

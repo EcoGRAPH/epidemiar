@@ -1222,8 +1222,14 @@ build_model <- function(model_choice,
   # run glm
   cluster_regress <- stats::glm(reg_eq,
                                 data = epi_known,
-                                #theta hardcoded temporarily until moved to fc_control$family_args
-                                family = MASS::negative.binomial(theta=2.31))
+                                # Conditional argument if fc_control$family_args exists
+                                #family = MASS::negative.binomial(theta=2.31),
+                                if(!is.null(fc_control$family_args)){
+                                  family = MASS::negative.binomial(fc_control$family_args)
+                                  }
+                                )
+
+  #OR.  switch to glm.nb if theta not given??
 
 
 } else {

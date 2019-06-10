@@ -521,7 +521,7 @@ run_epidemia <- function(epi_data = NULL,
                                    env_info,
                                    value_type = fc_control$value_type,
                                    model_choice,
-                                   family_args = fc_control$family_args,
+                                   theta = fc_control$theta,
                                    date_created = Sys.Date())
   #regression object for future other use or troubleshooting
   regression_object <- fc_res_all$reg_obj

@@ -536,6 +536,7 @@ run_epidemia <- function(epi_data = NULL,
                                    environ_anomalies,
                                    params_meta,
                                    regression_object)
+  message("Finished.")
   return(all_results)
 
 }

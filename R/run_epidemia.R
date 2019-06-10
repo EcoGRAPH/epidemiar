@@ -423,7 +423,7 @@ run_epidemia <- function(epi_data = NULL,
                                     env_info,
                                     value_type = fc_control$value_type,
                                     model_choice,
-                                    family_args = fc_control$family_args,
+                                    theta = fc_control$theta,
                                     date_created = Sys.Date())
 
     #if a model run, forecast result contains regression object

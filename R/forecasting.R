@@ -173,17 +173,18 @@ run_forecast <- function(epi_data,
   # If only model_run, then return to run_epidemia() here
   if (model_run){
     model_run_result <- forecast_regression(epi_lag,
-                                   quo_groupfield,
-                                   groupings,
-                                   env_variables_used,
-                                   report_dates,
-                                   req_date = report_dates$full$max,
-                                   ncores,
-                                   fit_freq = "once",
-                                   model_run,
-                                   model_obj,
-                                   model_cached,
-                                   model_choice)
+                                            quo_groupfield,
+                                            groupings,
+                                            env_variables_used,
+                                            report_dates,
+                                            req_date = report_dates$full$max,
+                                            ncores,
+                                            fit_freq = "once",
+                                            model_run,
+                                            model_obj,
+                                            model_cached,
+                                            model_choice,
+                                            theta = fc_control$theta)
 
     model_run_only <- create_named_list(env_variables_used,
                                         env_dt_ranges,
@@ -212,7 +213,8 @@ run_forecast <- function(epi_data,
                                           model_run,
                                           model_obj,
                                           model_cached,
-                                          model_choice)
+                                          model_choice,
+                                          theta = fc_control$theta)
     preds_catch <- forereg_return$date_preds
     reg_obj <- forereg_return$cluster_regress
 
@@ -235,7 +237,8 @@ run_forecast <- function(epi_data,
                                             model_run,
                                             model_obj,
                                             model_cached,
-                                            model_choice)
+                                            model_choice,
+                                            theta = fc_control$theta)
 
       dt_preds <- forereg_return$date_preds
       preds_catch <- rbind(preds_catch, as.data.frame(dt_preds))
@@ -975,7 +978,7 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 #'  model saves on processing time, but will need to be updated periodically.
 #'@param model_choice Critical argument to choose the type of model to generate.
 #'  The options are versions that the EPIDEMIA team has used for forecasting.
-#'  The first supported options is "poisson-gam" ("p") which is the original
+#'  The first supported options is "poisson-bam" ("p") which is the original
 #'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
 #'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
 #'  TRUE for using the anomalies of environmental variables rather than their
@@ -986,6 +989,9 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 #'  values in the modeling. The fc_control$anom_env can be overruled by the user
 #'  providing a value, but this is not recommended unless you are doing
 #'  comparisons.
+#'@param theta From fc_control$theta, the value of theta for a "negbin" model.
+#'  If present, will use glm(..., family = MASS::negative.binomial(theta)).  If
+#'  missing, will use MASS::glm.nb().
 #'
 #'@return Named list containing:
 #'date_preds: Full forecasted resulting dataset.
@@ -1004,7 +1010,8 @@ forecast_regression <- function(epi_lag,
                                 model_run,
                                 model_obj = NULL,
                                 model_cached = NULL,
-                                model_choice){
+                                model_choice,
+                                theta){
 
   if (fit_freq == "once"){
     #single fits use all the data available
@@ -1075,7 +1082,8 @@ forecast_regression <- function(epi_lag,
                                    modb_eq,
                                    bandsums_eq,
                                    epi_known,
-                                   ncores)
+                                   ncores,
+                                   theta)
 
   } else {
     #if model_obj given, then use that as cluster_regress instead of building a new one (above)
@@ -1130,7 +1138,7 @@ forecast_regression <- function(epi_lag,
 #'
 #'@param model_choice Critical argument to choose the type of model to generate.
 #'  The options are versions that the EPIDEMIA team has used for forecasting.
-#'  The first supported options is "poisson-gam" ("p") which is the original
+#'  The first supported options is "poisson-bam" ("p") which is the original
 #'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
 #'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
 #'  TRUE for using the anomalies of environmental variables rather than their
@@ -1155,6 +1163,10 @@ forecast_regression <- function(epi_lag,
 #'@param ncores The number of physical cores to use in parallel processing, set
 #'  in fc_control$ncores, else the max of the number of physical core available
 #'  minus 1, or 1 core.
+#'@param theta From fc_control$theta, the value of theta for a "negbin" model.
+#'  If present, will use glm(..., family = MASS::negative.binomial(theta)).  If
+#'  missing, will use MASS::glm.nb().
+
 #'
 #'@return Regression object
 #'
@@ -1165,7 +1177,8 @@ build_model <- function(model_choice,
                         modb_eq,
                         bandsums_eq,
                         epi_known,
-                        ncores){
+                        ncores,
+                        theta){
 
   #POISSON-BAM (set as default in first round input checking)
   if (model_choice == "poisson-bam"){
@@ -1221,13 +1234,13 @@ build_model <- function(model_choice,
 
   # run glm
   # Which negative binomial function depends on if fc_control$theta exists
-  if(!is.null(fc_control$theta)){
+  if(!is.null(theta)){
     message("Theta value provided. Running with glm(..., family = MASS::negative.binomial(theta = ", fc_control$theta, "))")
     cluster_regress <- stats::glm(reg_eq,
                                   data = epi_known,
                                   #theta value REQUIRED
                                   #family = MASS::negative.binomial(theta=2.31),
-                                  family = MASS::negative.binomial(theta = fc_control$theta))
+                                  family = MASS::negative.binomial(theta = theta))
   } else {
     message("Theta parameter (fc_control$theta) is missing, running with MASS::glm.nb()")
     cluster_regress <- MASS::glm.nb(reg_eq,

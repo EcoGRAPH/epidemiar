@@ -1235,7 +1235,7 @@ build_model <- function(model_choice,
   # run glm
   # Which negative binomial function depends on if fc_control$theta exists
   if(!is.null(theta)){
-    message("Theta value provided. Running with glm(..., family = MASS::negative.binomial(theta = ", fc_control$theta, "))")
+    message("Theta value provided. Running with glm(..., family = MASS::negative.binomial(theta = ", theta, "))")
     cluster_regress <- stats::glm(reg_eq,
                                   data = epi_known,
                                   #theta value REQUIRED

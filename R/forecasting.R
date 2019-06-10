@@ -1220,16 +1220,19 @@ build_model <- function(model_choice,
   }
 
   # run glm
-  cluster_regress <- stats::glm(reg_eq,
-                                data = epi_known,
-                                # Conditional argument if fc_control$family_args exists
-                                #family = MASS::negative.binomial(theta=2.31),
-                                if(!is.null(fc_control$family_args)){
-                                  family = MASS::negative.binomial(fc_control$family_args)
-                                  }
-                                )
-
-  #OR.  switch to glm.nb if theta not given??
+  # Which negative binomial function depends on if fc_control$theta exists
+  if(!is.null(fc_control$theta)){
+    message("Theta value provided. Running with glm(..., family = MASS::negative.binomial(theta = ", fc_control$theta, "))")
+    cluster_regress <- stats::glm(reg_eq,
+                                  data = epi_known,
+                                  #theta value REQUIRED
+                                  #family = MASS::negative.binomial(theta=2.31),
+                                  family = MASS::negative.binomial(theta = fc_control$theta))
+  } else {
+    message("Theta parameter (fc_control$theta) is missing, running with MASS::glm.nb()")
+    cluster_regress <- MASS::glm.nb(reg_eq,
+                                  data = epi_known)
+  }
 
 
 } else {

@@ -74,7 +74,7 @@
 #'  model saves on processing time, but will need to be updated periodically.
 #'@param model_choice Critical argument to choose the type of model to generate.
 #'  The options are versions that the EPIDEMIA team has used for forecasting.
-#'  The first supported options is "poisson-gam" ("p") which is the original
+#'  The first supported options is "poisson-bam" ("p") which is the original
 #'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
 #'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
 #'  TRUE for using the anomalies of environmental variables rather than their

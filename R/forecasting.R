@@ -1242,7 +1242,7 @@ build_model <- function(model_choice,
                                   #family = MASS::negative.binomial(theta=2.31),
                                   family = MASS::negative.binomial(theta = theta))
   } else {
-    message("Theta parameter (fc_control$theta) is missing, running with MASS::glm.nb()...")
+    message("Theta estimate (fc_control$theta) not provided, running with MASS::glm.nb()...")
     cluster_regress <- MASS::glm.nb(reg_eq,
                                   data = epi_known)
   }

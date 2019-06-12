@@ -263,7 +263,7 @@ input_check <- function(epi_data,
     #model choice already checked
     if (!model_cached$model_info$model_choice == model_choice){
       err_flag <- TRUE
-      err_msgs <- paste(err_msgs, "The model choice of the given cached model, ", model_cached$model_info$model_choice, " does not match the current setting of 'model_choice', ", model_choice, ".\n")
+      err_msgs <- paste(err_msgs, "The model choice of the given cached model, \"", model_cached$model_info$model_choice, "\", does not match the current setting of 'model_choice' of \"", model_choice, "\".\n")
     }
 
     #make sure given model (if given) is a regression object (using basic "lm" as test)

@@ -284,7 +284,7 @@ input_check <- function(epi_data,
       #end if names
     } else {
       err_flag <- TRUE
-      err_msgs <- paste(err_msgs, "The given cached model is missing $model_obj or $model_info.\n")
+      err_msgs <- paste(err_msgs, "The given cached model is missing $model_obj and/or $model_info.\n")
     } #end else on if names
 
   } #end if is.null model_cached

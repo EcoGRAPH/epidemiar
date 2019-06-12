@@ -259,27 +259,42 @@ input_check <- function(epi_data,
   #if given a full model
   if (!is.null(model_cached)){
 
-    #make sure model_choice matches between cached model and settings.
-    #model choice already checked
-    if (!model_cached$model_info$model_choice == model_choice){
-      err_flag <- TRUE
-      err_msgs <- paste(err_msgs, "The model choice of the given cached model, \"", model_cached$model_info$model_choice, "\", does not match the current setting of 'model_choice' of \"", model_choice, "\".\n")
-    }
+    #check that $model_info and $model_obj exists in model_cached
+    if (all(c("model_obj", "model_info") %in% names(model_cached))){
 
-    #make sure given model (if given) is a regression object (using basic "lm" as test)
-    #model_cached$model_obj
-      classes <- class(model_cached$model_obj)
-      if(!"lm" %in% classes){
-        err_flag <- TRUE
-        err_msgs <- paste(err_msgs, "The object in 'model_cached$model_obj' is not a regression object, found classes are: ", classes, ".\n")
-    } #end lm
-  } #end isnull model_cached
+      #if model looks okay so far, then check further
+      if(!model_flag){
+        #make sure model_choice matches between cached model and settings.
+        #model choice already checked
+        if (!model_cached$model_info$model_choice == model_choice){
+          err_flag <- TRUE
+          err_msgs <- paste(err_msgs, "The model choice of the given cached model, \"", model_cached$model_info$model_choice, "\", does not match the current setting of 'model_choice' of \"", model_choice, "\".\n")
+        } #end model_choice
+
+        #make sure given model (if given) is a regression object (using basic "lm" as test)
+        #model_cached$model_obj
+        classes <- class(model_cached$model_obj)
+        if (!"lm" %in% classes){
+          err_flag <- TRUE
+          err_msgs <- paste(err_msgs, "The object in 'model_cached$model_obj' is not a regression object, found classes are: ", classes, ".\n")
+        } #end lm check
+
+      } #end if !model_flag
+
+      #end if names
+    } else {
+      err_flag <- TRUE
+      err_msgs <- paste(err_msgs, "The given cached model is missing $model_obj or $model_info.\n")
+    } #end else on if names
+
+  } #end if is.null model_cached
 
   # things that must exist in model_cached$model_info
   # model_cached$model_info$model_choice
   # model_cached$model_info$date_created
   # model_cached$model_info$known_epi_range$max
   #but will probably give decent error messages on their own if missing.
+  # hhahahah, nope.
 
 
   # Control lists -----------------------------------------------------------

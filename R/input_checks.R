@@ -253,7 +253,7 @@ input_check <- function(epi_data,
 # Models & Caching --------------------------------------------------------
 
   #use model_cached not old model_obj
-  if (!is.na(model_obj) & is.na(model_cached)){
+  if (!is.null(model_obj) & is.null(model_cached)){
     err_flag <- TRUE
     err_msgs <- paste(err_msgs, "Please use the new 'model_cached' argument, and not deprecated 'model_obj'.\n")
   }

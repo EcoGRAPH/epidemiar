@@ -46,6 +46,7 @@
 #'  display on timeseries in reports.
 #'@param env_info Lookup table for environmental data - reference creation
 #'  method (e.g. sum or mean), report labels, etc.
+#'@param model_obj Deprecated, use model_cached.
 #'@param model_cached The output of a previous model_run = TRUE run of
 #'  run_epidemia() that produces a model (regression object) and metadata. The
 #'  metadata will be used for input checking and validation. Using a prebuilt
@@ -80,7 +81,7 @@ input_check <- function(epi_data,
                         report_period,
                         ed_summary_period,
                         ed_method,
-                        ed_control,
+                        ed_control = NULL,
                         env_data,
                         quo_obsfield,
                         quo_valuefield,
@@ -88,9 +89,11 @@ input_check <- function(epi_data,
                         fc_control,
                         env_ref_data,
                         env_info,
-                        model_obj,
-                        model_cached,
-                        model_choice){
+                        model_obj = NULL,
+                        model_cached = NULL,
+                        model_choice = NULL){
+
+  #NULL defaults same as run_epidemia(), but excluding the necessary items already checked
 
   # Want ALL data checks to happen, whether or not error happen before the end of the tests.
   # Want to collect all errors, and return all of them to console

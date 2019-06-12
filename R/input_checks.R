@@ -264,7 +264,7 @@ input_check <- function(epi_data,
 
   #make sure given model (if given) is a regression object (using basic "lm" as test)
   #model_cached$model_obj
-  if (!is.na(model_cached)){
+  if (!is.null(model_cached)){
     classes <- class(model_cached$model_obj)
     if(!"lm" %in% classes){
       err_flag <- TRUE

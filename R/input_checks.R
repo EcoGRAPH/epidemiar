@@ -81,7 +81,7 @@ input_check <- function(epi_data,
                         report_period,
                         ed_summary_period,
                         ed_method,
-                        ed_control = NULL,
+                        ed_control,
                         env_data,
                         quo_obsfield,
                         quo_valuefield,
@@ -89,11 +89,9 @@ input_check <- function(epi_data,
                         fc_control,
                         env_ref_data,
                         env_info,
-                        model_obj = NULL,
-                        model_cached = NULL,
-                        model_choice = NULL){
-
-  #NULL defaults same as run_epidemia(), but excluding the necessary items already checked
+                        model_obj,
+                        model_cached,
+                        model_choice){
 
   # Want ALL data checks to happen, whether or not error happen before the end of the tests.
   # Want to collect all errors, and return all of them to console

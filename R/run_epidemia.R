@@ -64,10 +64,7 @@
 #'@param model_run TRUE/FALSE flag for whether to only generate the model
 #'  regression object plus metadata. This model can be cached and used later on
 #'  its own, skipping a large portion of the slow calculations for future runs.
-#'@param model_obj Deprecated, use model_cached if possible. Regression object
-#'  built from a model_run = TRUE run of run_epidemia(). Using the prebuilt
-#'  model will significantly save on processing time, but will need to be
-#'  updated periodically.
+#'@param model_obj Deprecated, use model_cached.
 #'@param model_cached The output of a previous model_run = TRUE run of
 #'  run_epidemia() that produces a model (regression object) and metadata. The
 #'  metadata will be used for input checking and validation. Using a prebuilt
@@ -283,6 +280,7 @@ run_epidemia <- function(epi_data = NULL,
                                fc_control,
                                env_ref_data,
                                env_info,
+                               model_obj,
                                model_cached,
                                model_choice)
   #if warnings, just give message and continue
@@ -400,7 +398,6 @@ run_epidemia <- function(epi_data = NULL,
                              report_dates,
                              week_type,
                              model_run,
-                             model_obj,
                              model_cached,
                              model_choice)
 

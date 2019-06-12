@@ -88,6 +88,7 @@ input_check <- function(epi_data,
                         fc_control,
                         env_ref_data,
                         env_info,
+                        model_obj,
                         model_cached,
                         model_choice){
 
@@ -244,6 +245,37 @@ input_check <- function(epi_data,
       err_msgs <- paste(err_msgs, "The report length ", report_period, " must be longer than the early detection period ", ed_summary_period, " plus the forecast ", forecast_future, ".\n")
     }
   }
+
+
+# Models & Caching --------------------------------------------------------
+
+  #use model_cached not old model_obj
+  if (!is.na(model_obj) & is.na(model_cached)){
+    err_flag <- TRUE
+    err_msgs <- paste(err_msgs, "Please use the new 'model_cached' argument, and not deprecated 'model_obj'.\n")
+  }
+
+  #make sure model_choice matches between cached model and settings.
+  if (!model_cached$model_info$model_choice == model_choice){
+    err_flag <- TRUE
+    err_msgs <- paste(err_msgs, "The model choice of the given cached model, ", model_cached$model_info$model_choice, " does not match the current setting of 'model_choice', ", model_choice, ".\n")
+  }
+
+  #make sure given model (if given) is a regression object (using basic "lm" as test)
+  #model_cached$model_obj
+  if (!is.na(model_cached)){
+    classes <- class(model_cached$model_obj)
+    if(!"lm" %in% classes){
+      err_flag <- TRUE
+      err_msgs <- paste(err_msgs, "The object in 'model_cached$model_obj' is not a regression object, found classes are: ", classes, ".\n")
+    }
+  }
+
+  # things that must exist in model_cached$model_info
+  # model_cached$model_info$model_choice
+  # model_cached$model_info$date_created
+  # model_cached$model_info$known_epi_range$max
+  #but will probably give decent error messages on their own if missing.
 
   # Control lists -----------------------------------------------------------
 

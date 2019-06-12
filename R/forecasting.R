@@ -40,10 +40,6 @@
 #'@param model_run TRUE/FALSE flag for whether to only generate the model
 #'  regression object plus metadata. This model can be cached and used later on
 #'  its own, skipping a large portion of the slow calculations for future runs.
-#'@param model_obj Deprecated, use model_cached if possible. Regression object
-#'  built from a model_run = TRUE run of run_epidemia(). Using the prebuilt
-#'  model will significantly save on processing time, but will need to be
-#'  updated periodically.
 #'@param model_cached The output of a previous model_run = TRUE run of
 #'  run_epidemia() that produces a model (regression object) and metadata. The
 #'  metadata will be used for input checking and validation. Using a prebuilt
@@ -91,7 +87,6 @@ run_forecast <- function(epi_data,
                          report_dates,
                          week_type,
                          model_run,
-                         model_obj = NULL,
                          model_cached = NULL,
                          model_choice){
 
@@ -181,7 +176,6 @@ run_forecast <- function(epi_data,
                                             ncores,
                                             fit_freq = "once",
                                             model_run,
-                                            model_obj,
                                             model_cached,
                                             model_choice,
                                             theta = fc_control$theta)
@@ -211,7 +205,6 @@ run_forecast <- function(epi_data,
                                           ncores,
                                           fit_freq,
                                           model_run,
-                                          model_obj,
                                           model_cached,
                                           model_choice,
                                           theta = fc_control$theta)
@@ -235,7 +228,6 @@ run_forecast <- function(epi_data,
                                             ncores,
                                             fit_freq,
                                             model_run,
-                                            model_obj,
                                             model_cached,
                                             model_choice,
                                             theta = fc_control$theta)
@@ -968,10 +960,6 @@ lag_environ_to_epi <- function(epi_fc, quo_groupfield, groupings,
 #'@param model_run TRUE/FALSE flag for whether to only generate the model
 #'  regression object plus metadata. This model can be cached and used later on
 #'  its own, skipping a large portion of the slow calculations for future runs.
-#'@param model_obj Deprecated, use model_cached if possible. Regression object
-#'  built from a model_run = TRUE run of run_epidemia(). Using the prebuilt
-#'  model will significantly save on processing time, but will need to be
-#'  updated periodically.
 #'@param model_cached The output of a previous model_run = TRUE run of
 #'  run_epidemia() that produces a model (regression object) and metadata. The
 #'  metadata will be used for input checking and validation. Using a prebuilt
@@ -1008,7 +996,6 @@ forecast_regression <- function(epi_lag,
                                 ncores,
                                 fit_freq,
                                 model_run,
-                                model_obj = NULL,
                                 model_cached = NULL,
                                 model_choice,
                                 theta){
@@ -1046,8 +1033,8 @@ forecast_regression <- function(epi_lag,
 
 
 
-  ## If model_obj is NOT given, then create model / run regression
-  if (is.null(model_obj)){
+  ## If model_cached is NOT given, then create model / run regression
+  if (is.null(model_cached)){
 
     #create variable bandsummaries equation piece
     #  e.g. 'bandsummaries_{var1} * cluster_id' for however many env var bandsummaries there are
@@ -1086,8 +1073,14 @@ forecast_regression <- function(epi_lag,
                                    theta)
 
   } else {
-    #if model_obj given, then use that as cluster_regress instead of building a new one (above)
-    cluster_regress <- model_obj
+    #if model_cached given, then use that as cluster_regress instead of building a new one (above)
+
+    #message with model input
+    message("Using given cached ", model_cached$model_info$model_choice, " model, created ",
+            model_cached$model_info$date_created, ", with epidemiological data up through ",
+            model_cached$model_info$known_epi_range$max, ".")
+
+    cluster_regress <- model_cached$model_obj
   }
 
   ## If model run, return regression object to run_forecast() at this point

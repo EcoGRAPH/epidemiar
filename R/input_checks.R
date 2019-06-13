@@ -412,7 +412,7 @@ input_check <- function(epi_data,
 
   # ed_method & ed_control
 
-  if (ed_method == "Farrington"){
+  if (ed_method == "farrington"){
 
     # if Farrington, then check for controls for Farrington
     #w = 4, reweight = TRUE, weightsThreshold = 2.58, trend = TRUE, pThresholdTrend = 0, populationOffset = TRUE, noPeriods = 10, pastWeeksNotIncluded = 4, thresholdMethod = "nbPlugin"

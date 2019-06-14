@@ -160,17 +160,27 @@ run_epidemia <- function(epi_data = NULL,
                          model_choice = c("poisson-bam", "negbin")){
 
 
+  # For validation runs, special escapes ------------------------------------
+  valid_run <-  FALSE
+  calling_function = as.list(sys.call(-1))[[1]]
+  print(calling_function)
+  if(calling_function == "run_validation"){
+    valid_run = TRUE
+    message("Running for a validation week....")}
+
   # Non-standard evaluation quosures ----------------------------------------
 
-  # dplyr programming steps for passing of field names
-  quo_casefield <- rlang::enquo(casefield)
-  quo_popfield <- rlang::enquo(populationfield)
-  quo_groupfield <- rlang::enquo(groupfield)
-  quo_obsfield <- rlang::enquo(obsfield)
-  quo_valuefield <- rlang::enquo(valuefield)
+  #if from run_validation, fields are already quosures, so skip
+  if(!valid_run){
+    # dplyr programming steps for passing of field names
+    quo_casefield <- rlang::enquo(casefield)
+    quo_popfield <- rlang::enquo(populationfield)
+    quo_groupfield <- rlang::enquo(groupfield)
+    quo_obsfield <- rlang::enquo(obsfield)
+    quo_valuefield <- rlang::enquo(valuefield)
 
-  #Note: if field name does not exist in any dataset, enquo() will throw an error.
-
+    #Note: if field name does not exist in any dataset, enquo() will throw an error.
+  }
 
   # Preparing: Input checking -----------------------------------------------
 
@@ -472,6 +482,17 @@ run_epidemia <- function(epi_data = NULL,
 
 
   # Format other data for report --------------------------------------------
+
+  ## Validation runs needs only small subset of data
+  if(valid_run){
+
+    valid_mod_results <- create_named_list(modeling_results_data)
+
+    message("Finished week of validation run.")
+
+    return(valid_mod_results)
+  }
+
 
   ## Prep Environmental Data for report
   #using extended environmental data from forecast functions

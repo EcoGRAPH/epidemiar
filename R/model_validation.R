@@ -48,7 +48,9 @@
 #'  first object `validation_overall` is the results overall, and
 #'  `validation_grouping` is the results per geographic grouping.
 #'
+#'@export
 #'
+
 
 run_validation <- function(week_start = NULL,
                            total_weeks = 12,

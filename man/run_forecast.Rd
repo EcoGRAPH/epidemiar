@@ -7,7 +7,7 @@
 run_forecast(epi_data, quo_popfield, inc_per, quo_groupfield, groupings,
   env_data, quo_obsfield, quo_valuefield, env_variables, fc_control,
   env_ref_data, env_info, report_dates, week_type, model_run,
-  model_obj = NULL, model_cached = NULL, model_choice)
+  model_cached = NULL, model_choice)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date
@@ -61,11 +61,6 @@ reference data use ["ISO" or "CDC"].}
 \item{model_run}{TRUE/FALSE flag for whether to only generate the model
 regression object plus metadata. This model can be cached and used later on
 its own, skipping a large portion of the slow calculations for future runs.}
-
-\item{model_obj}{Deprecated, use model_cached if possible. Regression object
-built from a model_run = TRUE run of run_epidemia(). Using the prebuilt
-model will significantly save on processing time, but will need to be
-updated periodically.}
 
 \item{model_cached}{The output of a previous model_run = TRUE run of
 run_epidemia() that produces a model (regression object) and metadata. The

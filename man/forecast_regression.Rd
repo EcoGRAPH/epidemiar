@@ -5,12 +5,12 @@
 \title{Run forecast regression}
 \usage{
 forecast_regression(epi_lag, quo_groupfield, groupings, env_variables_used,
-  report_dates, req_date, ncores, fit_freq, model_run, model_obj = NULL,
-  model_cached = NULL, model_choice)
+  report_dates, req_date, ncores, fit_freq, model_run,
+  model_cached = NULL, model_choice, theta)
 }
 \arguments{
 \item{epi_lag}{Epidemiological dataset with basis spline summaries of the
-lagged environmental data anomalies, as output by lag_environ_to_epi().}
+lagged environmental data (or anomalies), as output by lag_environ_to_epi().}
 
 \item{quo_groupfield}{Quosure of the user given geographic grouping field to
 run_epidemia().}
@@ -41,11 +41,6 @@ increases processing time.}
 regression object plus metadata. This model can be cached and used later on
 its own, skipping a large portion of the slow calculations for future runs.}
 
-\item{model_obj}{Deprecated, use model_cached if possible. Regression object
-built from a model_run = TRUE run of run_epidemia(). Using the prebuilt
-model will significantly save on processing time, but will need to be
-updated periodically.}
-
 \item{model_cached}{The output of a previous model_run = TRUE run of
 run_epidemia() that produces a model (regression object) and metadata. The
 metadata will be used for input checking and validation. Using a prebuilt
@@ -53,7 +48,7 @@ model saves on processing time, but will need to be updated periodically.}
 
 \item{model_choice}{Critical argument to choose the type of model to generate.
 The options are versions that the EPIDEMIA team has used for forecasting.
-The first supported options is "poisson-gam" ("p") which is the original
+The first supported options is "poisson-bam" ("p") which is the original
 epidemiar model: a Poisson regression using bam (for large data GAMs), with
 a smoothed cyclical for seasonality. The default for fc_control$anom_env is
 TRUE for using the anomalies of environmental variables rather than their
@@ -64,6 +59,10 @@ default for fc_control$anom_env is FALSE and uses the actual observation
 values in the modeling. The fc_control$anom_env can be overruled by the user
 providing a value, but this is not recommended unless you are doing
 comparisons.}
+
+\item{theta}{From fc_control$theta, the value of theta for a "negbin" model.
+If present, will use glm(..., family = MASS::negative.binomial(theta)).  If
+missing, will use MASS::glm.nb().}
 }
 \value{
 Named list containing:

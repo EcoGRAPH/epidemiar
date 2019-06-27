@@ -84,10 +84,7 @@ method (e.g. sum or mean), report labels, etc.}
 regression object plus metadata. This model can be cached and used later on
 its own, skipping a large portion of the slow calculations for future runs.}
 
-\item{model_obj}{Deprecated, use model_cached if possible. Regression object
-built from a model_run = TRUE run of run_epidemia(). Using the prebuilt
-model will significantly save on processing time, but will need to be
-updated periodically.}
+\item{model_obj}{Deprecated, use model_cached.}
 
 \item{model_cached}{The output of a previous model_run = TRUE run of
 run_epidemia() that produces a model (regression object) and metadata. The
@@ -96,7 +93,7 @@ model saves on processing time, but will need to be updated periodically.}
 
 \item{model_choice}{Critical argument to choose the type of model to generate.
 The options are versions that the EPIDEMIA team has used for forecasting.
-The first supported options is "poisson-gam" ("p") which is the original
+The first supported options is "poisson-bam" ("p") which is the original
 epidemiar model: a Poisson regression using bam (for large data GAMs), with
 a smoothed cyclical for seasonality. The default for fc_control$anom_env is
 TRUE for using the anomalies of environmental variables rather than their

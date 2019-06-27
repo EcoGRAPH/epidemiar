@@ -1,5 +1,55 @@
 #validation function
 
+
+#'Run EPIDEMIA model validation statistics
+#'
+#'This function takes a few more arguments than `epidemiar::run_epidemia()` to
+#'generate statistics on model validation. The function will evaluate a number
+#'of weeks (`total_weeks`) starting from a specified week (`week_start`) and
+#'will look at the n-week ahead forecast (1 to `weeks_ahead` number of weeks)
+#'and compare the values to the observed number of cases. The validation
+#'statistics include Mean Squared Error (MSE) and Mean Absolute Error (MAE),
+#'both in total and per geographic grouping (if present).
+#'
+#'@param week_start Date to start testing for model validation.
+#'@param total_weeks Number of weeks from `week_start` to run validation tests.
+#'@param weeks_ahead Number of weeks for testing the n-week ahead forecasts.
+#'  Results will be generated from 1-week ahead through `weeks_ahead` number of
+#'  weeks.
+#'@param epi_data See description in `run_epidemia()`.
+#'@param casefield See description in `run_epidemia()`.
+#'@param populationfield See description in `run_epidemia()`.
+#'@param groupfield See description in `run_epidemia()`.
+#'@param week_type See description in `run_epidemia()`.
+#'@param report_period The number of weeks that the entire report will cover.
+#'  The \code{report_period} minus \code{forecast_future} is the number of weeks
+#'  of past (known) data that will be included. Overwritten to be `weeks_ahead`
+#'  + 1 for validation runs.
+#'@param ed_summary_period Overwritten to 1 for validation runs (no-op for no
+#'  event detection during validation runs).
+#'@param ed_method Overwritten to "none" for validation runs.
+#'@param env_data See description in `run_epidemia()`.
+#'@param obsfield See description in `run_epidemia()`.
+#'@param valuefield See description in `run_epidemia()`.
+#'@param forecast_future Number of future weeks from the end of the
+#'  \code{epi_data} to produce forecasts, as in `run_epidemia()`, but
+#'  overwritten as `weeks_ahead` for validation runs.
+#'@param fc_control See description in `run_epidemia()`. Note,
+#'  fc_control$value_type is overwritten as "cases" for validation runs.
+#'@param env_ref_data See description in `run_epidemia()`.
+#'@param env_info See description in `run_epidemia()`.
+#'@param model_cached See description in `run_epidemia()`.
+#'@param model_choice See description in `run_epidemia()`.
+#'
+#'
+#'@return Returns a list of validation statistics. Statistics are calculated on
+#'  the n-week ahead forecast and the actual observed case counts. Statistics
+#'  returned are Mean Squared Error (MSE) and Mean Absolute Error (MAE). The
+#'  first object `validation_overall` is the results overall, and
+#'  `validation_grouping` is the results per geographic grouping.
+#'
+#'
+
 run_validation <- function(week_start = NULL,
                            total_weeks = 12,
                            weeks_ahead = 2,
@@ -7,7 +57,6 @@ run_validation <- function(week_start = NULL,
                            epi_data = NULL,
                            casefield = NULL,
                            populationfield = NULL,
-                           inc_per = 1000,
                            groupfield = NULL,
                            week_type = c("ISO", "CDC"),
                            report_period = 3, #default is weeks_ahead default + 1

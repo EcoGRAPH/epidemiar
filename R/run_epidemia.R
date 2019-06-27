@@ -166,7 +166,7 @@ run_epidemia <- function(epi_data = NULL,
   print(calling_function)
   if(calling_function == "run_validation"){
     valid_run = TRUE
-    message("Running for a validation week....")}
+    message("Running model validation ...")}
 
   # Non-standard evaluation quosures ----------------------------------------
 

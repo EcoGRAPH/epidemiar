@@ -1176,7 +1176,7 @@ build_model <- function(model_choice,
   #POISSON-BAM (set as default in first round input checking)
   if (model_choice == "poisson-bam"){
 
-    message("Building Poisson model using bam() and forced cycical...")
+    message("Building Poisson model using bam() and forced cyclical...")
 
     #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create
     #expression to give to modeling function

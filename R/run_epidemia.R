@@ -163,10 +163,16 @@ run_epidemia <- function(epi_data = NULL,
   # For validation runs, special escapes ------------------------------------
   valid_run <-  FALSE
   calling_function = as.list(sys.call(-1))[[1]]
-  print(calling_function)
   if(calling_function == "run_validation"){
     valid_run = TRUE
-    message("Running model validation ...")}
+    message("Running model validation ...")
+    #rename already enquo'd variables
+    quo_casefield <- casefield
+    quo_popfield <- populationfield
+    quo_groupfield <- groupfield
+    quo_obsfield <- obsfield
+    quo_valuefield <- valuefield
+  }
 
   # Non-standard evaluation quosures ----------------------------------------
 
@@ -480,81 +486,84 @@ run_epidemia <- function(epi_data = NULL,
   modeling_results_data <- epidemiar::add_datefields(epi_res, week_type)
 
 
-
   # Format other data for report --------------------------------------------
 
-  ## Validation runs needs only small subset of data
-  if(valid_run){
+  #Do all the other data and reporting if not a validation run
+  if(!valid_run){
 
-    valid_mod_results <- create_named_list(modeling_results_data)
+    ## Prep Environmental Data for report
+    #using extended environmental data from forecast functions
+    environ_timeseries <- environ_report_format(env_ext_data = fc_res_all$env_data_extd,
+                                                env_ref_data,
+                                                quo_groupfield,
+                                                quo_obsfield,
+                                                env_used = fc_res_all$env_variables_used,
+                                                env_info,
+                                                week_type,
+                                                report_dates)
 
-    message("Finished week of validation run.")
+    ##Environmental Anomaly Data (during ED period)
+    environ_anomalies <- calc_env_anomalies(env_ts = environ_timeseries,
+                                            quo_groupfield,
+                                            quo_obsfield,
+                                            report_dates)
 
-    return(valid_mod_results)
-  }
+    ## Calculate Early Detection and Early Warning summary data
+    summary_data <- create_summary_data(ed_res,
+                                        quo_groupfield,
+                                        report_dates)
 
-
-  ## Prep Environmental Data for report
-  #using extended environmental data from forecast functions
-  environ_timeseries <- environ_report_format(env_ext_data = fc_res_all$env_data_extd,
-                                              env_ref_data,
-                                              quo_groupfield,
-                                              quo_obsfield,
-                                              env_used = fc_res_all$env_variables_used,
-                                              env_info,
-                                              week_type,
-                                              report_dates)
-
-  ##Environmental Anomaly Data (during ED period)
-  environ_anomalies <- calc_env_anomalies(env_ts = environ_timeseries,
-                                          quo_groupfield,
-                                          quo_obsfield,
-                                          report_dates)
-
-  ## Calculate Early Detection and Early Warning summary data
-  summary_data <- create_summary_data(ed_res,
+    ## Calculate epidemiological (incidence) summary
+    epi_summary <- create_epi_summary(obs_res,
                                       quo_groupfield,
                                       report_dates)
 
-  ## Calculate epidemiological (incidence) summary
-  epi_summary <- create_epi_summary(obs_res,
-                                    quo_groupfield,
-                                    report_dates)
+    ## Parameters and metadata that might be useful in report generation
+    # all of these may not be needed
+    fieldnames <- list(casefield = quo_name(quo_casefield),
+                       populationfield = quo_name(quo_popfield),
+                       groupfield = quo_name(quo_groupfield),
+                       obsfield = quo_name(quo_obsfield),
+                       valuefield = quo_name(quo_valuefield))
 
-  ## Parameters and metadata that might be useful in report generation
-  # all of these may not be needed
-  fieldnames <- list(casefield = quo_name(quo_casefield),
-                     populationfield = quo_name(quo_popfield),
-                     groupfield = quo_name(quo_groupfield),
-                     obsfield = quo_name(quo_obsfield),
-                     valuefield = quo_name(quo_valuefield))
-
-  params_meta <- create_named_list(fieldnames,
-                                   week_type,
-                                   ed_method,
-                                   groupings,
-                                   env_variables_used = fc_res_all$env_variables_used,
-                                   env_dt_ranges = fc_res_all$env_dt_ranges,
-                                   report_dates,
-                                   env_info,
-                                   value_type = fc_control$value_type,
-                                   model_choice,
-                                   theta = fc_control$theta,
-                                   date_created = Sys.Date())
-  #regression object for future other use or troubleshooting
-  regression_object <- fc_res_all$reg_obj
+    params_meta <- create_named_list(fieldnames,
+                                     week_type,
+                                     ed_method,
+                                     groupings,
+                                     env_variables_used = fc_res_all$env_variables_used,
+                                     env_dt_ranges = fc_res_all$env_dt_ranges,
+                                     report_dates,
+                                     env_info,
+                                     value_type = fc_control$value_type,
+                                     model_choice,
+                                     theta = fc_control$theta,
+                                     date_created = Sys.Date())
+    #regression object for future other use or troubleshooting
+    regression_object <- fc_res_all$reg_obj
 
 
-  # Collect all results -----------------------------------------------------
+    # Collect all results -----------------------------------------------------
 
-  all_results <- create_named_list(summary_data,
-                                   epi_summary,
-                                   modeling_results_data,
-                                   environ_timeseries,
-                                   environ_anomalies,
-                                   params_meta,
-                                   regression_object)
-  message("Finished.")
-  return(all_results)
+    all_results <- create_named_list(summary_data,
+                                     epi_summary,
+                                     modeling_results_data,
+                                     environ_timeseries,
+                                     environ_anomalies,
+                                     params_meta,
+                                     regression_object)
+    message("Finished.")
+    return(all_results)
 
-}
+    # end !valid run
+  } else {
+    ## Validation runs needs only small subset of data
+
+      valid_mod_results <- create_named_list(modeling_results_data)
+
+      message("Finished week of validation run.")
+
+      return(valid_mod_results)
+    } #end else of !valid run
+
+
+} #end run_epidemia() function

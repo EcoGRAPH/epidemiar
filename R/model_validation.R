@@ -44,7 +44,7 @@
 #'
 #'@return Returns a list of validation statistics. Statistics are calculated on
 #'  the n-week ahead forecast and the actual observed case counts. Statistics
-#'  returned are Mean Squared Error (MSE) and Mean Absolute Error (MAE). The
+#'  returned are Mean Squared Error (MSE), Mean Absolute Error (MAE), and propotional of observed values that were inside the predictional interval (prop_interval). The
 #'  first object `validation_overall` is the results overall, and
 #'  `validation_grouping` is the results per geographic grouping.
 #'
@@ -113,7 +113,7 @@ run_validation <- function(week_start = NULL,
   env_data_orig <- env_data
   #create list of dates
   #the start of calculations will be week_start minus weeks_ahead # of weeks
-  week_list <- week_start + lubridate::weeks(-weeks_ahead:total_weeks)
+  week_list <- week_start + lubridate::weeks(-weeks_ahead:total_weeks-1)
 
   #output will be list of dataframes until we collapse later
   fcs_list <- vector("list", length = length(week_list))
@@ -122,7 +122,7 @@ run_validation <- function(week_start = NULL,
   for (i in seq_along(week_list)){
     this_wk <- week_list[i]
 
-    print(paste0("Validation date running: ", this_wk)) # for testing for now
+    message("Validation run - date: ", this_wk) # for testing for now
 
     #set up data
     epi_data <- epi_data_orig %>%
@@ -229,6 +229,7 @@ run_validation <- function(week_start = NULL,
 
 
   #return both
+  message("Validation run finished.")
   val_results <- create_named_list(validation_overall, validation_grouping)
 
 

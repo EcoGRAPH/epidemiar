@@ -10,7 +10,7 @@ run_validation(week_start = NULL, total_weeks = 12, weeks_ahead = 2,
   ed_summary_period = 1, ed_method = "none", env_data = NULL,
   obsfield = NULL, valuefield = NULL, forecast_future = 2,
   fc_control = NULL, env_ref_data = NULL, env_info = NULL,
-  model_cached = NULL, model_choice = c("poisson-bam", "negbin"))
+  model_cached = NULL, model_choice = c("poisson-bam", "negbin"), ...)
 }
 \arguments{
 \item{week_start}{Date to start testing for model validation.}
@@ -61,13 +61,18 @@ fc_control$value_type is overwritten as "cases" for validation runs.}
 \item{model_cached}{See description in `run_epidemia()`.}
 
 \item{model_choice}{See description in `run_epidemia()`.}
+
+\item{...}{Accepts other arguments that are normally part of `run_epidemia()`,
+but ignored for validation runs. For example, `inc_per`, `ed_control`,
+`model_run`.}
 }
 \value{
 Returns a list of validation statistics. Statistics are calculated on
  the n-week ahead forecast and the actual observed case counts. Statistics
- returned are Mean Squared Error (MSE) and Mean Absolute Error (MAE). The
- first object `validation_overall` is the results overall, and
- `validation_grouping` is the results per geographic grouping.
+ returned are Mean Squared Error (MSE), Mean Absolute Error (MAE), and
+ proportion of observed values that were inside the prediction interval
+ (prop_interval). The first object `validation_overall` is the results
+ overall, and `validation_grouping` is the results per geographic grouping.
 }
 \description{
 This function takes a few more arguments than `epidemiar::run_epidemia()` to

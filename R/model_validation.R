@@ -40,13 +40,17 @@
 #'@param env_info See description in `run_epidemia()`.
 #'@param model_cached See description in `run_epidemia()`.
 #'@param model_choice See description in `run_epidemia()`.
+#'@param ... Accepts other arguments that are normally part of `run_epidemia()`,
+#'  but ignored for validation runs. For example, `inc_per`, `ed_control`,
+#'  `model_run`.
 #'
 #'
 #'@return Returns a list of validation statistics. Statistics are calculated on
 #'  the n-week ahead forecast and the actual observed case counts. Statistics
-#'  returned are Mean Squared Error (MSE), Mean Absolute Error (MAE), and propotional of observed values that were inside the predictional interval (prop_interval). The
-#'  first object `validation_overall` is the results overall, and
-#'  `validation_grouping` is the results per geographic grouping.
+#'  returned are Mean Squared Error (MSE), Mean Absolute Error (MAE), and
+#'  proportion of observed values that were inside the prediction interval
+#'  (prop_interval). The first object `validation_overall` is the results
+#'  overall, and `validation_grouping` is the results per geographic grouping.
 #'
 #'@export
 #'
@@ -72,7 +76,8 @@ run_validation <- function(week_start = NULL,
                            env_ref_data = NULL,
                            env_info = NULL,
                            model_cached = NULL,
-                           model_choice = c("poisson-bam", "negbin")){
+                           model_choice = c("poisson-bam", "negbin"),
+                           ...){
   #week_start: week to start reporting of results
   #total_weeks: number of weeks forward from week_start to gather test results
   #weeks_ahead: calculate stats on 1 to n week ahead predictions
@@ -104,6 +109,10 @@ run_validation <- function(week_start = NULL,
   #report out in CASES for validation
   fc_control$value_type <-  "cases"
 
+  #for params accepted by run_epidemia, but are meaningless for validation runs
+  # e.g. `inc_per`, `ed_control`, `model_run`
+  #captured, but then do nothing with them
+  dots <- list(...)
 
   # Week loop and prep ------------------------------------------------------
 

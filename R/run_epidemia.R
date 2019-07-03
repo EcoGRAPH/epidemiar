@@ -162,9 +162,12 @@ run_epidemia <- function(epi_data = NULL,
 
   # For validation runs, special escapes ------------------------------------
   valid_run <-  FALSE
-  calling_function = as.list(sys.call(-1))[[1]]
+  calling_check <- as.list(sys.call(-1))
+  if (length(calling_check) > 0){
+    calling_function <- as.list(sys.call(-1))[[1]]
+  } else {calling_function <- "directly"}
   if(calling_function == "run_validation"){
-    valid_run = TRUE
+    valid_run <-  TRUE
     message("Running model validation ...")
     #rename already enquo'd variables
     quo_casefield <- casefield

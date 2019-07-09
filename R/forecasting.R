@@ -209,7 +209,7 @@ run_forecast <- function(epi_data,
                                           model_choice,
                                           theta = fc_control$theta)
     preds_catch <- forereg_return$date_preds
-    reg_obj <- forereg_return$cluster_regress
+    reg_obj <- forereg_return$regress
 
   } else if (fit_freq == "week") {
     # for each week of report, run forecast
@@ -236,13 +236,13 @@ run_forecast <- function(epi_data,
       preds_catch <- rbind(preds_catch, as.data.frame(dt_preds))
 
       #taking advantage that only result will be of the last loop through
-      reg_obj <- forereg_return$cluster_regress
+      reg_obj <- forereg_return$regress
     }
 
   } else stop("Model fit frequency unknown") #shouldn't happen with default "once"
 
 
-  # Interval calculation - experimental
+  # Interval calculation
   preds_catch <- preds_catch %>%
     dplyr::mutate(fc_cases = fit,
                   fc_cases_upr = fit+1.96*sqrt(fit),
@@ -276,7 +276,7 @@ run_forecast <- function(epi_data,
                   #value = fc_cases / !!quo_popfield * inc_per,
                   #upper = fc_cases_upr / !!quo_popfield * inc_per,
                   #lower = fc_cases_lwr / !!quo_popfield * inc_per
-                  ) %>%
+    ) %>%
     dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
 
   # return list with res and other needed items
@@ -463,7 +463,7 @@ extend_env_future <- function(env_data, quo_groupfield, groupings, quo_obsfield,
   } else {
     #all env data known for known epi period
     env_known_complete <- env_data
-    } #end if report_dates$known$max > min_known_in_known section
+  } #end if report_dates$known$max > min_known_in_known section
 
   #find 1st NA, then take mean of previous week, input for that day
   env_known_mean <- env_last_week_mean(env_df = env_known_complete, env_variables_used, quo_groupfield, quo_obsfield, groupings)
@@ -1063,37 +1063,37 @@ forecast_regression <- function(epi_lag,
 
     # Model building switching point
 
-    cluster_regress <- build_model(model_choice,
-                                   n_groupings,
-                                   quo_groupfield,
-                                   modb_eq,
-                                   bandsums_eq,
-                                   epi_known,
-                                   ncores,
-                                   theta)
+    regress <- build_model(model_choice,
+                           n_groupings,
+                           quo_groupfield,
+                           modb_eq,
+                           bandsums_eq,
+                           epi_known,
+                           ncores,
+                           theta)
 
   } else {
-    #if model_cached given, then use that as cluster_regress instead of building a new one (above)
+    #if model_cached given, then use that as regress instead of building a new one (above)
 
     #message with model input
     message("Using given cached ", model_cached$model_info$model_choice, " model, created ",
             model_cached$model_info$date_created, ", with epidemiological data up through ",
             model_cached$model_info$known_epi_range$max, ".")
 
-    cluster_regress <- model_cached$model_obj
+    regress <- model_cached$model_obj
   }
 
   ## If model run, return regression object to run_forecast() at this point
   if (model_run){
-    return(cluster_regress)
+    return(regress)
   }
 
   ## Creating predictions switching point on model choice
-  cluster_preds <- create_predictions(model_choice,
-                                      cluster_regress,
-                                      epi_lag,
-                                      req_date,
-                                      ncores)
+  preds <- create_predictions(model_choice,
+                              regress,
+                              epi_lag,
+                              req_date,
+                              ncores)
 
 
   ## Clean up
@@ -1107,7 +1107,7 @@ forecast_regression <- function(epi_lag,
   #now cbind to get ready to return
   epi_preds <- cbind(epi_lag_trim %>%
                        filter(obs_date <= req_date),
-                     as.data.frame(cluster_preds)) %>%
+                     as.data.frame(preds)) %>%
     #and convert factor back to character for the groupings (originally converted b/c of bam/gam requirements)
     dplyr::mutate(!!rlang::quo_name(quo_groupfield) := as.character(!!quo_groupfield))
 
@@ -1123,7 +1123,7 @@ forecast_regression <- function(epi_lag,
   }
 
   forecast_reg_results <- create_named_list(date_preds,
-                                            cluster_regress)
+                                            regress)
 }
 
 
@@ -1198,53 +1198,53 @@ build_model <- function(model_choice,
 
     # run bam
     # Using discrete = TRUE was much faster than using parallel with bam.
-    cluster_regress <- mgcv::bam(reg_eq, data = epi_known,
-                                 family=poisson(),
-                                 control=mgcv::gam.control(trace=FALSE),
-                                 discrete = TRUE,
-                                 nthreads = ncores)
+    regress <- mgcv::bam(reg_eq, data = epi_known,
+                         family=poisson(),
+                         control=mgcv::gam.control(trace=FALSE),
+                         discrete = TRUE,
+                         nthreads = ncores)
 
 
-} else if (model_choice == "negbin"){
-  #NEGATIVE BINOMIAL using GLM
+  } else if (model_choice == "negbin"){
+    #NEGATIVE BINOMIAL using GLM
 
-  message("Building negative binomial model...")
+    message("Building negative binomial model...")
 
-  #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create
-  #expression to give to modeling function
-  #different versions if multiple geographic area groupings or not
-  #No cycical (as opposed to bam with s())
-  if (n_groupings > 1){
-    reg_eq <- stats::as.formula(paste("modeledvar ~ ",
-                                      rlang::quo_name(quo_groupfield), " + ",
-                                      modb_eq, " + ",
-                                      bandsums_eq))
+    #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create
+    #expression to give to modeling function
+    #different versions if multiple geographic area groupings or not
+    #No cycical (as opposed to bam with s())
+    if (n_groupings > 1){
+      reg_eq <- stats::as.formula(paste("modeledvar ~ ",
+                                        rlang::quo_name(quo_groupfield), " + ",
+                                        modb_eq, " + ",
+                                        bandsums_eq))
+    } else {
+      reg_eq <- stats::as.formula(paste("modeledvar ~ ",
+                                        modb_eq, " + ",
+                                        bandsums_eq))
+    }
+
+    # run glm
+    # Which negative binomial function depends on if fc_control$theta exists
+    if(!is.null(theta)){
+      message("Theta value provided. Running with glm(..., family = MASS::negative.binomial(theta = ", theta, "))...")
+      regress <- stats::glm(reg_eq,
+                            data = epi_known,
+                            #theta value REQUIRED
+                            #family = MASS::negative.binomial(theta=2.31),
+                            family = MASS::negative.binomial(theta = theta))
+    } else {
+      message("Theta estimate (fc_control$theta) not provided, running with MASS::glm.nb()...")
+      regress <- MASS::glm.nb(reg_eq,
+                              data = epi_known)
+    }
+
+
   } else {
-    reg_eq <- stats::as.formula(paste("modeledvar ~ ",
-                                      modb_eq, " + ",
-                                      bandsums_eq))
+    #Shouldn't happen, just in case.
+    stop("Error in selecting model choice.")
   }
-
-  # run glm
-  # Which negative binomial function depends on if fc_control$theta exists
-  if(!is.null(theta)){
-    message("Theta value provided. Running with glm(..., family = MASS::negative.binomial(theta = ", theta, "))...")
-    cluster_regress <- stats::glm(reg_eq,
-                                  data = epi_known,
-                                  #theta value REQUIRED
-                                  #family = MASS::negative.binomial(theta=2.31),
-                                  family = MASS::negative.binomial(theta = theta))
-  } else {
-    message("Theta estimate (fc_control$theta) not provided, running with MASS::glm.nb()...")
-    cluster_regress <- MASS::glm.nb(reg_eq,
-                                  data = epi_known)
-  }
-
-
-} else {
-  #Shouldn't happen, just in case.
-  stop("Error in selecting model choice.")
-}
 } # end build_model()
 
 
@@ -1264,7 +1264,7 @@ build_model <- function(model_choice,
 #'  values in the modeling. The fc_control$anom_env can be overruled by the user
 #'  providing a value, but this is not recommended unless you are doing
 #'  comparisons.
-#'@param cluster_regress The regression object, either the user-supplied one, or
+#'@param regress The regression object, either the user-supplied one, or
 #'  the one just generated.
 #'@param epi_lag Epidemiological dataset with basis spline summaries of the
 #'  lagged environmental data (or anomalies), with groupings as a factor.
@@ -1281,7 +1281,7 @@ build_model <- function(model_choice,
 #'
 #'
 create_predictions <- function(model_choice,
-                               cluster_regress,
+                               regress,
                                epi_lag,
                                req_date,
                                ncores){
@@ -1295,12 +1295,12 @@ create_predictions <- function(model_choice,
     ## Create predictions from either newly generated model, or given one
 
     #output prediction (through req_date)
-    cluster_preds <- mgcv::predict.bam(cluster_regress,
-                                       newdata = epi_lag %>% dplyr::filter(obs_date <= req_date),
-                                       se.fit = TRUE,       # included for backwards compatibility
-                                       type="response",
-                                       discrete = TRUE,
-                                       n.threads = ncores)
+    preds <- mgcv::predict.bam(regress,
+                               newdata = epi_lag %>% dplyr::filter(obs_date <= req_date),
+                               se.fit = TRUE,       # included for backwards compatibility
+                               type="response",
+                               discrete = TRUE,
+                               n.threads = ncores)
 
 
 
@@ -1313,10 +1313,10 @@ create_predictions <- function(model_choice,
     ## Create predictions from either newly generated model, or given one
 
     #output prediction (through req_date)
-    cluster_preds <- stats::predict.glm(cluster_regress,
-                                        newdata = epi_lag %>% dplyr::filter(obs_date <= req_date),
-                                        se.fit = TRUE,       # included for backwards compatibility
-                                        type="response")
+    preds <- stats::predict.glm(regress,
+                                newdata = epi_lag %>% dplyr::filter(obs_date <= req_date),
+                                se.fit = TRUE,       # included for backwards compatibility
+                                type="response")
 
 
   } else {

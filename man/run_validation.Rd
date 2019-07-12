@@ -5,12 +5,13 @@
 \title{Run EPIDEMIA model validation statistics}
 \usage{
 run_validation(week_start = NULL, total_weeks = 12, weeks_ahead = 2,
-  epi_data = NULL, casefield = NULL, populationfield = NULL,
-  groupfield = NULL, week_type = c("ISO", "CDC"), report_period = 3,
-  ed_summary_period = 1, ed_method = "none", env_data = NULL,
-  obsfield = NULL, valuefield = NULL, forecast_future = 2,
-  fc_control = NULL, env_ref_data = NULL, env_info = NULL,
-  model_cached = NULL, model_choice = c("poisson-bam", "negbin"), ...)
+  skill_test = FALSE, epi_data = NULL, casefield = NULL,
+  populationfield = NULL, groupfield = NULL, week_type = c("ISO",
+  "CDC"), report_period = 3, ed_summary_period = 1,
+  ed_method = "none", env_data = NULL, obsfield = NULL,
+  valuefield = NULL, forecast_future = 2, fc_control = NULL,
+  env_ref_data = NULL, env_info = NULL, model_cached = NULL,
+  model_choice = c("poisson-bam", "negbin"), ...)
 }
 \arguments{
 \item{week_start}{Date to start testing for model validation.}
@@ -20,6 +21,12 @@ run_validation(week_start = NULL, total_weeks = 12, weeks_ahead = 2,
 \item{weeks_ahead}{Number of weeks for testing the n-week ahead forecasts.
 Results will be generated from 1-week ahead through `weeks_ahead` number of
 weeks.}
+
+\item{skill_test}{Logical parameter indicating whether or not to run
+validations also on two null models for a skill test comparison. The null
+models are "persistence": the last known value (case counts) carried
+forward, and "average week" where the predicted value is the average of that
+week of the year, as calculated from historical data.}
 
 \item{epi_data}{See description in `run_epidemia()`.}
 

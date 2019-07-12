@@ -16,6 +16,11 @@
 #'@param weeks_ahead Number of weeks for testing the n-week ahead forecasts.
 #'  Results will be generated from 1-week ahead through `weeks_ahead` number of
 #'  weeks.
+#'@param skill_test Logical parameter indicating whether or not to run
+#'  validations also on two null models for a skill test comparison. The null
+#'  models are "persistence": the last known value (case counts) carried
+#'  forward, and "average week" where the predicted value is the average of that
+#'  week of the year, as calculated from historical data.
 #'@param epi_data See description in `run_epidemia()`.
 #'@param casefield See description in `run_epidemia()`.
 #'@param populationfield See description in `run_epidemia()`.
@@ -59,6 +64,7 @@
 run_validation <- function(week_start = NULL,
                            total_weeks = 12,
                            weeks_ahead = 2,
+                           skill_test = FALSE,
                            #for run_epidemia()
                            epi_data = NULL,
                            casefield = NULL,
@@ -112,134 +118,174 @@ run_validation <- function(week_start = NULL,
   #for params accepted by run_epidemia, but are meaningless for validation runs
   # e.g. `inc_per`, `ed_control`, `model_run`
   #captured, but then do nothing with them
+  # Also used for hidden raw_data argument for testing/development
   dots <- list(...)
 
-  # Week loop and prep ------------------------------------------------------
+
+  # All loop prep ------------------------------------------------------
 
   #Set up for looping
   #preserve full data
   epi_data_orig <- epi_data
   env_data_orig <- env_data
-  #create list of dates
-  #the start of calculations will be week_start minus weeks_ahead # of weeks
-  week_list <- week_start + lubridate::weeks(-weeks_ahead:total_weeks-1)
 
-  #output will be list of dataframes until we collapse later
-  fcs_list <- vector("list", length = length(week_list))
-
-  #loop
-  for (i in seq_along(week_list)){
-    this_wk <- week_list[i]
-
-    message("Validation run - date: ", this_wk) # for testing for now
-
-    #set up data
-    epi_data <- epi_data_orig %>%
-      dplyr::filter(obs_date <= this_wk)
-    env_data <- env_data_orig %>%
-      dplyr::filter(obs_date <= this_wk)
-
-    #run_epidemia
-    #passing quosures, which will have an escape built into run_epidemia()
-    reportdata <- run_epidemia(epi_data = epi_data,
-                               casefield = quo_casefield,
-                               populationfield = quo_popfield,
-                               inc_per = inc_per,
-                               groupfield = quo_groupfield,
-                               week_type = "ISO",
-                               report_period = report_period,
-                               ed_summary_period = ed_summary_period,
-                               ed_method = ed_method,
-                               ed_control = ed_control,
-                               env_data = env_data,
-                               obsfield = quo_obsfield,
-                               valuefield = quo_valuefield,
-                               forecast_future = forecast_future,
-                               fc_control = fc_control,
-                               env_ref_data = env_ref_data,
-                               env_info = env_info,
-                               model_cached = model_cached,
-                               model_choice = model_choice)
+  #Skill test loop set up
+  if (skill_test == TRUE){
+    models_to_run = c(model_choice, "null-persistence", "null-averageweek")
+  } else {
+    models_to_run = c(model_choice)
+  }
 
 
+# Skill test loop ---------------------------------------------------------
 
-    #pull needed and reformat
-    fcs_list[[i]] <- reportdata$modeling_results_data %>%
-      #get forecasts only
-      dplyr::filter(series == "fc") %>%
-      #get date of last known epi data
-      dplyr::mutate(known_week = this_wk,
-             #how many weeks ahead is the prediction
-             week_ahead = difftime(obs_date, known_week) %>% as.numeric(units = "weeks")) %>%
-      #don't need 0 week predictions (same week)
-      dplyr::filter(week_ahead > 0)
+  #skill test collection
+  all_validations <- vector("list", length = length(models_to_run))
+  #add names
+  names(all_validations) <- models_to_run
 
-    #also need to grab observations per run, will merge later
-    fcs_list[[i]] <- dplyr::bind_rows(fcs_list[[i]],
-                               reportdata$modeling_results_data %>%
-                                 dplyr::filter(series == "obs"))
+  #model loop
+  for (m in seq_along(models_to_run)){
 
+    this_model <- models_to_run[m]
 
-  } #end week loop
+    # Week loop ---------------------------------------------------------------
 
-  #have list of dataframes
-  #collapse/bindrows
-  fcs_obs <- dplyr::bind_rows(fcs_list)
+    #create list of dates
+    #the start of calculations will be week_start minus weeks_ahead # of weeks
+    week_list <- week_start + lubridate::weeks(-weeks_ahead:(total_weeks-1))
 
-  #Split forecasts and observations to join instead
-  fcs_only <- fcs_obs %>%
-    dplyr::filter(series == "fc")
+    #output will be list of dataframes until we collapse later
+    fcs_list <- vector("list", length = length(week_list))
 
-  obs_only <- fcs_obs %>%
-    dplyr::filter(series == "obs") %>%
-    dplyr::select(!!quo_groupfield, obs_date, value) %>%
-    dplyr::rename(obs = value)
+    #loop
+    for (i in seq_along(week_list)){
+      this_wk <- week_list[i]
 
-  #join
-  fc_join <- fcs_only %>%
-    dplyr::left_join(obs_only,
-                     #NSE fun
-                     by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
-                                             "obs_date"),
-                                           c(rlang::quo_name(quo_groupfield),
-                                             "obs_date")))
+      message("Validation run - date: ", this_wk) # for testing for now
 
-  #Filter to report weeks (trim off edges gathered b/c of weeks_ahead)
-  fc_trim <- fc_join %>%
-    dplyr::filter(between(obs_date,
-                          week_start,
-                          week_start + lubridate::weeks(total_weeks-1)))
+      #set up data
+      epi_data <- epi_data_orig %>%
+        dplyr::filter(obs_date <= this_wk)
+      env_data <- env_data_orig %>%
+        dplyr::filter(obs_date <= this_wk)
 
-
-  ## Calculate statistics
-  #per line stats
-  fc_join <- fc_join %>%
-    dplyr::mutate(diff = value - obs,
-                  absdiff = abs(diff),
-                  diffsq = diff ^ 2,
-                  predinterval = ifelse(obs >= lower & obs <= upper, TRUE, FALSE))
+      #run_epidemia
+      #passing quosures, which will have an escape built into run_epidemia()
+      reportdata <- run_epidemia(epi_data = epi_data,
+                                 casefield = quo_casefield,
+                                 populationfield = quo_popfield,
+                                 inc_per = inc_per,
+                                 groupfield = quo_groupfield,
+                                 week_type = "ISO",
+                                 report_period = report_period,
+                                 ed_summary_period = ed_summary_period,
+                                 ed_method = ed_method,
+                                 ed_control = ed_control,
+                                 env_data = env_data,
+                                 obsfield = quo_obsfield,
+                                 valuefield = quo_valuefield,
+                                 forecast_future = forecast_future,
+                                 fc_control = fc_control,
+                                 env_ref_data = env_ref_data,
+                                 env_info = env_info,
+                                 model_cached = model_cached,
+                                 model_choice = this_model) ##models_to_run
 
 
-  #overall week_ahead
-  validation_overall <- fc_join %>%
-    dplyr::group_by(week_ahead) %>%
-    dplyr::summarize(MAE = mean(absdiff, na.rm = TRUE),
-                     MSE = mean(diffsq, na.rm = TRUE),
-                     prop_interval = sum(predinterval, na.rm = TRUE) / sum(!is.na(predinterval)))
+
+      #pull needed and reformat
+      fcs_list[[i]] <- reportdata$modeling_results_data %>%
+        #get forecasts only
+        dplyr::filter(series == "fc") %>%
+        #get date of last known epi data
+        dplyr::mutate(known_week = this_wk,
+                      #how many weeks ahead is the prediction
+                      week_ahead = difftime(obs_date, known_week) %>% as.numeric(units = "weeks")) %>%
+        #don't need 0 week predictions (same week)
+        dplyr::filter(week_ahead > 0)
+
+      #also need to grab observations per run, will merge later
+      fcs_list[[i]] <- dplyr::bind_rows(fcs_list[[i]],
+                                        reportdata$modeling_results_data %>%
+                                          dplyr::filter(series == "obs"))
 
 
-  #overall week_ahead by grouping
-  validation_grouping <- fc_join %>%
-    dplyr::group_by(week_ahead, !!quo_groupfield) %>%
-    dplyr::summarize(MAE = mean(absdiff, na.rm = TRUE),
-                     MSE = mean(diffsq, na.rm = TRUE),
-                     prop_interval = sum(predinterval, na.rm = TRUE) / sum(!is.na(predinterval))) %>%
-    dplyr::arrange(!!quo_groupfield, week_ahead)
+    } #end week loop
+
+    #have list of dataframes
+    #collapse/bindrows
+    fcs_obs <- dplyr::bind_rows(fcs_list)
+
+    #Split forecasts and observations to join instead
+    fcs_only <- fcs_obs %>%
+      dplyr::filter(series == "fc")
+
+    obs_only <- fcs_obs %>%
+      dplyr::filter(series == "obs") %>%
+      dplyr::select(!!quo_groupfield, obs_date, value) %>%
+      dplyr::rename(obs = value)
+
+    #join
+    fc_join <- fcs_only %>%
+      dplyr::left_join(obs_only,
+                       #NSE fun
+                       by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                                               "obs_date"),
+                                             c(rlang::quo_name(quo_groupfield),
+                                               "obs_date")))
+
+    #Filter to report weeks (trim off edges gathered b/c of weeks_ahead)
+    fc_trim <- fc_join %>%
+      dplyr::filter(between(obs_date,
+                            week_start,
+                            week_start + lubridate::weeks(total_weeks-1)))
 
 
-  #return both
+    ## Calculate statistics
+    #per line stats
+    fc_stats <- fc_trim %>%
+      dplyr::mutate(diff = value - obs,
+                    absdiff = abs(diff),
+                    diffsq = diff ^ 2,
+                    predinterval = ifelse(obs >= lower & obs <= upper, TRUE, FALSE))
+
+
+    #overall week_ahead
+    validation_overall <- fc_stats %>%
+      dplyr::group_by(week_ahead) %>%
+      dplyr::summarize(MAE = mean(absdiff, na.rm = TRUE),
+                       MSE = mean(diffsq, na.rm = TRUE),
+                       prop_interval = sum(predinterval, na.rm = TRUE) / sum(!is.na(predinterval)))
+
+
+    #overall week_ahead by grouping
+    validation_grouping <- fc_stats %>%
+      dplyr::group_by(week_ahead, !!quo_groupfield) %>%
+      dplyr::summarize(MAE = mean(absdiff, na.rm = TRUE),
+                       MSE = mean(diffsq, na.rm = TRUE),
+                       prop_interval = sum(predinterval, na.rm = TRUE) / sum(!is.na(predinterval))) %>%
+      dplyr::arrange(!!quo_groupfield, week_ahead)
+
+
+    #return both
+    # and raw data with hidden option
+    if (!is.null(dots[['raw_data']])){
+      if (dots[['raw_data']] == TRUE){
+        val_results <- create_named_list(validation_overall, validation_grouping, raw_stats = fc_stats)
+      } #end raw data TRUE
+    } else {
+      #normal return with just results
+      val_results <- create_named_list(validation_overall, validation_grouping)
+    }
+
+    #add results to list by name
+    all_validations[[this_model]] <- val_results
+
+  }#end model loop
+
+
   message("Validation run finished.")
-  val_results <- create_named_list(validation_overall, validation_grouping)
-
+  all_validations
 
 } #end run validation

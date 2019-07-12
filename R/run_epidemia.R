@@ -168,7 +168,7 @@ run_epidemia <- function(epi_data = NULL,
   } else {calling_function <- "directly"}
   if(calling_function == "run_validation"){
     valid_run <-  TRUE
-    message("Running model validation ...")
+    message("Running model validation...")
     #rename already enquo'd variables
     quo_casefield <- casefield
     quo_popfield <- populationfield
@@ -220,6 +220,7 @@ run_epidemia <- function(epi_data = NULL,
       missing_flag <- TRUE
       missing_msgs <- paste0(missing_msgs, names(necessary[arg]), sep = "\n")
     }
+    #note: fix this later: Error in create_named_list() : object 'fc_control' not found
   }
   #if missing, stop and give error message
   if (missing_flag){
@@ -236,7 +237,8 @@ run_epidemia <- function(epi_data = NULL,
     model_choice <- tolower(model_choice)
   }
   model_choice <- tryCatch({
-    match.arg(model_choice, c("poisson-bam", "negbin"))
+    #including hidden null models for skill test in validation
+    match.arg(model_choice, c("poisson-bam", "negbin", "null-persistence", "null-averageweek"))
   }, error = function(e){
     message("Warning: Given 'model_choice' does not match 'poisson-bam' or 'negbin', running as 'poisson-bam'.")
     "poisson-bam"

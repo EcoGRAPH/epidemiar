@@ -145,6 +145,8 @@ run_forecast <- function(epi_data,
     fc_control$anom_env <- dplyr::case_when(
       model_choice == "poisson-gam" ~ TRUE,
       model_choice == "negbin" ~ FALSE,
+      model_choice == "null-persistence" ~ FALSE,
+      model_choice == "null-weekaverage" ~ FALSE,
       #should never occur, but if it does, default to FALSE
       TRUE ~ FALSE)
   }
@@ -163,6 +165,10 @@ run_forecast <- function(epi_data,
                                 env_fc,
                                 env_variables_used,
                                 laglen = fc_control$lag_length)
+
+  # add week of year, needed for null-weekaverage model
+  # here with week_type, else need to pass that in to further down functions
+  epi_lag <- add_datefields(epi_lag, week_type)
 
 
   # If only model_run, then return to run_epidemia() here
@@ -1104,6 +1110,7 @@ forecast_regression <- function(epi_lag,
   epi_lag_trim <- dplyr::select(epi_lag, -dplyr::one_of(band_names))
   epi_lag_trim <- dplyr::select(epi_lag_trim, -dplyr::one_of(bspl_names))
 
+
   #now cbind to get ready to return
   epi_preds <- cbind(epi_lag_trim %>%
                        filter(obs_date <= req_date),
@@ -1241,6 +1248,39 @@ build_model <- function(model_choice,
     }
 
 
+  } else if (model_choice == "null-persistence"){
+
+    #null model
+    #persistence (carry forward)
+    #no regression object
+
+    #create "model" using known data.
+    #Will fill down in create_predictions
+    regress <- epi_known %>%
+      #grouping by geographical unit
+      dplyr::group_by(!!quo_groupfield) %>%
+      #prediction is 1 lag (previous week)
+      #fit is name of value from regression models
+      dplyr::mutate(fit = dplyr::lag(modeledvar, n = 1)) %>%
+      #cleaning up as not needed, and for bug hunting
+      dplyr::select(-dplyr::starts_with("band")) %>%
+      dplyr::select(-dplyr::starts_with("modbs"))
+
+
+
+  } else if (model_choice == "null-averageweek"){
+
+    #null model
+    #average of week of year (from historical data)
+    #not a regression object
+
+    #create "model" (averages) using known data.
+    regress <- epi_known %>%
+      #calculate averages per geographic group per week of year
+      dplyr::group_by(!!quo_groupfield, week_epidemiar) %>%
+      dplyr::summarize(fit = mean(modeledvar, na.rm = TRUE))
+
+
   } else {
     #Shouldn't happen, just in case.
     stop("Error in selecting model choice.")
@@ -1319,9 +1359,62 @@ create_predictions <- function(model_choice,
                                 type="response")
 
 
+  } else if (model_choice == "null-persistence"){
+
+    message("Creating predictions using persistence null model...")
+
+    #persistence model just carries forward the last known value
+    #the important part is the forecast / trailing end part
+    #manipulating to be in quasi-same format as the other models return
+
+    #cleaning up as not needed, and for bug hunting
+    epi_lag <- epi_lag %>%
+      dplyr::select(-dplyr::starts_with("band")) %>%
+      dplyr::select(-dplyr::starts_with("modbs"))
+
+    #regress is a tibble not regression object here
+    # has a variable fit with lag of 1 on known data
+    #epi_lag has the newer rows
+    preds <- epi_lag %>%
+      #filter to requested date
+      dplyr::filter(obs_date <= req_date) %>%
+      #join to get "fit" values from "model"
+      #join on all shared columns (i.e. everything in regress not "fit") to prevent renaming
+      dplyr::left_join(regress, by = names(regress)[!names(regress) %in% c("fit")]) %>%
+      #important at end/fc section, when we fill down
+      tidyr::fill(fit, .direction = "down") %>%
+      #format into nominal regression predict output
+      dplyr::select(fit) %>%
+      as.data.frame()
+
+  } else if (model_choice == "null-averageweek"){
+
+    message("Creating predictions using average week of year null model...")
+
+    #average week null model calculates the average cases of that
+    # week of year from historical data
+    #manipulating to be in quasi-same format as the other models return
+
+    #regress is the averages per week of year from known data
+
+    epi_lag <- epi_lag %>%
+      #filter to requested date
+      dplyr::filter(obs_date <= req_date)
+
+    #join back
+    preds <- epi_lag %>%
+      #join to get average values
+      #join on all shared columns (i.e. everything in regress not "fit") to prevent renaming
+      # and so don't need column names not passed into this function
+      dplyr::left_join(regress, by = names(regress)[!names(regress) %in% c("fit")]) %>%
+      #format into nominal regression output
+      dplyr::select(fit) %>%
+      as.data.frame()
+
+
   } else {
     #Shouldn't happen, just in case.
     stop("Error in selecting model choice.")
   }
 
-} #end create_preditions()
+} #end create_predictions()

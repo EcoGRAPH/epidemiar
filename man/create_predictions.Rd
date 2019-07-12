@@ -4,8 +4,7 @@
 \alias{create_predictions}
 \title{Create the appropriate predictions/forecasts.}
 \usage{
-create_predictions(model_choice, cluster_regress, epi_lag, req_date,
-  ncores)
+create_predictions(model_choice, regress, epi_lag, req_date, ncores)
 }
 \arguments{
 \item{model_choice}{Critical argument to choose the type of model to generate.
@@ -22,7 +21,7 @@ values in the modeling. The fc_control$anom_env can be overruled by the user
 providing a value, but this is not recommended unless you are doing
 comparisons.}
 
-\item{cluster_regress}{The regression object, either the user-supplied one, or
+\item{regress}{The regression object, either the user-supplied one, or
 the one just generated.}
 
 \item{epi_lag}{Epidemiological dataset with basis spline summaries of the

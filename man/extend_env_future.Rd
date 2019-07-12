@@ -48,11 +48,9 @@ reference data use ["ISO" or "CDC"].}
 }
 \value{
 Environmental dataset, with data extended into the future forecast
- period. Unknown environmental data in known epidemiological data period is
+ period. Unknown environmental data with runs of < 2 weeks is
  filled in with last known data (i.e. "persistence" method, using the mean of
- the previous week of known data). In the forecast portion, if there are four
- or fewer weeks unknown, then it is also filled in with persistence method.
- If in the forecast portion, there is more than four weeks unknown, the
+ the previous week of known data). For missing data runs more than 2 weeks, the
  values are filled in using a progressive blend of the the mean of the last
  known week and the historical means.
 }

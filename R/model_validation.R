@@ -1,5 +1,3 @@
-#validation function
-
 
 #'Run EPIDEMIA model validation statistics
 #'
@@ -137,7 +135,7 @@ run_validation <- function(week_start = NULL,
   }
 
 
-# Skill test loop ---------------------------------------------------------
+  # Skill test loop ---------------------------------------------------------
 
   #skill test collection
   all_validations <- vector("list", length = length(models_to_run))
@@ -289,3 +287,60 @@ run_validation <- function(week_start = NULL,
   all_validations
 
 } #end run validation
+
+
+#' View overall model validation statistics
+#'
+#' Small function to pull out just overall validation statistics.
+#'
+#' @param validations The set of validation statistics produced by
+#'   run_validation()
+#'
+#' @return A list of tibbles containing only the model overall statistics (and
+#'   not including the geographic grouping results, if present).
+#'
+#' @export
+#'
+view_overall_validations <- function(validations){
+  lapply(validations, `[[`, "validation_overall")
+}
+
+#' Save overall model validation statistics
+#'
+#' Small function to pull out just overall validation statistics and save to
+#' csv.
+#'
+#' @param validations The set of validation statistics produced by
+#'   run_validation()
+#' @param save_file File name to save results into csv format
+#'
+#' @return A csv file containing only the model overall statistics (and not
+#'   including the geographic grouping results, if present).
+#'
+#' @export
+#'
+save_overall_validations <- function(validations, save_file){
+  lapply(validations, `[[`, "validation_overall") %>%
+    bind_rows(.id = "model") %>%
+    write_csv("save_file")
+}
+
+#' Save geographic grouping model validation statistics
+#'
+#' Small function to pull out validation statistics per geographic grouping and
+#' save to csv.
+#'
+#' @param validations The set of validation statistics produced by
+#'   run_validation()
+#' @param save_file File name to save results into csv format
+#'
+#' @return A csv file containing the model validation statistics for the
+#'   geographic grouping results.
+#'
+#' @export
+#'
+save_geog_validations <- function(validations, save_file){
+  lapply(validations, `[[`, "validation_grouping") %>%
+    bind_rows(.id = "model") %>%
+    write_csv("save_file")
+}

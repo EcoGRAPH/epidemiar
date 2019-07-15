@@ -57,6 +57,7 @@
 #'  values in the modeling. The fc_control$anom_env can be overruled by the user
 #'  providing a value, but this is not recommended unless you are doing
 #'  comparisons.
+#'@param valid_run Internal binary for whether this is part of a validation run.
 #'
 #'
 #'@return Named list containing:
@@ -88,7 +89,8 @@ run_forecast <- function(epi_data,
                          week_type,
                          model_run,
                          model_cached = NULL,
-                         model_choice){
+                         model_choice,
+                         valid_run){
 
   message("Preparing for forecasting...")
 
@@ -122,7 +124,10 @@ run_forecast <- function(epi_data,
                                      env_info,
                                      env_variables_used,
                                      report_dates,
-                                     week_type)
+                                     week_type,
+                                     model_choice,
+                                     valid_run)
+
   epi_data_extd <- extend_epi_future(epi_data,
                                      quo_popfield,
                                      quo_groupfield,
@@ -420,6 +425,20 @@ pull_model_envvars <- function(env_data, quo_obsfield, fc_control){
 #'@param week_type String indicating the standard (WHO ISO-8601 or CDC epi
 #'  weeks) that the weeks of the year in epidemiological and environmental
 #'  reference data use ["ISO" or "CDC"].
+#'@param model_choice Critical argument to choose the type of model to generate.
+#'  The options are versions that the EPIDEMIA team has used for forecasting.
+#'  The first supported options is "poisson-gam" ("p") which is the original
+#'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
+#'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
+#'  TRUE for using the anomalies of environmental variables rather than their
+#'  raw values. The second option is "negbin" ("n") which is a negative binomial
+#'  regression using glm, with no external seasonality terms - letting the
+#'  natural cyclical behavior of the environmental variables fill that role. The
+#'  default for fc_control$anom_env is FALSE and uses the actual observation
+#'  values in the modeling. The fc_control$anom_env can be overruled by the user
+#'  providing a value, but this is not recommended unless you are doing
+#'  comparisons.
+#'@param valid_run Internal boolean for whether this is part of a validation run.
 #'
 #'@return Environmental dataset, with data extended into the future forecast
 #'  period. Unknown environmental data with runs of < 2 weeks is
@@ -437,7 +456,9 @@ extend_env_future <- function(env_data,
                               env_info,
                               env_variables_used,
                               report_dates,
-                              week_type){
+                              week_type,
+                              model_choice,
+                              valid_run){
 
   # Extend environmental data into the future forecast time period, while
   # also dealing with any other missing environmental data.
@@ -504,135 +525,150 @@ extend_env_future <- function(env_data,
       #mark which are about to be filled in
       dplyr::mutate(data_source = ifelse(is.na(val_epidemiar), "Extended", data_source))
 
+    #Optimizing for speed for validation runs with null models, skip unneeded
 
-    #function for rle needed to honor group_bys
-    # computes an rle based on if value is NA or not
-    # returns the number of rows in the run
-    get_rle_na_info <- function(x){
-      x_na_rle <- rle(is.na(x))
-      run_id = rep(seq_along(x_na_rle$lengths), times = x_na_rle$lengths)
-      run_tot <- rep(x_na_rle$lengths, times = x_na_rle$lengths)
-      as_tibble(create_named_list(run_id, run_tot))
-    }
+    if (valid_run == TRUE &
+        (model_choice == "null-persistence" | model_choice == "null-averageweek")){
 
+      #Missing environmental data is fine for null models
+      # as they do not use that data
+      # and validation runs do not return env data
+      env_extended_final <- env_future
 
-    env_na_rle <- env_future %>%
-      dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
-      #make doubly sure in sorted date order
-      arrange(obs_date) %>%
-      #since adding multiple columns, use do instead of mutate
-      do(cbind(., get_rle_na_info(.$val_epidemiar))) %>%
-      #mutate(run_total = rle_na_count(val_epidemiar)) %>%
-      #add a groupby with the new run ID
-      group_by(!!quo_groupfield, !!quo_obsfield, run_id) %>%
-      #creates an index of where that row is in the run
-      mutate(id_in_run = seq_along(val_epidemiar))
+    } else {
+      #need to fill in missing data
 
-    #find 1st NA, then take mean of previous week, input for that day
-    #first NA now can be found with is.na(val_epidemiar) & id_in_run == 1
-    #use zoo::rollapply for mean
-
-    #Fill in first NA of a run with the mean of previous week
-    env_na1fill <- env_na_rle %>%
-      #confirm proper grouping
-      dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
-      #create a 1 day lag variable since need previous 7 days not including current
-      mutate(val_lag1 = dplyr::lag(val_epidemiar, n = 1),
-             #if_else to find the first NA
-             val_epidemiar = ifelse(is.na(val_epidemiar) & id_in_run == 1,
-                                    #zoo:rollapply to calculate mean of last 7 days (week) on lagged var
-                                    zoo::rollapply(data = val_lag1,
-                                                   width = 7,
-                                                   FUN = mean,
-                                                   align = "right",
-                                                   na.rm = TRUE),
-                                    #if not first NA, then contine with original val_epidemiar value
-                                    val_epidemiar)) %>%
-      #drop unneeded lag column
-      select(-val_lag1)
-
-    ##Prep for blending previous week mean & historical averages for other missing
-
-    #Prep ref data - get only used vars
-    env_ref_varused <- env_ref_data %>%
-      dplyr::filter(!!quo_obsfield %in% env_variables_used)
+      #function for rle needed to honor group_bys
+      # computes an rle based on if value is NA or not
+      # returns the number of rows in the run
+      get_rle_na_info <- function(x){
+        x_na_rle <- rle(is.na(x))
+        run_id = rep(seq_along(x_na_rle$lengths), times = x_na_rle$lengths)
+        run_tot <- rep(x_na_rle$lengths, times = x_na_rle$lengths)
+        as_tibble(create_named_list(run_id, run_tot))
+      }
 
 
-    #joins for ref summary type, and summary for week
-    env_join_ref <- env_na1fill %>%
-      #add week, year fields
-      epidemiar::add_datefields(week_type) %>%
-      #get reference/summarizing method from user supplied env_info
-      dplyr::left_join(env_info %>%
-                         dplyr::select(!!quo_obsfield, reference_method),
-                       by = rlang::set_names(rlang::quo_name(quo_obsfield),
-                                             rlang::quo_name(quo_obsfield))) %>%
-      #get weekly ref value
-      dplyr::left_join(env_ref_varused %>%
-                         dplyr::select(!!quo_obsfield, !!quo_groupfield, week_epidemiar, ref_value),
-                       #NSE fun
-                       by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
-                                               rlang::quo_name(quo_obsfield),
-                                               "week_epidemiar"),
-                                             c(rlang::quo_name(quo_groupfield),
-                                               rlang::quo_name(quo_obsfield),
-                                               "week_epidemiar")))
+      env_na_rle <- env_future %>%
+        dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
+        #make doubly sure in sorted date order
+        arrange(obs_date) %>%
+        #since adding multiple columns, use do instead of mutate
+        do(cbind(., get_rle_na_info(.$val_epidemiar))) %>%
+        #mutate(run_total = rle_na_count(val_epidemiar)) %>%
+        #add a groupby with the new run ID
+        group_by(!!quo_groupfield, !!quo_obsfield, run_id) %>%
+        #creates an index of where that row is in the run
+        mutate(id_in_run = seq_along(val_epidemiar))
 
-    #calculate NA missing values using carry|blend
-    env_filled <- env_join_ref %>%
-      #order very important for filling next step
-      dplyr::arrange(!!quo_groupfield, !!quo_obsfield, obs_date) %>%
-      dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
-      #propagate last known value down rows
-      dplyr::mutate(last_known = val_epidemiar) %>%
-      #fill down, so missing weeks has "last known value" IN row for calculations
-      tidyr::fill(last_known, .direction = "down") %>%
-      #calculate parts (for all, will only use when needed)
-      # with progressive blending based on id_in_run and run_tot
-      mutate(recent_modifier = (run_tot - id_in_run - 1) / run_tot,
-             recent_part = recent_modifier * last_known,
-             historical_modifier = (id_in_run - 1) / run_tot,
-             #historical is by week, so get pseudo-daily value depending on reference method,
-             # i.e. how to summarize a week of data
-             historical_value = dplyr::case_when(
-               reference_method == "mean" ~ ref_value,
-               reference_method == "sum"  ~ ref_value / 7,
-               #default as if mean
-               TRUE             ~ ref_value),
-             historical_part = historical_modifier * historical_value,
-             #testing
-             val_orig = val_epidemiar,
-             #only fill NA values
-             val_epidemiar = ifelse(is.na(val_epidemiar),
-                                    #persist if <15 days, blend if greater
-                                    ifelse(run_tot < 15,
-                                           last_known,
-                                           recent_part + historical_part),
-                                    #if notNA, then use existing val_epidemiar value
-                                    val_epidemiar))
+      #find 1st NA, then take mean of previous week, input for that day
+      #first NA now can be found with is.na(val_epidemiar) & id_in_run == 1
+      #use zoo::rollapply for mean
 
-    #clean up
-    env_extended_final <- env_filled %>%
-      #remove all added columns to match original format
-      select(-c(run_id, run_tot, id_in_run,
-                week_epidemiar, year_epidemiar,
-                last_known,
-                reference_method, ref_value,
-                recent_modifier, recent_part,
-                historical_modifier, historical_value, historical_part,
-                val_orig)) %>%
-      #fill everything except original value field
-      #for any other column that got vanished during crossing, etc.
-      tidyr::fill(dplyr::everything(), -!!quo_valuefield, .direction = "down") %>%
-      #ungroup to end
-      ungroup()
+      #Fill in first NA of a run with the mean of previous week
+      env_na1fill <- env_na_rle %>%
+        #confirm proper grouping
+        dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
+        #create a 1 day lag variable since need previous 7 days not including current
+        mutate(val_lag1 = dplyr::lag(val_epidemiar, n = 1),
+               #if_else to find the first NA
+               val_epidemiar = ifelse(is.na(val_epidemiar) & id_in_run == 1,
+                                      #zoo:rollapply to calculate mean of last 7 days (week) on lagged var
+                                      zoo::rollapply(data = val_lag1,
+                                                     width = 7,
+                                                     FUN = mean,
+                                                     align = "right",
+                                                     na.rm = TRUE),
+                                      #if not first NA, then contine with original val_epidemiar value
+                                      val_epidemiar)) %>%
+        #drop unneeded lag column
+        select(-val_lag1)
 
-  } #end else, meaning some missing data
+      ##Prep for blending previous week mean & historical averages for other missing
 
+      #Prep ref data - get only used vars
+      env_ref_varused <- env_ref_data %>%
+        dplyr::filter(!!quo_obsfield %in% env_variables_used)
+
+
+      #joins for ref summary type, and summary for week
+      env_join_ref <- env_na1fill %>%
+        #add week, year fields
+        epidemiar::add_datefields(week_type) %>%
+        #get reference/summarizing method from user supplied env_info
+        dplyr::left_join(env_info %>%
+                           dplyr::select(!!quo_obsfield, reference_method),
+                         by = rlang::set_names(rlang::quo_name(quo_obsfield),
+                                               rlang::quo_name(quo_obsfield))) %>%
+        #get weekly ref value
+        dplyr::left_join(env_ref_varused %>%
+                           dplyr::select(!!quo_obsfield, !!quo_groupfield, week_epidemiar, ref_value),
+                         #NSE fun
+                         by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                                                 rlang::quo_name(quo_obsfield),
+                                                 "week_epidemiar"),
+                                               c(rlang::quo_name(quo_groupfield),
+                                                 rlang::quo_name(quo_obsfield),
+                                                 "week_epidemiar")))
+
+      #calculate NA missing values using carry|blend
+      env_filled <- env_join_ref %>%
+        #order very important for filling next step
+        dplyr::arrange(!!quo_groupfield, !!quo_obsfield, obs_date) %>%
+        dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
+        #propagate last known value down rows
+        dplyr::mutate(last_known = val_epidemiar) %>%
+        #fill down, so missing weeks has "last known value" IN row for calculations
+        tidyr::fill(last_known, .direction = "down") %>%
+        #calculate parts (for all, will only use when needed)
+        # with progressive blending based on id_in_run and run_tot
+        mutate(recent_modifier = (run_tot - id_in_run - 1) / run_tot,
+               recent_part = recent_modifier * last_known,
+               historical_modifier = (id_in_run - 1) / run_tot,
+               #historical is by week, so get pseudo-daily value depending on reference method,
+               # i.e. how to summarize a week of data
+               historical_value = dplyr::case_when(
+                 reference_method == "mean" ~ ref_value,
+                 reference_method == "sum"  ~ ref_value / 7,
+                 #default as if mean
+                 TRUE             ~ ref_value),
+               historical_part = historical_modifier * historical_value,
+               #testing
+               val_orig = val_epidemiar,
+               #only fill NA values
+               val_epidemiar = ifelse(is.na(val_epidemiar),
+                                      #persist if <15 days, blend if greater
+                                      ifelse(run_tot < 15,
+                                             last_known,
+                                             recent_part + historical_part),
+                                      #if notNA, then use existing val_epidemiar value
+                                      val_epidemiar))
+
+      #clean up
+      env_extended_final <- env_filled %>%
+        #remove all added columns to match original format
+        select(-c(run_id, run_tot, id_in_run,
+                  week_epidemiar, year_epidemiar,
+                  last_known,
+                  reference_method, ref_value,
+                  recent_modifier, recent_part,
+                  historical_modifier, historical_value, historical_part,
+                  val_orig)) %>%
+        #fill everything except original value field
+        #for any other column that got vanished during crossing, etc.
+        tidyr::fill(dplyr::everything(), -!!quo_valuefield, .direction = "down") %>%
+        #ungroup to end
+        ungroup()
+
+    } #end else, meaning some missing data
+
+
+  } #end else on valid run & null models
+
+  #several paths to get to an env_extended_final
   return(env_extended_final)
 
 } # end extend_env_future
-
 
 
 

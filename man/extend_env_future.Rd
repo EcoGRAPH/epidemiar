@@ -6,7 +6,7 @@
 \usage{
 extend_env_future(env_data, quo_groupfield, groupings, quo_obsfield,
   quo_valuefield, env_ref_data, env_info, env_variables_used, report_dates,
-  week_type)
+  week_type, model_choice, valid_run)
 }
 \arguments{
 \item{env_data}{Daily environmental data for the same groupfields and date
@@ -45,6 +45,22 @@ forecast period, and early detection period.}
 \item{week_type}{String indicating the standard (WHO ISO-8601 or CDC epi
 weeks) that the weeks of the year in epidemiological and environmental
 reference data use ["ISO" or "CDC"].}
+
+\item{model_choice}{Critical argument to choose the type of model to generate.
+The options are versions that the EPIDEMIA team has used for forecasting.
+The first supported options is "poisson-gam" ("p") which is the original
+epidemiar model: a Poisson regression using bam (for large data GAMs), with
+a smoothed cyclical for seasonality. The default for fc_control$anom_env is
+TRUE for using the anomalies of environmental variables rather than their
+raw values. The second option is "negbin" ("n") which is a negative binomial
+regression using glm, with no external seasonality terms - letting the
+natural cyclical behavior of the environmental variables fill that role. The
+default for fc_control$anom_env is FALSE and uses the actual observation
+values in the modeling. The fc_control$anom_env can be overruled by the user
+providing a value, but this is not recommended unless you are doing
+comparisons.}
+
+\item{valid_run}{Internal boolean for whether this is part of a validation run.}
 }
 \value{
 Environmental dataset, with data extended into the future forecast

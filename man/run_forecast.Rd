@@ -7,7 +7,7 @@
 run_forecast(epi_data, quo_popfield, inc_per, quo_groupfield, groupings,
   env_data, quo_obsfield, quo_valuefield, env_variables, fc_control,
   env_ref_data, env_info, report_dates, week_type, model_run,
-  model_cached = NULL, model_choice)
+  model_cached = NULL, model_choice, valid_run)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date
@@ -80,6 +80,8 @@ default for fc_control$anom_env is FALSE and uses the actual observation
 values in the modeling. The fc_control$anom_env can be overruled by the user
 providing a value, but this is not recommended unless you are doing
 comparisons.}
+
+\item{valid_run}{Internal binary for whether this is part of a validation run.}
 }
 \value{
 Named list containing:

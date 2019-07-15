@@ -420,7 +420,8 @@ run_epidemia <- function(epi_data = NULL,
                              week_type,
                              model_run,
                              model_cached,
-                             model_choice)
+                             model_choice,
+                             valid_run)
 
   #if we are only generating the model, then end here
   if (model_run){

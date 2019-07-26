@@ -8,14 +8,14 @@ date: "Updated `r format(Sys.time(), '%B %d, %Y')`"
 output:
   rmarkdown::html_vignette:
     fig_caption: yes
-  pdf_document:
-    number_sections: yes
-    toc: yes
-    toc_depth: 2
   html_document:
     df_print: paged
     toc: yes
     toc_depth: '2'
+  pdf_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
 vignette: |
   %\VignetteIndexEntry{Output Data} 
   %\VignetteEncoding{UTF-8} 
@@ -103,8 +103,8 @@ This is the regression object from the general additive model (bam()) regression
 
 # Epidemiar Output Dataset - Model Only Run
 
-The results of `run_epidemiar(..., model_run = TRUE)` is only the regression object (model) plus some metadata information about what was used to generate the model. 
-Once a model has been generated, it can be fed back into `run_epidemiar(..., model_obj = {regression object})` for faster predictions rather than regenerating the model on each run. Determining the balance on how old of a model is still useful is heavily dependent on the specific dataset. 
+The results of `run_epidemiar(..., model_run = TRUE)` is a cached model: the regression object plus some metadata information about what was used to generate the model. 
+Once a model has been generated, it can be fed back into `run_epidemiar(..., model_cached = {cached model object})` for faster predictions rather than regenerating the model on each run. Determining the balance on how old of a model is still useful is heavily dependent on the specific dataset. 
 
 1. `model_obj`
 2. `model_info`

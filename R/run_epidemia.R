@@ -362,7 +362,13 @@ run_epidemia <- function(epi_data = NULL,
     #and sort by alphabetical groupfield
     dplyr::arrange(!!quo_groupfield, obs_date)
   #Note: val_epidemiar is field name returned (env)
-  env_data <- env_NA_interpolate(env_data, quo_obsfield, quo_valuefield, quo_groupfield) %>%
+  #interpolation is no longer necessary with new extend_env_future()
+  #env_data <- env_NA_interpolate(env_data, quo_obsfield, quo_valuefield, quo_groupfield) %>%
+  env_data <- env_data %>%
+    #first, mark which ones during known time range were observed versus (will be) interpolated
+    dplyr::mutate(data_source = ifelse(!is.na(!!quo_valuefield), "Observed", "Interpolated")) %>%
+    #copy over value
+    mutate(val_epidemiar = !!quo_valuefield) %>%
     #and sort by alphabetical groupfield
     dplyr::arrange(!!quo_groupfield, !!quo_obsfield, obs_date)
 

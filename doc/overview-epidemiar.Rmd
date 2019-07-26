@@ -8,14 +8,14 @@ date: "Updated `r format(Sys.time(), '%B %d, %Y')`"
 output:
   rmarkdown::html_vignette:
     fig_caption: yes
-  html_document:
-    df_print: paged
-    toc: yes
-    toc_depth: '2'
   pdf_document:
     number_sections: yes
     toc: yes
     toc_depth: 2
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '2'
 vignette: |
   %\VignetteIndexEntry{Overview} 
   %\VignetteEncoding{UTF-8} 
@@ -67,7 +67,7 @@ The main requirements for using this package are:
 
 # Modeling Overview
 
-The model is based on a general additive model (GAM) regression of multiple factors, including the geographic group, long terms trends, seasonality, lagged environmental drivers and clustering of geographic groups. 
+There are two models currently implemented in epidemiar. The first, `model_choice = poisson-bam`, is based on a general additive model (GAM) regression of multiple factors, including the geographic group, long terms trends, seasonality, lagged environmental drivers and clustering of geographic groups. 
 
 <!-- equation attempts
 \begin{align} 
@@ -94,10 +94,10 @@ $log(cases) \sim ~geo + bs_1 * geo + bs_2 * geo + bs_3 * geo + bs_4 * geo + bs_5
 ~~~~~~~~~~~~~~~~~~~~(env_1 sum_1 * cl + env_1 sum_2 * cl +  env_1 sum_3 * cl + \\ 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~env_1 sum_4 * cl + env_1 sum_5 * cl)~ + \cdots \\ 
 ~~~~~~~~~~~~~~~~~~~~(env_n sum_1 * cl + env_n sum_2 * cl + env_n sum_3 * cl + \\ 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~env_n sum_4 * cl + env_n sum_5 * cl)$ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~env_n sum_4 * cl + env_n sum_5 * cl) + \\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~env_n sum_6 * cl + env_n sum_7 * cl)$ 
 
-
-where $geo$ is the geographic group, $bs_1$ ... $bs_5$ are modified basis functions, $doy$ is the day of the year, $env$ are the environmental variables (1, 2 ... n) and the 5 summary ($sum$) statistics from the lagged basis functions, and $cl$ is the cluster identification of that geographic group. The regression is done with `family=poisson()` for a log link function to the case count. See the following sections for more details. 
+where $geo$ is the geographic group, $bs_1$ ... $bs_5$ are modified basis functions, $doy$ is the day of the year, $env$ are the environmental variables (1, 2 ... n) and the 7 summary ($sum$) statistics from the lagged basis functions, and $cl$ is the cluster identification of that geographic group. The regression is done with `family=poisson()` for a log link function to the case count. See the following sections for more details. 
 
 ## Geographic group, long term trends, and seasonality
 
@@ -134,6 +134,23 @@ On the other extreme, you could run separate models for each geographic group (e
 We allow the user to identify their own clusters of geographic units. The clustering determination can be done prior however the user chooses - for example, global model, individual models, clustering by ecological zones, or by identifying similar temporal disease patterns.
 
 
+## Second Model Choice
+
+There is also an option to use a negative binomial model (`model_choice = negbin`) instead. This is a glm with `family = MASS::negative.binomial(theta)`. If theta is not specified in `fc_control$theta`, then the call uses the `MASS::glm.nb()` function instead. 
+
+In this model, the environmental data is *not* anomalized, but rather the raw values are used (by default, however this can be changed by setting `fc_control$anom_env = TRUE`). 
+
+There is also *no* forced cyclical factor for seasonality, with the idea that the environmental variables are capturing this information. 
+
+The long term trend and lagged basis functions are the same as in the main model. This model was added for comparison, but is not actively used in the EPIDEMIA-Ethiopia forecasting.
+
+
+## Model Caching Option
+
+The results of `run_epidemiar(..., model_run = TRUE)` is a cached model: the regression object plus some metadata information about what was used to generate the model. 
+Once a model has been generated, it can be fed back into `run_epidemiar(..., model_cached = {cached model object})` for faster predictions rather than regenerating the model on each run. Determining the balance on how old of a model is still useful is heavily dependent on the specific dataset. 
+
+
 # Event Detection Overview
 
 The central idea behind outbreak detection is to identify when the case volume exceeds a baseline threshold, and to use this information in a prospective (not retrospective) manner to identify epidemics in their early stages.
@@ -159,13 +176,15 @@ Alert summaries are also created for the early detection and early warning perio
 
 # References
 
+Davis JK, Gebrehiwot T, Worku M, Awoke W, Mihretie A, Nekorchuk D, Wimberly MC. A genetic algorithm for identifying spatially-varying environmental drivers in a malaria time series model. Environmental Modelling & Softare. 2019; 119:275-284. 
+
 Farrington CP, Andrews NJ, Beale AD, Catchpole MA. A Statistical Algorithm for the Early Detection of Outbreaks of Infectious Disease. J R Stat Soc Ser A Stat Soc. 1996;159:547–63. 
 
 Höhle M. surveillance: An R package for the monitoring of infectious diseases. Comput Stat. 2007;22:571–82.
 
 Hulth A, Andrews N, Ethelberg S, Dreesman J, Faensen D, van Pelt W, et al. Practical usage of computer-supported outbreak detection in five European countries. Eurosurveillance. 2010;15:19658. 
 
-Merkord CL, Liu Y, Mihretie A, Gebrehiwot T, Awoke W, Bayabil E, et al. Integrating malaria surveillance with climate data for outbreak detection and forecasting: the EPIDEMIA system. Malar J. 2017;16.
+Merkord CL, Liu Y, Mihretie A, Gebrehiwot T, Awoke W, Bayabil E, Henebry M, Kassa GT, Lake M, Wimberly WC. Integrating malaria surveillance with climate data for outbreak detection and forecasting: the EPIDEMIA system. Malar J. 2017;16.
 
 Noufaily A, Enki DG, Farrington P, Garthwaite P, Andrews N, Charlett A. An improved algorithm for outbreak detection in multiple surveillance systems. Stat Med. 2013;32:1206–22.
 
@@ -193,15 +212,3 @@ drivers and malaria in the highlands of Ethiopia," Parasites & Vectors, vol. 8, 
 <<>>
 
 --> 
-
-<!-- Separate Doc 
-
-# Running epidemiar
-# Creating the Report
-
-Steps to Run Report: In brief, after user parameters and model specifications have been set, users follow these steps to create reports:
-1.	update their surveillance data, 
-2.	update environmental data,
-3.	open the Custom R Project and run a script that will read in the data, run the model, produce the forecasts, and format the finalized report. 
-
--->

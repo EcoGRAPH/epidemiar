@@ -8,14 +8,14 @@ date: "Updated `r format(Sys.time(), '%B %d, %Y')`"
 output:
   rmarkdown::html_vignette:
     fig_caption: yes
-  pdf_document:
-    number_sections: yes
-    toc: yes
-    toc_depth: 2
   html_document:
     df_print: paged
     toc: yes
     toc_depth: '2'
+  pdf_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
 vignette: |
   %\VignetteIndexEntry{Modeling Data and Parameters} 
   %\VignetteEncoding{UTF-8} 

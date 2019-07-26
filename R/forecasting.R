@@ -555,7 +555,6 @@ extend_env_future <- function(env_data,
         arrange(obs_date) %>%
         #since adding multiple columns, use do instead of mutate
         do(cbind(., get_rle_na_info(.$val_epidemiar))) %>%
-        #mutate(run_total = rle_na_count(val_epidemiar)) %>%
         #add a groupby with the new run ID
         group_by(!!quo_groupfield, !!quo_obsfield, run_id) %>%
         #creates an index of where that row is in the run

@@ -352,9 +352,9 @@ stss_res_to_output_data <- function(stss_res_list,
     dplyr::left_join(epi_fc_data %>%
                        dplyr::select(!!quo_groupfield, !!quo_popfield, obs_date),
                      by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
-                                      "obs_date"),
-                                    c(rlang::quo_name(quo_groupfield),
-                                      "epoch")))
+                                             "obs_date"),
+                                           c(rlang::quo_name(quo_groupfield),
+                                             "epoch")))
 
   #gather early detection (KNOWN - pre-forecast) event detection alert series
   ed_alert_res <- stss_res_flat %>%

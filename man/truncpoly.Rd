@@ -15,6 +15,11 @@ truncpoly(x = NULL, degree = 6, maxobs = NULL, minobs = NULL)
 
 \item{minobs}{Date of the first known value.}
 }
+\value{
+A modified b-spline basis with the last basis splines reversed and
+ the second to last basis spline function removed (to reduce the edge effects
+ of using splines).
+}
 \description{
 The modified basis splines are used to capture any long term trends per
 geographic group.

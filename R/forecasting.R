@@ -312,7 +312,7 @@ run_forecast <- function(epi_data,
 #'@param maxobs Date of the last known value.
 #'@param minobs Date of the first known value.
 #'
-#'@returna A modified b-spline basis with the last basis splines reversed and
+#'@return A modified b-spline basis with the last basis splines reversed and
 #'  the second to last basis spline function removed (to reduce the edge effects
 #'  of using splines).
 #'

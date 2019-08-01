@@ -289,12 +289,15 @@ make_stss <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings){
                  g_df[ which(g_df$obs_date == min(g_df$obs_date)), "week_epidemiar"])
 
     #make that group's sts object
-    stss[[i]] <- surveillance::sts(observed = g_cases,
-                                   start = g_start,
-                                   frequency = 52,  #weekly <<>>
-                                   population = g_pop,
-                                   epochAsDate = TRUE,
-                                   epoch = as.numeric(g_data$obs_date))
+    # due to R 3.6+ now verbose on S3 methods overwriting
+    # wrapping first surveillance package call in suppressMesssages()
+    # because somewhere it calls spatstats with print method for boxx class that overwrites cli's
+    stss[[i]] <- suppressMessages(surveillance::sts(observed = g_cases,
+                                                    start = g_start,
+                                                    frequency = 52,  #weekly
+                                                    population = g_pop,
+                                                    epochAsDate = TRUE,
+                                                    epoch = as.numeric(g_data$obs_date)))
   } # end for loop
   stss
 }

@@ -23,7 +23,7 @@ Results will be generated from 1-week ahead through `weeks_ahead` number of
 weeks.}
 
 \item{skill_test}{Logical parameter indicating whether or not to run
-validations also on two null models for a skill test comparison. The null
+validations also on two naïve models for a skill test comparison. The naïve
 models are "persistence": the last known value (case counts) carried
 forward, and "average week" where the predicted value is the average of that
 week of the year, as calculated from historical data.}

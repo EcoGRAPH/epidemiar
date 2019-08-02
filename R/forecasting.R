@@ -150,8 +150,8 @@ run_forecast <- function(epi_data,
     fc_control$anom_env <- dplyr::case_when(
       model_choice == "poisson-gam" ~ TRUE,
       model_choice == "negbin" ~ FALSE,
-      model_choice == "null-persistence" ~ FALSE,
-      model_choice == "null-weekaverage" ~ FALSE,
+      model_choice == "naive-persistence" ~ FALSE,
+      model_choice == "naive-weekaverage" ~ FALSE,
       #should never occur, but if it does, default to FALSE
       TRUE ~ FALSE)
   }
@@ -525,12 +525,12 @@ extend_env_future <- function(env_data,
       #mark which are about to be filled in
       dplyr::mutate(data_source = ifelse(is.na(val_epidemiar), "Extended", data_source))
 
-    #Optimizing for speed for validation runs with null models, skip unneeded
+    #Optimizing for speed for validation runs with naïve models, skip unneeded
 
     if (valid_run == TRUE &
-        (model_choice == "null-persistence" | model_choice == "null-averageweek")){
+        (model_choice == "naive-persistence" | model_choice == "naive-averageweek")){
 
-      #Missing environmental data is fine for null models
+      #Missing environmental data is fine for naïve models
       # as they do not use that data
       # and validation runs do not return env data
       env_extended_final <- env_future
@@ -662,7 +662,7 @@ extend_env_future <- function(env_data,
     } #end else, meaning some missing data
 
 
-  } #end else on valid run & null models
+  } #end else on valid run & naïve models
 
   #several paths to get to an env_extended_final
   return(env_extended_final)
@@ -1240,9 +1240,9 @@ build_model <- function(model_choice,
     }
 
 
-  } else if (model_choice == "null-persistence"){
+  } else if (model_choice == "naive-persistence"){
 
-    #null model
+    #naïve model
     #persistence (carry forward)
     #no regression object
 
@@ -1260,9 +1260,9 @@ build_model <- function(model_choice,
 
 
 
-  } else if (model_choice == "null-averageweek"){
+  } else if (model_choice == "naive-averageweek"){
 
-    #null model
+    #naïve model
     #average of week of year (from historical data)
     #not a regression object
 
@@ -1351,9 +1351,9 @@ create_predictions <- function(model_choice,
                                 type="response")
 
 
-  } else if (model_choice == "null-persistence"){
+  } else if (model_choice == "naive-persistence"){
 
-    message("Creating predictions using persistence null model...")
+    message("Creating predictions using persistence naïve model...")
 
     #persistence model just carries forward the last known value
     #the important part is the forecast / trailing end part
@@ -1379,9 +1379,9 @@ create_predictions <- function(model_choice,
       dplyr::select(fit) %>%
       as.data.frame()
 
-  } else if (model_choice == "null-averageweek"){
+  } else if (model_choice == "naive-averageweek"){
 
-    message("Creating predictions using average week of year null model...")
+    message("Creating predictions using average week of year naïve model...")
 
     #average week null model calculates the average cases of that
     # week of year from historical data

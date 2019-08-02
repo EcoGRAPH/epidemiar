@@ -48,7 +48,7 @@ The `run_validation()` function takes 4 arguments, plus all the `run_epidemia()`
 * `week_start`: The week to begin validation, can be built with `epidemiar::make_date_yw()` and isoyear and isoweek numbers (or epiweeks, with appropriate modifications).
 * `total_weeks`: The number of weeks from `week_start` to run the validation.
 * `week_ahead`: To validate 1 through _n_-week ahead predictions. 
-* `skill_test`: TRUE/FALSE on whether to also run the null/naive models for comparison: Persistence - last known value carried forward n-appropriate weeks, and Average Week - the average cases from that week of the week (per geographic grouping). 
+* `skill_test`: TRUE/FALSE on whether to also run the naïve models for comparison: Persistence - last known value carried forward n-appropriate weeks, and Average Week - the average cases from that week of the week (per geographic grouping). 
 
 
 ## Other Arguments & Adjustments
@@ -68,7 +68,7 @@ Results will be returned summarized at the model level and also at the geographi
 
 ## Format
 
-Results are returned in a list, by model (name of the base model and the null models if run with skill test comparison). 
+Results are returned in a list, by model (name of the base model and the naïve models if run with skill test comparison). 
 
 * `validation_overall`: overall results 
 * `validation_grouping`: results per geographic grouping

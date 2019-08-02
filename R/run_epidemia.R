@@ -237,8 +237,8 @@ run_epidemia <- function(epi_data = NULL,
     model_choice <- tolower(model_choice)
   }
   model_choice <- tryCatch({
-    #including hidden null models for skill test in validation
-    match.arg(model_choice, c("poisson-bam", "negbin", "null-persistence", "null-averageweek"))
+    #including hidden naïve models for skill test in validation
+    match.arg(model_choice, c("poisson-bam", "negbin", "naive-persistence", "naive-averageweek"))
   }, error = function(e){
     message("Warning: Given 'model_choice' does not match 'poisson-bam' or 'negbin', running as 'poisson-bam'.")
     "poisson-bam"

@@ -99,7 +99,15 @@ run_forecast <- function(epi_data,
   #used in anomalize_env() and forecast_regression()
   if (!is.null(fc_control$ncores)) {
     ncores <- fc_control$ncores
-  } else ncores <- max(parallel::detectCores(logical=FALSE) - 1, 1)
+    #because re-using ncores argument for nthreads &
+    # nthreads above 2 is not actually helpful
+    ncores <- ifelse(ncores > 1, 2, 1)
+  } else {
+    #no ncores value fed in, so test and determine
+    #cap at 2 for nthread re-use of this variable
+    #ncores <- max(parallel::detectCores(logical=FALSE) - 1, 1)
+    ncores <- ifelse(parallel::detectCores(logical=FALSE) > 1, 2, 1)
+  } #end else for ncores not given
 
   # create the modeling variable
   # epi_data <- mutate(epi_data, logcase = log(cases_epidemiar + 1))

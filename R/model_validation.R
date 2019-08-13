@@ -322,7 +322,7 @@ view_overall_validations <- function(validations){
 save_overall_validations <- function(validations, save_file){
   lapply(validations, `[[`, "validation_overall") %>%
     bind_rows(.id = "model") %>%
-    write_csv("save_file")
+    write_csv(save_file)
 }
 
 #' Save geographic grouping model validation statistics
@@ -342,5 +342,5 @@ save_overall_validations <- function(validations, save_file){
 save_geog_validations <- function(validations, save_file){
   lapply(validations, `[[`, "validation_grouping") %>%
     bind_rows(.id = "model") %>%
-    write_csv("save_file")
+    write_csv(save_file)
 }

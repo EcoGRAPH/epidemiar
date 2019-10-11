@@ -663,7 +663,7 @@ extend_env_future <- function(env_data,
                   val_orig)) %>%
         #fill everything except original value field
         #for any other column that got vanished during crossing, etc.
-        tidyr::fill(dplyr::everything(), -!!quo_valuefield, .direction = "down") %>%
+        tidyr::fill(dplyr::everything(), -!!quo_valuefield, -!!quo_groupfield, -!!quo_obsfield, .direction = "down") %>%
         #ungroup to end
         ungroup()
 

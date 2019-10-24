@@ -533,12 +533,12 @@ extend_env_future <- function(env_data,
       #mark which are about to be filled in
       dplyr::mutate(data_source = ifelse(is.na(val_epidemiar), "Extended", data_source))
 
-    #Optimizing for speed for validation runs with naïve models, skip unneeded
+    #Optimizing for speed for validation runs with naive models, skip unneeded
 
     if (valid_run == TRUE &
         (model_choice == "naive-persistence" | model_choice == "naive-averageweek")){
 
-      #Missing environmental data is fine for naïve models
+      #Missing environmental data is fine for naive models
       # as they do not use that data
       # and validation runs do not return env data
       env_extended_final <- env_future
@@ -670,7 +670,7 @@ extend_env_future <- function(env_data,
     } #end else, meaning some missing data
 
 
-  } #end else on valid run & naïve models
+  } #end else on valid run & naive models
 
   #several paths to get to an env_extended_final
   return(env_extended_final)
@@ -1250,7 +1250,7 @@ build_model <- function(model_choice,
 
   } else if (model_choice == "naive-persistence"){
 
-    #naïve model
+    #naive model
     #persistence (carry forward)
     #no regression object
 
@@ -1270,7 +1270,7 @@ build_model <- function(model_choice,
 
   } else if (model_choice == "naive-averageweek"){
 
-    #naïve model
+    #naive model
     #average of week of year (from historical data)
     #not a regression object
 
@@ -1361,7 +1361,7 @@ create_predictions <- function(model_choice,
 
   } else if (model_choice == "naive-persistence"){
 
-    message("Creating predictions using persistence naïve model...")
+    message("Creating predictions using persistence naive model...")
 
     #persistence model just carries forward the last known value
     #the important part is the forecast / trailing end part
@@ -1389,7 +1389,7 @@ create_predictions <- function(model_choice,
 
   } else if (model_choice == "naive-averageweek"){
 
-    message("Creating predictions using average week of year naïve model...")
+    message("Creating predictions using average week of year naive model...")
 
     #average week null model calculates the average cases of that
     # week of year from historical data

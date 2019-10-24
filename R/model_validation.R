@@ -24,8 +24,8 @@
 #'  forecasting next week, but you don't know this week's data yet, you only
 #'  know last week's numbers.
 #'@param per_timesteps When creating a timeseries of validation results, create
-#'  sets with per_timesteps number of steps in each set. Should be a minimum of
-#'  10 timesteps. Last grouping may not contain full set.
+#'  a moving window with per_timesteps width number of time points. Should be a
+#'  minimum of 10 timesteps.
 #'@param skill_test Logical parameter indicating whether or not to run
 #'  validations also on two naïve models for a skill test comparison. The naïve
 #'  models are "persistence": the last known value (case counts) carried
@@ -69,8 +69,6 @@
 #'
 #'@export
 #'
-
-
 run_validation <- function(date_start = NULL,
                            total_timesteps = 12,
                            timesteps_ahead = 2,
@@ -168,7 +166,7 @@ run_validation <- function(date_start = NULL,
 
     this_model <- models_to_run[m]
 
-    #If naive-averageweek, timesteps_ahead is meaningless, just use 1 and change to NA later
+    #If naive-averageweek, timesteps_ahead is meaningless, just use 1
     if (this_model == "naive-averageweek"){
       this_timesteps_ahead <- 1
       this_forecast_future <- this_timesteps_ahead
@@ -251,7 +249,7 @@ run_validation <- function(date_start = NULL,
     #collapse/bindrows
     fcs_only <- dplyr::bind_rows(fcs_list) %>%
       #nicely arrange
-      dplyr::arrange(!!quo_groupfield, obs_date, timestep_ahead)
+      dplyr::arrange(!!quo_groupfield, timestep_ahead, obs_date)
 
 
     # #Split forecasts and observations to join instead
@@ -276,7 +274,7 @@ run_validation <- function(date_start = NULL,
       dplyr::filter(between(obs_date,
                             date_start,
                             date_start + lubridate::weeks(total_timesteps-1))) %>%
-    #Add column for showing reporting_lag
+      #Add column for showing reporting_lag
       dplyr::mutate(reporting_lag = reporting_lag)
 
     #timestep_ahead is meaningless for average week.
@@ -295,29 +293,46 @@ run_validation <- function(date_start = NULL,
   } #end model loop
 
 
+  if (skill_test == TRUE){
+    #calc skill comparison statistics
+    skill_overall <- calc_skill(get_overall_validations(all_validations))
+    skill_grouping <- calc_skill(get_group_validations(all_validations), quo_groupfield)
+
+    val_result_result <- create_named_list(skill_overall, skill_grouping, validations = all_validations)
+  } else {
+    #just the one model validation datasets
+    val_result_result <- all_validations
+  }
+
   message("Validation run finished.")
-  all_validations
+  val_result_result
 
 } #end run validation
 
 
 
-#' Calculate validation statistics from forecast results.
+#'Calculate validation statistics from forecast results.
 #'
-#' Helper function to calculate the validation statistics from each model run.
-#' Mean Absolute Error (MAE), Root Mean Square Error (RMSE), Proportion of
-#' observations in in prediction interval, and R^2. Calculates it both at a
-#' global model level per timestep ahead, and at a geographical grouping level
-#' per timestep ahead. Also calculates a timeseries of evaluation metrics at
-#' every per_timesteps number of timesteps per grouping (if applicable) and
-#' timestep_ahead.
+#'Helper function to calculate the validation statistics from each model run.
+#'Mean Absolute Error (MAE), Root Mean Square Error (RMSE), Proportion of
+#'observations in in prediction interval, and R^2. Calculates it both at a
+#'global model level per timestep ahead, and at a geographical grouping level
+#'per timestep ahead. Also calculates a timeseries of evaluation metrics at
+#'every per_timesteps number of timesteps per grouping (if applicable) and
+#'timestep_ahead.
 #'
-#' @param fc_trim The forecast results of one model type, combined with observed
-#'   values, trimmed to user requested date range.
-#' @param dots The non-required arguments to run_validation() for developer
-#'   testing.
+#'@param fc_trim The forecast results of one model type, combined with observed
+#'  values, trimmed to user requested date range.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_validation()/run_epidemia().
+#'@param per_timesteps When creating a timeseries of validation results, create
+#'  a moving window with per_timesteps width number of time points. Should be a
+#'  minimum of 10 timesteps.
+#'@param dots The non-required arguments to run_validation() for developer
+#'  testing.
 #'
-#' @return
+#'@return A named list of validation statistic results: validation_overall,
+#'  validation_grouping, validation_timeseries
 #'
 calc_val_stats <- function(fc_trim, quo_groupfield, per_timesteps, dots){
   # MAE: mean(|obs - pred|)
@@ -343,11 +358,12 @@ calc_val_stats <- function(fc_trim, quo_groupfield, per_timesteps, dots){
     #stat calc
     dplyr::summarize(MAE = mean(absdiff, na.rm = TRUE),
                      MSE = mean(diffsq, na.rm = TRUE),
-                     RMSE = sqrt(MSE),
                      prop_interval = sum(predinterval, na.rm = TRUE) / sum(!is.na(predinterval)),
                      SSE = sum(diffsq, na.rm = TRUE),
-                     TSS = sum(total_squares, na.rm = TRUE),
-                     R2 = 1 - (SSE/TSS))
+                     TSS = sum(total_squares, na.rm = TRUE)) %>%
+    #and mutate for final calc
+    dplyr::mutate(RMSE = sqrt(MSE),
+                  R2 = 1 - (SSE/TSS))
 
 
   #overall timestep_ahead by grouping
@@ -359,39 +375,44 @@ calc_val_stats <- function(fc_trim, quo_groupfield, per_timesteps, dots){
     #stat calc
     dplyr::summarize(MAE = mean(absdiff, na.rm = TRUE),
                      MSE = mean(diffsq, na.rm = TRUE),
-                     RMSE = sqrt(MSE),
                      prop_interval = sum(predinterval, na.rm = TRUE) / sum(!is.na(predinterval)),
                      SSE = sum(diffsq, na.rm = TRUE),
-                     TSS = sum(total_squares, na.rm = TRUE),
-                     R2 = 1 - (SSE/TSS))
+                     TSS = sum(total_squares, na.rm = TRUE)) %>%
+    #and mutate for final calc
+    dplyr::mutate(RMSE = sqrt(MSE),
+                  R2 = 1 - (SSE/TSS))
 
 
   #timeseries calculations
   # minimum of ~10 timesteps per summary
-  fc_timeseries <- fc_stats %>%
+  # ROLLING window
+  validation_timeseries <- fc_stats %>%
     dplyr::group_by(!!quo_groupfield, timestep_ahead) %>%
-    #create group every per_timesteps
-    mutate(ts_group = gl(n(), per_timesteps, n())) %>%
-    #group by new timeseries group
-    group_by(ts_group, add = TRUE) %>%
-    #count number of timesteps in group (last group may not have complete set)
-    mutate(n_steps = length(unique(obs_date)))
-
-  validation_timeseries <- fc_timeseries %>%
-    dplyr::group_by(!!quo_groupfield, timestep_ahead, ts_group) %>%
-    #Now calc TSS part of R2
-    dplyr::mutate(meanobs = mean(obs),
-                  total_squares = (obs - meanobs)^2) %>%
-    #stat calc
-    dplyr::summarize(MAE = mean(absdiff, na.rm = TRUE),
-                     MSE = mean(diffsq, na.rm = TRUE),
-                     RMSE = sqrt(MSE),
-                     prop_interval = sum(predinterval, na.rm = TRUE) / sum(!is.na(predinterval)),
-                     SSE = sum(diffsq, na.rm = TRUE),
-                     TSS = sum(total_squares, na.rm = TRUE),
-                     R2 = 1 - (SSE/TSS))
-
-
+    #rollapply for get mean of obs
+    dplyr::mutate(meanobs = zoo::rollmeanr(x = obs,
+                                           k = per_timesteps,
+                                           fill = NA),
+                  total_squares = (obs - meanobs)^2,
+                  MAE = zoo::rollmeanr(x = absdiff,
+                                       k = per_timesteps,
+                                       fill = NA),
+                  MSE = zoo::rollmeanr(x = diffsq,
+                                       k = per_timesteps,
+                                       fill = NA),
+                  RMSE = sqrt(MSE),
+                  prop_interval = zoo::rollsumr(x = predinterval,
+                                                k = per_timesteps,
+                                                fill = NA) /
+                    zoo::rollsumr(x = !is.na(predinterval),
+                                  k = per_timesteps,
+                                  fill = NA),
+                  SSE = zoo::rollsumr(x = diffsq,
+                                      k = per_timesteps,
+                                      fill = NA),
+                  TSS = zoo::rollsumr(x = total_squares,
+                                      k = per_timesteps,
+                                      fill = NA),
+                  R2 = 1 - (SSE/TSS))
 
 
   #return all
@@ -408,23 +429,142 @@ calc_val_stats <- function(fc_trim, quo_groupfield, per_timesteps, dots){
 } #end calc_val_stats()
 
 
-
-
-#' View overall model validation statistics
+#' Get overall model validation statistics
 #'
 #' Small function to pull out just overall validation statistics.
 #'
 #' @param validations The set of validation statistics produced by
-#'   run_validation()
+#'   run_validation() - only the list of validation data sets, not including the skill metrics.
 #'
 #' @return A list of tibbles containing only the model overall statistics (and
 #'   not including the geographic grouping results, if present).
 #'
 #' @export
 #'
-view_overall_validations <- function(validations){
+get_overall_validations <- function(validations){
   lapply(validations, `[[`, "validation_overall")
 }
+
+
+#' Get geographic grouping model validation statistics
+#'
+#' Small function to pull out just the geographic grouping validation statistics.
+#'
+#' @param validations The set of validation statistics produced by
+#'   run_validation() - only the list of validation data sets, not including the skill metrics.
+#'
+#' @return A list of tibbles containing only the model geographic grouping statistics.
+#'
+#' @export
+#'
+get_group_validations <- function(validations){
+  lapply(validations, `[[`, "validation_grouping")
+}
+
+
+
+#' Calculate model skill comparison statistics
+#'
+#' Helper function to calculate the relative improvement of the forecast over the specified naive model.
+#' Skill score = (score_fc - score_naive) / (score_perfect - score_naive)
+#' Skill metric has an upper bound of 1. No improvement is 0. Lower bound depends on statistic.
+#'
+#'@param fc_stat The forecast model statistic value.
+#'@param naive_stat The naive model statistic value (same statistic as forecast model).
+#'@param perfect_stat The value of a perfect score for that stastistic.
+#'
+#'@return Skill score: the relative improvement the forecast model has over the naive model.
+#'
+#'@export
+#'
+calc_skill_stat <- function(fc_stat, naive_stat, perfect_stat){
+  skill_stat <- (fc_stat - naive_stat) / (perfect_stat - naive_stat)
+}
+
+
+#' Calculate the forecast model skill score compared to the naive model predictions.
+#'
+#'@param val_list A list of 3 datasets of validation results: the first is the forecast model, the following two are the naive model results, as created by binding the results of calc_val_stats() in run_validation().
+#'@param grp Optional inclusion of quo_groupfield when calculating skill scores by groupfield.
+#'
+#'@return Single dataset with skill scores of the main forecast model against each of the naive models, per timestep ahead, and optionally, per geographic grouping
+#'
+calc_skill <- function(val_list, grp = NULL){
+
+  #separate out, rename columns, and join/crossing
+  val_fc <- val_list[[1]] %>%
+    dplyr::rename(fc_MAE = MAE,
+                  fc_RMSE = RMSE,
+                  fc_prop_interval = prop_interval,
+                  fc_R2 = R2) %>%
+    dplyr::select(group_cols(), timestep_ahead, starts_with("fc_"))
+
+  val_np <- val_list$`naive-persistence` %>%
+    dplyr::rename(np_MAE = MAE,
+                  np_RMSE = RMSE,
+                  np_prop_interval = prop_interval,
+                  np_R2 = R2) %>%
+    dplyr::select(group_cols(), timestep_ahead, starts_with("np_"))
+
+  val_naw <- val_list$`naive-averageweek` %>%
+    rename(naw_MAE = MAE,
+           naw_RMSE = RMSE,
+           naw_prop_interval = prop_interval,
+           naw_R2 = R2) %>%
+    #no timestep_ahead for average week, all same
+    select(group_cols(), starts_with("naw_"))
+
+  #appropriate joins
+  if (is.null(grp)){
+    #join together
+    val_join <- val_fc %>%
+      #join with persistence
+      dplyr::left_join(val_np,
+                       by = "timestep_ahead") %>%
+      #join with average week (1 value to all timesteps ahead)
+      tidyr::crossing(val_naw)
+  } else {
+    #else join with groupfield
+    #join together
+    val_join <- val_fc %>%
+      #join with persistence
+      dplyr::left_join(val_np,
+                       #NSE fun
+                       by = rlang::set_names(c(rlang::quo_name(grp),
+                                               "timestep_ahead"),
+                                             c(rlang::quo_name(grp),
+                                               "timestep_ahead"))) %>%
+      #join with average week (1 value to all timesteps ahead)
+      dplyr::left_join(val_naw,
+                       by = rlang::set_names(rlang::quo_name(grp),
+                                             rlang::quo_name(grp)))
+  } #end joinings
+
+  #perfect skill metrics
+  perfect_MAE <- 0
+  perfect_RMSE <- 0
+  perfect_prop_interval <- 1
+  perfect_R2 <- 1
+
+  #calc skill metrics of fc model to each of naive models
+  val_skill <- val_join %>%
+    mutate(skill_MAE_persistence = calc_skill_stat(fc_MAE, np_MAE, perfect_MAE),
+           skill_MAE_averageweek = calc_skill_stat(fc_MAE, naw_MAE, perfect_MAE),
+           skill_RMSE_persistence = calc_skill_stat(fc_RMSE, np_RMSE, perfect_RMSE),
+           skill_RMSE_averageweek = calc_skill_stat(fc_RMSE, naw_RMSE, perfect_RMSE),
+           skill_interval_persistence = calc_skill_stat(fc_prop_interval, np_prop_interval,
+                                                        perfect_prop_interval),
+           skill_interval_averageweek = calc_skill_stat(fc_prop_interval, naw_prop_interval,
+                                                        perfect_prop_interval),
+           skill_R2_persistence =  calc_skill_stat(fc_R2, np_R2, perfect_R2),
+           skill_R2_averageweek =  calc_skill_stat(fc_R2, naw_R2, perfect_R2)) %>%
+    #select final stats only
+    select(group_cols(), timestep_ahead, starts_with("skill_"))
+
+  val_skill
+}
+
+
 
 #' Save overall model validation statistics
 #'
@@ -432,7 +572,7 @@ view_overall_validations <- function(validations){
 #' csv.
 #'
 #' @param validations The set of validation statistics produced by
-#'   run_validation()
+#'   run_validation() - only the list of validation data sets, not including the skill metrics.
 #' @param save_file File name to save results into csv format
 #'
 #' @return A csv file containing only the model overall statistics (and not
@@ -446,13 +586,14 @@ save_overall_validations <- function(validations, save_file){
     write_csv(save_file)
 }
 
+
 #' Save geographic grouping model validation statistics
 #'
 #' Small function to pull out validation statistics per geographic grouping and
 #' save to csv.
 #'
 #' @param validations The set of validation statistics produced by
-#'   run_validation()
+#'   run_validation() - only the list of validation data sets, not including the skill metrics.
 #' @param save_file File name to save results into csv format
 #'
 #' @return A csv file containing the model validation statistics for the

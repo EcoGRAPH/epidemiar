@@ -4,9 +4,9 @@
 \alias{run_validation}
 \title{Run EPIDEMIA model validation statistics}
 \usage{
-run_validation(date_start = NULL, total_timesteps = 12,
+run_validation(date_start = NULL, total_timesteps = 26,
   timesteps_ahead = 2, reporting_lag = 0, per_timesteps = 12,
-  skill_test = FALSE, epi_data = NULL, casefield = NULL,
+  skill_test = TRUE, epi_data = NULL, casefield = NULL,
   populationfield = NULL, groupfield = NULL, week_type = c("ISO",
   "CDC"), report_period = 3, ed_summary_period = 1,
   ed_method = "none", env_data = NULL, obsfield = NULL,
@@ -87,12 +87,15 @@ but ignored for validation runs. For example, `inc_per`, `ed_control`,
 `model_run`.}
 }
 \value{
-Returns a list of validation statistics. Statistics are calculated on
- the n-week ahead forecast and the actual observed case counts. Statistics
- returned are  Mean Absolute Error (MAE), Root Mean Squared Error (RMSE), and
- proportion of observed values that were inside the prediction interval
- (prop_interval). The first object `validation_overall` is the results
- overall, and `validation_grouping` is the results per geographic grouping.
+Returns a nested list of validation statistics. Statistics are
+ calculated on the n-week ahead forecast and the actual observed case counts.
+ Statistics returned are  Mean Absolute Error (MAE), Root Mean Squared Error
+ (RMSE), and proportion of observed values that were inside the prediction
+ interval (prop_interval). The first object is `skill_scores`, which contains
+ `skill_overall` and `skill_grouping`. The second list is `validations`,
+ which contains lists per model run (the forecast model and then optionally
+ the naive models). Within each, `validation_overall` is the results overall,
+ and `validation_grouping` is the results per geographic grouping.
 }
 \description{
 This function takes a few more arguments than `epidemiar::run_epidemia()` to

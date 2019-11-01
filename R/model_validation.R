@@ -60,21 +60,24 @@
 #'  `model_run`.
 #'
 #'
-#'@return Returns a list of validation statistics. Statistics are calculated on
-#'  the n-week ahead forecast and the actual observed case counts. Statistics
-#'  returned are  Mean Absolute Error (MAE), Root Mean Squared Error (RMSE), and
-#'  proportion of observed values that were inside the prediction interval
-#'  (prop_interval). The first object `validation_overall` is the results
-#'  overall, and `validation_grouping` is the results per geographic grouping.
+#'@return Returns a nested list of validation statistics. Statistics are
+#'  calculated on the n-week ahead forecast and the actual observed case counts.
+#'  Statistics returned are  Mean Absolute Error (MAE), Root Mean Squared Error
+#'  (RMSE), and proportion of observed values that were inside the prediction
+#'  interval (prop_interval). The first object is `skill_scores`, which contains
+#'  `skill_overall` and `skill_grouping`. The second list is `validations`,
+#'  which contains lists per model run (the forecast model and then optionally
+#'  the naive models). Within each, `validation_overall` is the results overall,
+#'  and `validation_grouping` is the results per geographic grouping.
 #'
 #'@export
 #'
 run_validation <- function(date_start = NULL,
-                           total_timesteps = 12,
+                           total_timesteps = 26,
                            timesteps_ahead = 2,
                            reporting_lag = 0,
                            per_timesteps = 12,
-                           skill_test = FALSE,
+                           skill_test = TRUE,
                            #for run_epidemia()
                            epi_data = NULL,
                            casefield = NULL,
@@ -87,7 +90,7 @@ run_validation <- function(date_start = NULL,
                            env_data = NULL,
                            obsfield = NULL,
                            valuefield = NULL,
-                           forecast_future = 2, #default same as weeks_ahead default
+                           forecast_future = 2, #default same as timesteps_ahead default
                            fc_control = NULL,
                            env_ref_data = NULL,
                            env_info = NULL,
@@ -117,19 +120,29 @@ run_validation <- function(date_start = NULL,
 
   #Assumed that run_epidemia() parameters just copied and pasted, so adjust for validation
   #new lengths
-  forecast_future <- timesteps_ahead
+  forecast_future <- timesteps_ahead + reporting_lag
   report_period <- forecast_future + 1
   #no event detection
   ed_summary_period <- 1
   ed_method <- "none"
   #report out in CASES for validation
-  fc_control$value_type <-  "cases"
+  fc_control$value_type <- "cases"
 
   #for params accepted by run_epidemia, but are meaningless for validation runs
   # e.g. `inc_per`, `ed_control`, `model_run`
   #captured, but then do nothing with them
   # Also used for hidden raw_data argument for testing/development
   dots <- list(...)
+
+  #Create parameter metadata
+  metadata <- create_named_list(date_start,
+                                total_timesteps,
+                                timesteps_ahead,
+                                reporting_lag,
+                                per_timesteps,
+                                skill_test,
+                                casefield = quo_name(quo_casefield),
+                                date_created = Sys.Date())
 
 
   # All loop prep ------------------------------------------------------
@@ -172,7 +185,8 @@ run_validation <- function(date_start = NULL,
       this_forecast_future <- this_timesteps_ahead
       this_report_period <- this_forecast_future + 1
     } else {
-      this_timesteps_ahead <- timesteps_ahead
+      #use modified forecast_future which is timesteps_ahead + reporting_lag
+      this_timesteps_ahead <- forecast_future #timesteps_ahead
       this_forecast_future <- this_timesteps_ahead
       this_report_period <- this_forecast_future + 1
     }
@@ -193,12 +207,12 @@ run_validation <- function(date_start = NULL,
       message("Validation run - date: ", this_dt) # for testing for now
 
       #set up data
-      #censoring as appropriate with reporting_lag (used for both epi & env)
-      censor_date <- this_dt - lubridate::weeks(reporting_lag)
+      #censoring as appropriate
+      #reporting_lag will be handled with offset timesteps
       epi_data <- epi_data_orig %>%
-        dplyr::filter(obs_date <= censor_date)
+        dplyr::filter(obs_date <= this_dt)
       env_data <- env_data_orig %>%
-        dplyr::filter(obs_date <= censor_date)
+        dplyr::filter(obs_date <= this_dt)
 
       #run_epidemia
       #passing quosures, which will have an escape built into run_epidemia()
@@ -229,18 +243,12 @@ run_validation <- function(date_start = NULL,
         #get forecasts only
         dplyr::filter(series == "fc") %>%
         #get base date of report ('current date' in relation to forecast)
-        dplyr::mutate(base_date = this_dt,
-                      #due to reporting lag, date of last known data
-                      last_known_date = censor_date,
-                      #how many weeks ahead is the prediction
-                      timestep_ahead = difftime(obs_date, base_date) %>% as.numeric(units = "weeks")) %>%
+        dplyr::mutate(preadj_date = this_dt,
+                      #how many weeks ahead is the prediction (not adjusting for reporting lag yet)
+                      timestep_ahead_orig = difftime(obs_date, preadj_date) %>%
+                                          as.numeric(units = "weeks")) %>%
         #don't need 0 week predictions (same week)
-        dplyr::filter(timestep_ahead > 0)
-
-      # #also need to grab observations per run, will merge later
-      # fcs_list[[i]] <- dplyr::bind_rows(fcs_list[[i]],
-      #                                   reportdata$modeling_results_data %>%
-      #                                     dplyr::filter(series == "obs"))
+        dplyr::filter(timestep_ahead_orig > 0)
 
 
     } #end timestep loop
@@ -249,16 +257,8 @@ run_validation <- function(date_start = NULL,
     #collapse/bindrows
     fcs_only <- dplyr::bind_rows(fcs_list) %>%
       #nicely arrange
-      dplyr::arrange(!!quo_groupfield, timestep_ahead, obs_date)
+      dplyr::arrange(!!quo_groupfield, timestep_ahead_orig, obs_date)
 
-
-    # #Split forecasts and observations to join instead
-    # fcs_only <- fcs_obs %>%
-    #   dplyr::filter(series == "fc")
-    # obs_only <- fcs_obs %>%
-    #   dplyr::filter(series == "obs") %>%
-    #   dplyr::select(!!quo_groupfield, obs_date, value) %>%
-    #   dplyr::rename(obs = value)
 
     #join
     fc_join <- fcs_only %>%
@@ -269,20 +269,34 @@ run_validation <- function(date_start = NULL,
                                              c(rlang::quo_name(quo_groupfield),
                                                "obs_date")))
 
-    #Filter to report weeks (trim off edges gathered b/c of weeks_ahead)
+    #make all the reporting_lag adjustments
+    # basically, we ran extra forecast future steps
+    # so we now can simply shift everything backwards except for averageweek
+    if (this_model == "naive-averageweek"){
+      fc_join <- fc_join %>%
+        dplyr::mutate(run_date = preadj_date,
+                      #timestep_ahead is meaningless for average week.
+                      # NA may cause unexpected results with grouping, so replace with 0
+                      timestep_ahead = 0,
+                      #Add column for showing reporting_lag
+                      reporting_lag = reporting_lag)
+    } else {
+      fc_join <- fc_join %>%
+        dplyr::mutate(run_date = preadj_date - lubridate::weeks(reporting_lag),
+                      timestep_ahead = timestep_ahead_orig - reporting_lag,
+                      #Add column for showing reporting_lag
+                      reporting_lag = reporting_lag) %>%
+        #filter out the timesteps that are now less than 1 step
+        dplyr::filter(timestep_ahead > 0)
+    }
+
+
+    #Filter to report weeks (trim off edges gathered b/c of weeks_ahead, etc.)
     fc_trim <- fc_join %>%
       dplyr::filter(between(obs_date,
                             date_start,
-                            date_start + lubridate::weeks(total_timesteps-1))) %>%
-      #Add column for showing reporting_lag
-      dplyr::mutate(reporting_lag = reporting_lag)
+                            date_start + lubridate::weeks(total_timesteps-1)))
 
-    #timestep_ahead is meaningless for average week.
-    # NA may cause unexpected results with grouping, so replace with 0
-    if (this_model == "naive-averageweek"){
-      fc_trim <- fc_trim %>%
-        dplyr::mutate(timestep_ahead = 0)
-    }
 
     ## Calculate statistics
     val_results <- calc_val_stats(fc_trim, quo_groupfield, per_timesteps, dots)
@@ -293,19 +307,25 @@ run_validation <- function(date_start = NULL,
   } #end model loop
 
 
+
+  #Get skill test list of results
   if (skill_test == TRUE){
     #calc skill comparison statistics
     skill_overall <- calc_skill(get_overall_validations(all_validations))
     skill_grouping <- calc_skill(get_group_validations(all_validations), quo_groupfield)
+    skill_scores <- create_named_list(skill_overall, skill_grouping)
 
-    val_result_result <- create_named_list(skill_overall, skill_grouping, validations = all_validations)
+    val_return <- create_named_list(skill_scores, validations = all_validations, metadata)
   } else {
     #just the one model validation datasets
-    val_result_result <- all_validations
+    val_return <- create_named_list(all_validations, metadata)
   }
 
+
+
+
   message("Validation run finished.")
-  val_result_result
+  val_return
 
 } #end run validation
 
@@ -549,14 +569,14 @@ calc_skill <- function(val_list, grp = NULL){
   #calc skill metrics of fc model to each of naive models
   val_skill <- val_join %>%
     mutate(skill_MAE_persistence = calc_skill_stat(fc_MAE, np_MAE, perfect_MAE),
-           skill_MAE_averageweek = calc_skill_stat(fc_MAE, naw_MAE, perfect_MAE),
            skill_RMSE_persistence = calc_skill_stat(fc_RMSE, np_RMSE, perfect_RMSE),
-           skill_RMSE_averageweek = calc_skill_stat(fc_RMSE, naw_RMSE, perfect_RMSE),
            skill_interval_persistence = calc_skill_stat(fc_prop_interval, np_prop_interval,
                                                         perfect_prop_interval),
+           skill_R2_persistence =  calc_skill_stat(fc_R2, np_R2, perfect_R2),
+           skill_MAE_averageweek = calc_skill_stat(fc_MAE, naw_MAE, perfect_MAE),
+           skill_RMSE_averageweek = calc_skill_stat(fc_RMSE, naw_RMSE, perfect_RMSE),
            skill_interval_averageweek = calc_skill_stat(fc_prop_interval, naw_prop_interval,
                                                         perfect_prop_interval),
-           skill_R2_persistence =  calc_skill_stat(fc_R2, np_R2, perfect_R2),
            skill_R2_averageweek =  calc_skill_stat(fc_R2, naw_R2, perfect_R2)) %>%
     #select final stats only
     select(group_cols(), timestep_ahead, starts_with("skill_"))

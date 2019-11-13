@@ -63,8 +63,7 @@
 #'@return Returns a nested list of validation statistics. Statistics are
 #'  calculated on the n-week ahead forecast and the actual observed case counts.
 #'  Statistics returned are  Mean Absolute Error (MAE), Root Mean Squared Error
-#'  (RMSE), and proportion of observed values that were inside the prediction
-#'  interval (prop_interval). The first object is `skill_scores`, which contains
+#'  (RMSE). The first object is `skill_scores`, which contains
 #'  `skill_overall` and `skill_grouping`. The second list is `validations`,
 #'  which contains lists per model run (the forecast model and then optionally
 #'  the naive models). Within each, `validation_overall` is the results overall,
@@ -357,16 +356,18 @@ run_validation <- function(date_start = NULL,
 calc_val_stats <- function(fc_trim, quo_groupfield, per_timesteps, dots){
   # MAE: mean(|obs - pred|)
   # RMSE: sqrt(mean((obs - pred)^2))
-  # Proportion in Interval: 1/T if inside, summed. Over all non-NA entries.
   # R2 (R^2): 1 - SSE/TSS.  SSE = sum((obs-pred)^2). TSS = sum((obs - mean(obs))^2).
   #     B/c involves mean of group of observations, must be calculated after grouping
+
+  #Removed
+  # Proportion in Interval: 1/T if inside, summed. Over all non-NA entries.
 
   #per line stats
   fc_stats <- fc_trim %>%
     dplyr::mutate(diff = obs - value,
                   absdiff = abs(diff),
-                  diffsq = diff ^ 2,
-                  predinterval = ifelse(obs >= lower & obs <= upper, TRUE, FALSE))
+                  diffsq = diff ^ 2)
+                  #,predinterval = ifelse(obs >= lower & obs <= upper, TRUE, FALSE))
 
 
   #overall timestep_ahead
@@ -378,12 +379,15 @@ calc_val_stats <- function(fc_trim, quo_groupfield, per_timesteps, dots){
     #stat calc
     dplyr::summarize(MAE = mean(absdiff, na.rm = TRUE),
                      MSE = mean(diffsq, na.rm = TRUE),
-                     prop_interval = sum(predinterval, na.rm = TRUE) / sum(!is.na(predinterval)),
+                     #prop_interval = sum(predinterval, na.rm = TRUE) / sum(!is.na(predinterval)),
                      SSE = sum(diffsq, na.rm = TRUE),
                      TSS = sum(total_squares, na.rm = TRUE)) %>%
     #and mutate for final calc
     dplyr::mutate(RMSE = sqrt(MSE),
-                  R2 = 1 - (SSE/TSS))
+                  R2 = 1 - (SSE/TSS)) %>%
+    #drop unneeded columns
+    dplyr::select(-SSE, -TSS, -MSE)
+
 
 
   #overall timestep_ahead by grouping
@@ -395,12 +399,14 @@ calc_val_stats <- function(fc_trim, quo_groupfield, per_timesteps, dots){
     #stat calc
     dplyr::summarize(MAE = mean(absdiff, na.rm = TRUE),
                      MSE = mean(diffsq, na.rm = TRUE),
-                     prop_interval = sum(predinterval, na.rm = TRUE) / sum(!is.na(predinterval)),
+                     #prop_interval = sum(predinterval, na.rm = TRUE) / sum(!is.na(predinterval)),
                      SSE = sum(diffsq, na.rm = TRUE),
                      TSS = sum(total_squares, na.rm = TRUE)) %>%
     #and mutate for final calc
     dplyr::mutate(RMSE = sqrt(MSE),
-                  R2 = 1 - (SSE/TSS))
+                  R2 = 1 - (SSE/TSS)) %>%
+    #drop unneeded columns
+    dplyr::select(-SSE, -TSS, -MSE)
 
 
   #timeseries calculations
@@ -420,12 +426,12 @@ calc_val_stats <- function(fc_trim, quo_groupfield, per_timesteps, dots){
                                        k = per_timesteps,
                                        fill = NA),
                   RMSE = sqrt(MSE),
-                  prop_interval = zoo::rollsumr(x = predinterval,
-                                                k = per_timesteps,
-                                                fill = NA) /
-                    zoo::rollsumr(x = !is.na(predinterval),
-                                  k = per_timesteps,
-                                  fill = NA),
+                  #prop_interval = zoo::rollsumr(x = predinterval,
+                  #                              k = per_timesteps,
+                  #                              fill = NA) /
+                  #  zoo::rollsumr(x = !is.na(predinterval),
+                  #                k = per_timesteps,
+                  #                fill = NA),
                   SSE = zoo::rollsumr(x = diffsq,
                                       k = per_timesteps,
                                       fill = NA),
@@ -515,21 +521,21 @@ calc_skill <- function(val_list, grp = NULL){
   val_fc <- val_list[[1]] %>%
     dplyr::rename(fc_MAE = MAE,
                   fc_RMSE = RMSE,
-                  fc_prop_interval = prop_interval,
+                  #fc_prop_interval = prop_interval,
                   fc_R2 = R2) %>%
     dplyr::select(group_cols(), timestep_ahead, starts_with("fc_"))
 
   val_np <- val_list$`naive-persistence` %>%
     dplyr::rename(np_MAE = MAE,
                   np_RMSE = RMSE,
-                  np_prop_interval = prop_interval,
+                  #np_prop_interval = prop_interval,
                   np_R2 = R2) %>%
     dplyr::select(group_cols(), timestep_ahead, starts_with("np_"))
 
   val_naw <- val_list$`naive-averageweek` %>%
     rename(naw_MAE = MAE,
            naw_RMSE = RMSE,
-           naw_prop_interval = prop_interval,
+           #naw_prop_interval = prop_interval,
            naw_R2 = R2) %>%
     #no timestep_ahead for average week, all same
     select(group_cols(), starts_with("naw_"))
@@ -563,20 +569,20 @@ calc_skill <- function(val_list, grp = NULL){
   #perfect skill metrics
   perfect_MAE <- 0
   perfect_RMSE <- 0
-  perfect_prop_interval <- 1
+  #perfect_prop_interval <- 1
   perfect_R2 <- 1
 
   #calc skill metrics of fc model to each of naive models
   val_skill <- val_join %>%
     mutate(skill_MAE_persistence = calc_skill_stat(fc_MAE, np_MAE, perfect_MAE),
            skill_RMSE_persistence = calc_skill_stat(fc_RMSE, np_RMSE, perfect_RMSE),
-           skill_interval_persistence = calc_skill_stat(fc_prop_interval, np_prop_interval,
-                                                        perfect_prop_interval),
+           #skill_interval_persistence = calc_skill_stat(fc_prop_interval, np_prop_interval,
+           #                                             perfect_prop_interval),
            skill_R2_persistence =  calc_skill_stat(fc_R2, np_R2, perfect_R2),
            skill_MAE_averageweek = calc_skill_stat(fc_MAE, naw_MAE, perfect_MAE),
            skill_RMSE_averageweek = calc_skill_stat(fc_RMSE, naw_RMSE, perfect_RMSE),
-           skill_interval_averageweek = calc_skill_stat(fc_prop_interval, naw_prop_interval,
-                                                        perfect_prop_interval),
+           #skill_interval_averageweek = calc_skill_stat(fc_prop_interval, naw_prop_interval,
+           #                                             perfect_prop_interval),
            skill_R2_averageweek =  calc_skill_stat(fc_R2, naw_R2, perfect_R2)) %>%
     #select final stats only
     select(group_cols(), timestep_ahead, starts_with("skill_"))

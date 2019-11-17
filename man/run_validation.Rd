@@ -90,8 +90,7 @@ but ignored for validation runs. For example, `inc_per`, `ed_control`,
 Returns a nested list of validation statistics. Statistics are
  calculated on the n-week ahead forecast and the actual observed case counts.
  Statistics returned are  Mean Absolute Error (MAE), Root Mean Squared Error
- (RMSE), and proportion of observed values that were inside the prediction
- interval (prop_interval). The first object is `skill_scores`, which contains
+ (RMSE). The first object is `skill_scores`, which contains
  `skill_overall` and `skill_grouping`. The second list is `validations`,
  which contains lists per model run (the forecast model and then optionally
  the naive models). Within each, `validation_overall` is the results overall,

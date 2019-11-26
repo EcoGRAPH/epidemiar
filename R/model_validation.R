@@ -409,6 +409,7 @@ calc_val_stats <- function(fc_trim, quo_groupfield, per_timesteps, dots){
     dplyr::select(-SSE, -TSS, -MSE)
 
 
+
   #timeseries calculations
   # minimum of ~10 timesteps per summary
   # ROLLING window
@@ -438,7 +439,16 @@ calc_val_stats <- function(fc_trim, quo_groupfield, per_timesteps, dots){
                   TSS = zoo::rollsumr(x = total_squares,
                                       k = per_timesteps,
                                       fill = NA),
-                  R2 = 1 - (SSE/TSS))
+                  R2 = 1 - (SSE/TSS)) %>%
+    #rename columns to be clearer
+    dplyr::rename(forecast = value,
+                  observed = obs) %>%
+    # drop unneeded columns
+    dplyr::select(-series, -preadj_date, -timestep_ahead_orig, -run_date,
+                  -diff, -absdiff, -diffsq, -meanobs, -total_squares, -MSE, -SSE, -TSS) %>%
+    # for now, drop R2 until can figure out how to include better
+    dplyr::select(-R2)
+
 
 
   #return all

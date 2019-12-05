@@ -87,14 +87,16 @@ but ignored for validation runs. For example, `inc_per`, `ed_control`,
 `model_run`.}
 }
 \value{
-Returns a nested list of validation statistics. Statistics are
- calculated on the n-week ahead forecast and the actual observed case counts.
- Statistics returned are  Mean Absolute Error (MAE), Root Mean Squared Error
- (RMSE). The first object is `skill_scores`, which contains
- `skill_overall` and `skill_grouping`. The second list is `validations`,
- which contains lists per model run (the forecast model and then optionally
- the naive models). Within each, `validation_overall` is the results overall,
- and `validation_grouping` is the results per geographic grouping.
+Returns a nested list of validation results. Statistics are calculated
+ on the n-week ahead forecast and the actual observed case counts. Statistics
+ returned are  Mean Absolute Error (MAE), Root Mean Squared Error (RMSE). The
+ first object is `skill_scores`, which contains `skill_overall` and
+ `skill_grouping`. The second list is `validations`, which contains lists per
+ model run (the forecast model and then optionally the naive models). Within
+ each, `validation_overall` is the results overall, and `validation_grouping`
+ is the results per geographic grouping. Lastly, a `metadata` list contains
+ the important parameter settings used to run validation and when the results
+ where generated.
 }
 \description{
 This function takes a few more arguments than `epidemiar::run_epidemia()` to

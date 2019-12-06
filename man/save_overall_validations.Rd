@@ -8,7 +8,7 @@ save_overall_validations(validations, save_file)
 }
 \arguments{
 \item{validations}{The set of validation statistics produced by
-run_validation()}
+run_validation() - only the list of validation data sets, not including the skill metrics.}
 
 \item{save_file}{File name to save results into csv format}
 }

@@ -4,8 +4,9 @@
 \alias{run_validation}
 \title{Run EPIDEMIA model validation statistics}
 \usage{
-run_validation(week_start = NULL, total_weeks = 12, weeks_ahead = 2,
-  skill_test = FALSE, epi_data = NULL, casefield = NULL,
+run_validation(date_start = NULL, total_timesteps = 26,
+  timesteps_ahead = 2, reporting_lag = 0, per_timesteps = 12,
+  skill_test = TRUE, epi_data = NULL, casefield = NULL,
   populationfield = NULL, groupfield = NULL, week_type = c("ISO",
   "CDC"), report_period = 3, ed_summary_period = 1,
   ed_method = "none", env_data = NULL, obsfield = NULL,
@@ -14,13 +15,25 @@ run_validation(week_start = NULL, total_weeks = 12, weeks_ahead = 2,
   model_choice = c("poisson-bam", "negbin"), ...)
 }
 \arguments{
-\item{week_start}{Date to start testing for model validation.}
+\item{date_start}{Date to start testing for model validation.}
 
-\item{total_weeks}{Number of weeks from `week_start` to run validation tests.}
+\item{total_timesteps}{Number of weeks from `week_start` to run validation
+tests.}
 
-\item{weeks_ahead}{Number of weeks for testing the n-week ahead forecasts.
+\item{timesteps_ahead}{Number of weeks for testing the n-week ahead forecasts.
 Results will be generated from 1-week ahead through `weeks_ahead` number of
 weeks.}
+
+\item{reporting_lag}{Number of timesteps to simulate reporting lag. For
+instance, if you have weekly data, and a reporting_lag of 1 week, and are
+working with a timesteps_ahead of 1 week, then that is functional equivalent
+to reporting lag of 0, and timesteps_ahead of 2 weeks. I.e. You are
+forecasting next week, but you don't know this week's data yet, you only
+know last week's numbers.}
+
+\item{per_timesteps}{When creating a timeseries of validation results, create
+a moving window with per_timesteps width number of time points. Should be a
+minimum of 10 timesteps.}
 
 \item{skill_test}{Logical parameter indicating whether or not to run
 validations also on two naïve models for a skill test comparison. The naïve
@@ -74,19 +87,25 @@ but ignored for validation runs. For example, `inc_per`, `ed_control`,
 `model_run`.}
 }
 \value{
-Returns a list of validation statistics. Statistics are calculated on
- the n-week ahead forecast and the actual observed case counts. Statistics
- returned are Mean Squared Error (MSE), Mean Absolute Error (MAE), and
- proportion of observed values that were inside the prediction interval
- (prop_interval). The first object `validation_overall` is the results
- overall, and `validation_grouping` is the results per geographic grouping.
+Returns a nested list of validation results. Statistics are calculated
+ on the n-week ahead forecast and the actual observed case counts. Statistics
+ returned are  Mean Absolute Error (MAE), Root Mean Squared Error (RMSE). The
+ first object is `skill_scores`, which contains `skill_overall` and
+ `skill_grouping`. The second list is `validations`, which contains lists per
+ model run (the forecast model and then optionally the naive models). Within
+ each, `validation_overall` is the results overall, and `validation_grouping`
+ is the results per geographic grouping. Lastly, a `metadata` list contains
+ the important parameter settings used to run validation and when the results
+ where generated.
 }
 \description{
 This function takes a few more arguments than `epidemiar::run_epidemia()` to
 generate statistics on model validation. The function will evaluate a number
-of weeks (`total_weeks`) starting from a specified week (`week_start`) and
-will look at the n-week ahead forecast (1 to `weeks_ahead` number of weeks)
-and compare the values to the observed number of cases. The validation
-statistics include Mean Squared Error (MSE) and Mean Absolute Error (MAE),
-both in total and per geographic grouping (if present).
+of weeks (`total_timesteps`) starting from a specified week (`date_start`) and
+will look at the n-week ahead forecast (1 to `timesteps_ahead` number of
+weeks) and compare the values to the observed number of cases. An optional
+`reporting_lag` argument will censor the last known data back that number of
+weeks. The validation statistics include Root Mean Squared Error (RMSE) and
+Mean Absolute Error (MAE), and an R-squared staistic both in total and per
+geographic grouping (if present).
 }

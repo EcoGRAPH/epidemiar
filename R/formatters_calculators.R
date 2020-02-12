@@ -29,9 +29,14 @@
 #'  during the report period for each geographic unit. Returned as
 #'  environ_timeseries in the run_epidemia() output.
 #'
-environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
-                                  quo_obsfield, env_used, env_info,
-                                  week_type, report_dates){
+environ_report_format <- function(env_ext_data,
+                                  env_ref_data,
+                                  quo_groupfield,
+                                  quo_obsfield,
+                                  env_used,
+                                  env_info,
+                                  epi_date_type,
+                                  report_dates){
   #daily env data
   env_data_varused <- env_ext_data %>%
     dplyr::filter(!!quo_obsfield %in% env_used)
@@ -48,6 +53,11 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
                      by = rlang::set_names(rlang::quo_name(quo_obsfield),
                                            rlang::quo_name(quo_obsfield))) %>%
     #add week, year fields
+    week_type <- dplyr::case_when(
+      epi_date_type == "weekISO" ~ "ISO",
+      epi_date_type == "weekCDC"  ~ "CDC",
+      #default as if mean
+      TRUE             ~ NA_character_)
     epidemiar::add_datefields(week_type) %>%
     #trim dates to reduce processing (dates are rough, technically just need week prior to start. 8 is not magical)
     dplyr::filter(obs_date >= report_dates$full$min - 8 & obs_date <= report_dates$full$max + 8) %>%
@@ -107,7 +117,9 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
 #'@return Data set of early detection and early warning alert summaries for each
 #'  geographic group. Returned as summary_data in the run_epidemia() output.
 #'
-create_summary_data <- function(ed_res, quo_groupfield, report_dates){
+create_summary_data <- function(ed_res,
+                                quo_groupfield,
+                                report_dates){
 
   #levels
   alert_level <- c("Low", "Medium", "High")
@@ -173,9 +185,12 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
 #'@return Mean disease incidence per geographic group during the early detection
 #'  period, returned as epi_summary in the run_epidemia() ouput.
 #'
-create_epi_summary <- function(obs_res, quo_groupfield, report_dates){
+create_epi_summary <- function(obs_res,
+                               quo_groupfield,
+                               report_dates){
   #using obs_res - if cases/incidence becomes a user set choice, this might make it easier (value is already what it needs to be)
   #but note that (as of writing this) that obs_res using the original, UNinterpolated values (so that end users are disturbed to see case data where there should not be)
+  #<<>>
 
   epi <- obs_res %>%
     #epi data is weekly, get the data for the early detection summary period
@@ -206,7 +221,10 @@ create_epi_summary <- function(obs_res, quo_groupfield, report_dates){
 #'   environmental anomalies calculated as residuals from GAM in anomalize_env()
 #'   as part of forecasting.
 #'
-calc_env_anomalies <- function(env_ts, quo_groupfield, quo_obsfield, report_dates){
+calc_env_anomalies <- function(env_ts,
+                               quo_groupfield,
+                               quo_obsfield,
+                               report_dates){
   # anomalies
   anom_env <- env_ts %>%
     # only mapping those in the early detection period

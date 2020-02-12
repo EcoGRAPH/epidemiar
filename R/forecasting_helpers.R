@@ -1,0 +1,662 @@
+# helper/subfunctions related to forecasting
+
+#' Pull only model env variables.
+#'
+#'@param env_data Daily environmental data for the same groupfields and date
+#'  range as the epidemiological data. It may contain extra data (other
+#'  districts or date ranges). The data must be in long format (one row for each
+#'  date and environmental variable combination), and must start at absolutel
+#'  minimum \code{laglen} (in \code{fc_control}) days before epi_data for
+#'  forecasting.
+#'@param quo_obsfield Quosure of user given field name of the environmental data
+#'  variables
+#'@param fc_control Parameters for forecasting, including which environmental
+#'  variable to include and any geographic clusters.
+#'
+#'@return List of environmental variables that were used in the
+#'  modeling (had to be both listed in model variables input file and present the
+#'  env_data dataset).
+#'
+pull_model_envvars <- function(env_data, quo_obsfield, env_var){
+
+  #pull variables into list
+  model_vars <- env_var %>% dplyr::pull(!!quo_obsfield)
+
+  #filter env_data for those model_vars
+  env_data <- env_data %>%
+    dplyr::filter(!!quo_obsfield %in% model_vars)
+}
+
+#' Extend environmental data into the future.
+#'
+#'@param env_data Daily environmental data for the same groupfields and date
+#'  range as the epidemiological data. It may contain extra data (other
+#'  districts or date ranges). The data must be in long format (one row for each
+#'  date and environmental variable combination), and must start at absolutel
+#'  minimum \code{laglen} (in \code{fc_control}) days before epi_data for
+#'  forecasting.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'@param quo_obsfield Quosure of user given field name of the environmental data
+#'  variables
+#'@param quo_valuefield Quosure of user given field name of the value of the
+#'  environmental data variable observations.
+#'@param env_ref_data Historical averages by week of year for environmental
+#'  variables. Used in extended environmental data into the future for long
+#'  forecast time, to calculate anomalies in early detection period, and to
+#'  display on timeseries in reports.
+#'@param env_info Lookup table for environmental data - reference creation
+#'  method (e.g. sum or mean), report labels, etc.
+#'@param env_variables_used List of environmental variables that were used in
+#'  the modeling
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'@param week_type String indicating the standard (WHO ISO-8601 or CDC epi
+#'  weeks) that the weeks of the year in epidemiological and environmental
+#'  reference data use ["ISO" or "CDC"].
+#'@param model_choice Critical argument to choose the type of model to generate.
+#'  The options are versions that the EPIDEMIA team has used for forecasting.
+#'  The first supported options is "poisson-gam" ("p") which is the original
+#'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
+#'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
+#'  TRUE for using the anomalies of environmental variables rather than their
+#'  raw values. The second option is "negbin" ("n") which is a negative binomial
+#'  regression using glm, with no external seasonality terms - letting the
+#'  natural cyclical behavior of the environmental variables fill that role. The
+#'  default for fc_control$anom_env is FALSE and uses the actual observation
+#'  values in the modeling. The fc_control$anom_env can be overruled by the user
+#'  providing a value, but this is not recommended unless you are doing
+#'  comparisons.
+#'@param valid_run Internal boolean for whether this is part of a validation run.
+#'
+#'@return Environmental dataset, with data extended into the future forecast
+#'  period. Unknown environmental data with runs of < 2 weeks is
+#'  filled in with last known data (i.e. "persistence" method, using the mean of
+#'  the previous week of known data). For missing data runs more than 2 weeks, the
+#'  values are filled in using a progressive blend of the the mean of the last
+#'  known week and the historical means.
+#'
+extend_env_future <- function(env_data,
+                              quo_groupfield,
+                              quo_obsfield,
+                              quo_valuefield,
+                              env_ref_data,
+                              env_info,
+                              fc_model_family,
+                              #pull from report_settings
+                              epi_date_type,
+                              #calculated/internal
+                              valid_run,
+                              groupings,
+                              env_variables_used,
+                              report_dates){
+
+  # Extend environmental data into the future forecast time period, while
+  # also dealing with any other missing environmental data.
+
+  # Progressive blend (over # of missing weeks) of
+  # mean of last known week & historical/climatological means (weekly value)
+  # but only if missing run is larger than 2 weeks * 7 = 14 days
+  # if less than, just use persistence/carry forward/last known value
+  # E.g. if 20 missing in a run:
+  # 1 was filled in with previous week mean (recent value)
+  # 2: 19/20 recent + 1/20 historical, 3: 18/20 recent + 2/20 historical, ... 20: 1/20 recent + 19/20 historical.
+  # Will ALWAYS include part of recent known data (relevant if recent patterns are departure from climate averages)
+
+
+  #Do not need data past end of forecast period (if exists)
+  env_trim <- env_data %>%
+    dplyr::filter(obs_date <= report_dates$forecast$max)
+
+  #Calculate the earliest of the latest known data dates
+  # per env var, per geographic grouping
+  earliest_end_known <- env_trim %>%
+    #per geographic grouping, per environmental variable
+    dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
+    #the last known date for each
+    dplyr::summarize(max_dates = max(obs_date, na.rm = TRUE)) %>%
+    #the earliest of the last known
+    dplyr::pull(max_dates) %>% min()
+
+
+  #If earliest_end_known is end of forecast period, then no missing data
+  if (earliest_end_known >= report_dates$forecast$max){
+
+    env_extended_final <- env_trim
+
+  } else {
+    #Some amount of missing data exists
+
+    #Calculate full/complete data table
+    #combination of all groups, env vars, and dates (DAILY)
+    #from earliest_end_known through the end of the forecast period
+    env_future_complete <- tidyr::crossing(obs_date = seq.Date(earliest_end_known + 1,
+                                                               report_dates$forecast$max, 1),
+                                           group_temp = groupings,
+                                           obs_temp = env_variables_used)
+    #and fix names with NSE
+    env_future_complete <- env_future_complete %>%
+      dplyr::rename(!!rlang::quo_name(quo_groupfield) := group_temp,
+                    !!rlang::quo_name(quo_obsfield) := obs_temp)
+
+    #could have ragged env data per variable per grouping
+    #so, antijoin with env_known_fill first to get the actually missing rows
+    env_future_missing <- env_future_complete %>%
+      dplyr::anti_join(env_trim, by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                                                         rlang::quo_name(quo_obsfield),
+                                                         "obs_date"),
+                                                       c(rlang::quo_name(quo_groupfield),
+                                                         rlang::quo_name(quo_obsfield),
+                                                         "obs_date")))
+
+
+
+    #bind with existing data (NAs for everything else)
+    env_future <- dplyr::bind_rows(env_trim, env_future_missing) %>%
+      #mark which are about to be filled in
+      dplyr::mutate(data_source = ifelse(is.na(val_epidemiar), "Extended", data_source))
+
+    #Optimizing for speed for validation runs with naive models, skip unneeded
+
+    if (valid_run == TRUE &
+        (fc_model_family == "naive-persistence" | fc_model_family == "naive-averageweek")){
+
+      #Missing environmental data is fine for naive models
+      # as they do not use that data
+      # and validation runs do not return env data
+      env_extended_final <- env_future
+
+    } else {
+      #need to fill in missing data
+
+      #function for rle needed to honor group_bys
+      # computes an rle based on if value is NA or not
+      # returns the number of rows in the run
+      get_rle_na_info <- function(x){
+        x_na_rle <- rle(is.na(x))
+        run_id = rep(seq_along(x_na_rle$lengths), times = x_na_rle$lengths)
+        run_tot <- rep(x_na_rle$lengths, times = x_na_rle$lengths)
+        as_tibble(create_named_list(run_id, run_tot))
+      }
+
+
+      env_na_rle <- env_future %>%
+        dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
+        #make doubly sure in sorted date order
+        arrange(obs_date) %>%
+        #since adding multiple columns, use do instead of mutate
+        do(cbind(., get_rle_na_info(.$val_epidemiar))) %>%
+        #add a groupby with the new run ID
+        group_by(!!quo_groupfield, !!quo_obsfield, run_id) %>%
+        #creates an index of where that row is in the run
+        mutate(id_in_run = seq_along(val_epidemiar))
+
+      #find 1st NA, then take mean of previous week, input for that day
+      #first NA now can be found with is.na(val_epidemiar) & id_in_run == 1
+      #use zoo::rollapply for mean
+
+      #Fill in first NA of a run with the mean of previous week
+      env_na1fill <- env_na_rle %>%
+        #confirm proper grouping
+        dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
+        #create a 1 day lag variable since need previous 7 days not including current
+        mutate(val_lag1 = dplyr::lag(val_epidemiar, n = 1),
+               #if_else to find the first NA
+               val_epidemiar = ifelse(is.na(val_epidemiar) & id_in_run == 1,
+                                      #zoo:rollapply to calculate mean of last 7 days (week) on lagged var
+                                      zoo::rollapply(data = val_lag1,
+                                                     width = 7,
+                                                     FUN = mean,
+                                                     align = "right",
+                                                     na.rm = TRUE),
+                                      #if not first NA, then contine with original val_epidemiar value
+                                      val_epidemiar)) %>%
+        #drop unneeded lag column
+        select(-val_lag1)
+
+      ##Prep for blending previous week mean & historical averages for other missing
+
+      #Prep ref data - get only used vars
+      env_ref_varused <- env_ref_data %>%
+        dplyr::filter(!!quo_obsfield %in% env_variables_used)
+
+
+      #joins for ref summary type, and summary for week
+      env_join_ref <- env_na1fill %>%
+        #add week, year fields
+        epidemiar::add_datefields(week_type) %>%
+        #get reference/summarizing method from user supplied env_info
+        dplyr::left_join(env_info %>%
+                           dplyr::select(!!quo_obsfield, reference_method),
+                         by = rlang::set_names(rlang::quo_name(quo_obsfield),
+                                               rlang::quo_name(quo_obsfield))) %>%
+        #get weekly ref value
+        dplyr::left_join(env_ref_varused %>%
+                           dplyr::select(!!quo_obsfield, !!quo_groupfield, week_epidemiar, ref_value),
+                         #NSE fun
+                         by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                                                 rlang::quo_name(quo_obsfield),
+                                                 "week_epidemiar"),
+                                               c(rlang::quo_name(quo_groupfield),
+                                                 rlang::quo_name(quo_obsfield),
+                                                 "week_epidemiar")))
+
+      #calculate NA missing values using carry|blend
+      env_filled <- env_join_ref %>%
+        #order very important for filling next step
+        dplyr::arrange(!!quo_groupfield, !!quo_obsfield, obs_date) %>%
+        dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
+        #propagate last known value down rows
+        dplyr::mutate(last_known = val_epidemiar) %>%
+        #fill down, so missing weeks has "last known value" IN row for calculations
+        tidyr::fill(last_known, .direction = "down") %>%
+        #calculate parts (for all, will only use when needed)
+        # with progressive blending based on id_in_run and run_tot
+        mutate(recent_modifier = (run_tot - id_in_run - 1) / run_tot,
+               recent_part = recent_modifier * last_known,
+               historical_modifier = (id_in_run - 1) / run_tot,
+               #historical is by week, so get pseudo-daily value depending on reference method,
+               # i.e. how to summarize a week of data
+               historical_value = dplyr::case_when(
+                 reference_method == "mean" ~ ref_value,
+                 reference_method == "sum"  ~ ref_value / 7,
+                 #default as if mean
+                 TRUE             ~ ref_value),
+               historical_part = historical_modifier * historical_value,
+               #testing
+               val_orig = val_epidemiar,
+               #only fill NA values
+               val_epidemiar = ifelse(is.na(val_epidemiar),
+                                      #persist if <15 days, blend if greater
+                                      ifelse(run_tot < 15,
+                                             last_known,
+                                             recent_part + historical_part),
+                                      #if notNA, then use existing val_epidemiar value
+                                      val_epidemiar))
+
+      #clean up
+      env_extended_final <- env_filled %>%
+        #remove all added columns to match original format
+        select(-c(run_id, run_tot, id_in_run,
+                  week_epidemiar, year_epidemiar,
+                  last_known,
+                  reference_method, ref_value,
+                  recent_modifier, recent_part,
+                  historical_modifier, historical_value, historical_part,
+                  val_orig)) %>%
+        #fill everything except original value field
+        #for any other column that got vanished during crossing, etc.
+        tidyr::fill(dplyr::everything(), -!!quo_valuefield, -!!quo_groupfield, -!!quo_obsfield, .direction = "down") %>%
+        #ungroup to end
+        ungroup()
+
+    } #end else, meaning some missing data
+
+
+  } #end else on valid run & naive models
+
+  #several paths to get to an env_extended_final
+  return(env_extended_final)
+
+} # end extend_env_future
+
+
+
+
+#' Extend epidemiology dataframe into future.
+#'
+#'@param epi_data Epidemiological data with case numbers per week, with date
+#'  field "obs_date".
+#'@param quo_popfield Quosure of user-given field containing population values.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'@param report_dates Internally generated set of report date information: min,
+#'  max, list of dates for full report, known epidemiological data period,
+#'  forecast period, and early detection period.
+#'
+#'@return Epidemiological dataset extended past the known epi data time range
+#'  and into the future/forecast period. Case numbers are filled in the NA (to
+#'  be forecasted), and the population is estimated in a persistence method.
+#'
+extend_epi_future <- function(epi_data,
+                              quo_popfield,
+                              quo_groupfield,
+                              #calculated/internal
+                              groupings,
+                              report_dates){
+  #extended epi data into future dates
+  #for use in modeling later (results will be put elsewhere), this is for env and lags and modeling dataset
+  epi_future <- tidyr::crossing(obs_date = report_dates$forecast$seq,
+                                group_temp = groupings)
+  #and fix names with NSE
+  epi_future <- epi_future %>%
+    dplyr::rename(!!quo_name(quo_groupfield) := group_temp)
+
+  #bind with exisiting data (NAs for everything else in epi_future)
+  extended_epi <- dplyr::bind_rows(epi_data, epi_future) %>%
+    dplyr::arrange(!!quo_groupfield, obs_date)
+
+  #fill population down
+  extended_epi <- tidyr::fill(extended_epi, !!quo_popfield, .direction = "down")
+
+  extended_epi
+}
+
+
+#' Format env data for modeling
+#'
+#'@param env_data_extd An environmental dataset extended into the
+#'  future/forecast period with estimated values for the environmental
+#'  variables.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param quo_obsfield Quosure of user given field name of the environmental data
+#'  variables.
+#'
+#'@return An environmental dataset formatted to pass over to BAM/GAM modeling.
+#'
+env_format_fc <- function(env_data_extd,
+                          quo_groupfield,
+                          quo_obsfield){
+  #turns long format into wide format - one entry per day per group
+  #1: groupfield, 2: Date, 3: numericdate, 4+: env var (column name is env name)
+  env_spread <- env_data_extd %>%
+    dplyr::mutate(numericdate = as.numeric(obs_date)) %>%
+    dplyr::select(!!quo_groupfield, !!quo_obsfield, obs_date, numericdate, val_epidemiar) %>%
+    tidyr::spread(key = !!quo_obsfield, value = val_epidemiar)
+
+  env_spread
+}
+
+#' Format epi data for modeling
+#'
+#'@param epi_data_extd An epidemiological dataset extended into the
+#'  future/forecast period with NA values for to-be-forecasted case numbers.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param fc_control Parameters for forecasting, including which environmental
+#'  variable to include and any geographic clusters.
+#'
+#'@return An epidemiological dataset formatted to pass over to BAM/GAM modeling.
+#'
+epi_format_fc <- function(epi_data_extd,
+                          quo_groupfield,
+                          fc_clusters){
+
+  #Get cluster information from model
+  epi_format <- epi_data_extd %>%
+    #join with cluster info
+    dplyr::left_join(fc_clusters,
+                     #NSE
+                     by = rlang::set_names(rlang::quo_name(quo_groupfield),
+                                           rlang::quo_name(quo_groupfield))) %>%
+    #set cluster id as factor, must be for regression later
+    dplyr::mutate(cluster_id = as.factor(cluster_id),
+                  #need numeric date for regression
+                  numericdate = as.numeric(obs_date))
+
+  epi_format
+}
+
+#' Convert environmental data into anomalies.
+#'
+#' Raw environmental values are not used in modeling, but rather their
+#' anomalies, departures for the historical "normal". We are looking at the
+#' influence of deviation from normal in the environmental factors to help
+#' explain deviations from normal in the human cases.
+#'
+#'@param env_fc Environmental data formatted for forecasting by env_format_fc().
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param env_variables_used List of environmental variables that were used in
+#'  the modeling.
+#'@param ncores The number of physical cores to use in parallel processing, set
+#'  in fc_control$ncores, else the max of the number of physical core available
+#'  minus 1, or 1 core.
+#'
+#'@return Environmental dataset in same format as env_fc but with the residuals
+#'  from a GAM with geographic unit and cyclical cubic regression spline on day
+#'  of year per geographic group in place of the original raw values.
+#'
+anomalize_env <- function(env_fc,
+                          quo_groupfield,
+                          nthreads,
+                          #internal/calculated
+                          env_variables_used) {
+
+  # Loop through each environmental variable replacing non-NA observations
+  # with residuals from a gam with only geographic area (group) and day of year
+
+  #Originally written with dataframes. Tibble/NSE/dplyr conversion not yet fully done.
+  # #new tibble
+  # env_fc_anom <- env_fc %>%
+  #   mutate(group_factor = factor(!!quo_groupfield),
+  #          doy = format(obs_date, "%j")) %>% as.numeric()
+
+  # needed data for gam
+  group_factor <- env_fc %>% pull(!!quo_groupfield) %>% factor()
+  doy <- env_fc %>% pull(obs_date) %>% format("%j") %>% as.numeric()
+
+  env_fc <- as.data.frame(env_fc)
+
+  # loop through environmental columns
+  # note: brittle on column position until rewrite
+  for (curcol in 4:ncol(env_fc)) {
+
+    #if more than one geographic area
+    if (nlevels(group_factor) > 1){
+      tempbam <- mgcv::bam(env_fc[,curcol] ~ group_factor + s(doy, bs="cc", by=group_factor),
+                           data=env_fc,
+                           discrete = TRUE,
+                           nthreads = ncores)
+    } else {
+      #if only 1 geographic area, then run without group_factor
+      tempbam <- mgcv::bam(env_fc[,curcol] ~ s(doy, bs="cc"),
+                           data = env_fc,
+                           discrete = TRUE,
+                           nthreads = nthreads)
+    }
+
+    # could perhaps more cleverly be figured out by understanding the na.options of bam,
+    # but for the moment just replace non-NA observations with their residuals
+    env_fc[!is.na(env_fc[,curcol]),curcol] <- tempbam$residuals
+
+  }
+
+  env_fc <- tibble::as_tibble(env_fc)
+  return(env_fc)
+
+}
+
+#' Lag the environmental data.
+#'
+#'@param epi_fc An epidemiological dataset extended into the
+#'  future/forecast period with NA values for to-be-forecasted case numbers,
+#'  as formatted for forecasting by epi_format_fc().
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'@param env_fc Environmental data formatted for forecasting by env_format_fc().
+#'@param env_variables_used List of environmental variables that were used in
+#'  the modeling.
+#'@param laglen The maximum number of days in the past to consider interactions
+#'  between the environmental variable anomalies and the disease case counts.
+#'
+#'@return Wide dataset based on epidemiological data dates with five
+#'  bandsummaries per environmental variable, from the basis spline summaries of
+#'  the lagged environmental variable.
+#'
+lag_environ_to_epi <- function(epi_fc,
+                               env_fc,
+                               quo_groupfield,
+                               lag_len,
+                               #calculated/internal
+                               groupings,
+                               env_variables_used){
+
+  #create lag frame
+  datalagger <- tidyr::crossing(group_temp = groupings,
+                                obs_date = unique(epi_fc$obs_date),
+                                lag = seq(from = 0, to = lag_len - 1, by = 1)) %>%
+    # #same order from originally written expand.grid
+    # arrange(lag, Date, group_temp) %>%
+    #add lagging date
+    dplyr::mutate(laggeddate = obs_date - as.difftime(lag, units = "days"))
+
+  #and fix names with NSE
+  datalagger <- datalagger %>%
+    dplyr::rename(!!quo_name(quo_groupfield) := group_temp)
+
+  #add env data
+  datalagger <- dplyr::left_join(datalagger, env_fc,
+                                 #because dplyr NSE, notice flip order
+                                 by = rlang::set_names(c(rlang::quo_name(quo_groupfield), "obs_date"),
+                                                       c(rlang::quo_name(quo_groupfield), "laggeddate")))
+
+  # pivot lagged environmental data to epi data
+  epi_lagged <- epi_fc #to more easily debug and rerun
+  for (curcol in which(colnames(env_fc) %in% env_variables_used)){
+    valuevar <- colnames(env_fc)[curcol]
+    #wide data for all lags of that env var
+    meandat <- datalagger %>%
+      dplyr::select(!!quo_groupfield, obs_date, lag, valuevar) %>%
+      tidyr::spread(key = lag, value = valuevar)
+    #rename lag columns (but not groupfield or Date)
+    names(meandat)[-(1:2)] <- paste0(valuevar, "_", names(meandat)[-(1:2)])
+
+    #join cur var wide data to epi data
+    epi_lagged <- dplyr::left_join(epi_lagged, meandat,
+                                   #dplyr NSE
+                                   by = rlang::set_names(c(rlang::quo_name(quo_groupfield), "obs_date"),
+                                                         c(rlang::quo_name(quo_groupfield), "obs_date")))
+  } #end pivot loop
+
+  # # set up distributed lag basis functions (creates 5 basis functions)
+  # lagframe <- data.frame(x = seq(from = 1, to = laglen, by = 1))
+  # alpha <- 1/4
+  # distlagfunc <- splines::ns(lagframe$x, intercept = TRUE,
+  #                            knots = quantile(lagframe$x,
+  #                                             probs=seq(from = alpha, to = 1 - alpha,
+  #                                                       by = alpha),
+  #                                             na.rm = TRUE))
+  # dlagdeg <- pracma::size(distlagfunc)[2]
+
+  # set up distributed lag basis functions (creates 7 basis functions)
+  alpha <- 1/4
+  distlagfunc <- splines::bs(x=seq(from=1, to=lag_len, by=1), intercept=TRUE,
+                             knots=quantile(seq(from=1, to=lag_len, by=1),
+                                            probs=seq(from=alpha, to=1-alpha, by=alpha),
+                                            na.rm=TRUE))
+  dlagdeg <- ncol(distlagfunc)
+
+
+  # create actual distributed lag summaries
+  for (curvar in env_variables_used){
+    bandsum <- matrix(data = rep(0, nrow(epi_lagged) * dlagdeg),
+                      nrow = nrow(epi_lagged), ncol = dlagdeg)
+    #first column of that variable (0 lag)
+    mindex <- which(colnames(epi_lagged) == paste0(curvar, "_0"))
+    #temp working matrix
+    bandtemp <- as.matrix(epi_lagged[, (mindex:(mindex+lag_len-1))])
+    #distributed lag summaries
+    for (j in 1:dlagdeg){
+      bandsum[, j] <- bandtemp %*% distlagfunc[,j]
+    }
+    bandsum <- data.frame(bandsum)
+    names(bandsum) <- paste0("bandsum_", curvar, "_", 1:dlagdeg)
+
+    # we used to do a submatrix here so that the regression formulae would
+    # be more easily written, but this was incompatible with dplyr
+    epi_lagged <- dplyr::bind_cols(epi_lagged, bandsum)
+
+    #created summary value for each basis function (5) per env variable per group per week (based on epidemiological data time unit)
+
+  } #end distr lag summary loop
+
+  #only keep bandsummaries (daily lags can be removed to free up a lot of space)
+  #  note: ^ matches beginning of string, otherwise we'd get the bandsummaries too, which we want to keep
+  for (cvar in env_variables_used){
+    epi_lagged[, which(grepl(paste0("^", cvar, "_"), colnames(epi_lagged)))] <- NULL
+  }
+
+  epi_lagged
+}
+
+
+
+# this creates a modified b-spline basis (which is a piecewise polynomial)
+
+#' Truncates poly. Creates a modified b-spline basis.
+#'
+#' The modified basis splines are used to capture any long term trends per
+#' geographic group.
+#'
+#'@param x Vector of weekly observation dates.
+#'@param degree Degree passed to splines::bs().
+#'@param maxobs Date of the last known value.
+#'@param minobs Date of the first known value.
+#'
+#'@return A modified b-spline basis with the last basis splines reversed and
+#'  the second to last basis spline function removed (to reduce the edge effects
+#'  of using splines).
+#'
+truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
+
+  # Some of the later functions will convert date to type spline, so
+  # it's best to go ahead and convert now. Left_join doesn't convert
+  # dates to numeric on the fly.
+  x <- as.numeric(x)
+
+  # create frame to hold modified b-spline basis
+  xdf  <- data.frame(x=x)
+
+  # figure out where we apparently have data
+  apparentminobs <- min(xdf$x, na.rm=TRUE)
+  apparentmaxobs <- max(xdf$x, na.rm=TRUE)
+
+  # figure out where the bspline basis will have support
+  if (!is.null(minobs)) {
+
+    actualminobs <- max(apparentminobs, minobs)
+
+  } else { actualminobs <- apparentminobs }
+  if (!is.null(maxobs)) {
+
+    actualmaxobs <- min(apparentmaxobs, maxobs)
+
+  } else { actualmaxobs <- apparentmaxobs }
+
+  # create a full frame to hold this basis before truncation
+  xdf2     <- data.frame(x = actualminobs:actualmaxobs)
+  xdf2$bas <- splines::bs(x=xdf2$x, degree=degree)
+
+  # reverse the last spline basis function
+  xdf2$bas[,degree] <- rev(xdf2$bas[,degree])
+
+  # delete the next to last spline basis function
+  xdf2$bas <- xdf2$bas[,-(degree-1)]
+
+  # merge with original frame
+  xdf <- dplyr::left_join(xdf, xdf2, by="x")
+
+  # make values 0 where we extend beyond actualmax/minobs
+  for (colnum in 1:ncol(xdf$bas)) {
+
+    xdf$bas[is.na(xdf$bas[,colnum]),colnum] <- 0
+
+  }
+
+  tempdf <- data.frame(xdf$bas)
+  names(tempdf) <- paste("modbs_reserved_", names(tempdf), sep="")
+
+  return(tempdf)
+
+}
+
+
+
+
+

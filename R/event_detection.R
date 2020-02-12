@@ -30,15 +30,16 @@
 #' "thresh" : threshold values per week
 #'
 run_event_detection <- function(epi_fc_data,
-                                quo_popfield,
-                                inc_per,
                                 quo_groupfield,
-                                groupings,
+                                quo_popfield,
+                                #rpt settings items
                                 ed_method,
                                 ed_control,
-                                report_dates,
-                                vt,
-                                mc){
+                                val_type,
+                                inc_per,
+                                #internal/calc
+                                groupings,
+                                report_dates){
   #message("Running early detection...")
 
   #only supporting Farrington Improved method from Surveillance right now,
@@ -49,14 +50,13 @@ run_event_detection <- function(epi_fc_data,
 
     message("Running early detection: Farrington...")
     ed_far_res <- run_farrington(epi_fc_data,
-                                 quo_popfield,
-                                 inc_per,
                                  quo_groupfield,
-                                 groupings,
+                                 quo_popfield,
                                  ed_control,
-                                 report_dates,
-                                 vt,
-                                 mc)
+                                 val_type,
+                                 inc_per,
+                                 groupings,
+                                 report_dates)
     return(ed_far_res)
 
   } else if (ed_method == "none") {
@@ -97,14 +97,13 @@ run_event_detection <- function(epi_fc_data,
 #' "thresh" : threshold values per week
 #'
 run_farrington <- function(epi_fc_data,
-                           quo_popfield,
-                           inc_per,
                            quo_groupfield,
-                           groupings,
+                           quo_popfield,
                            ed_control,
-                           report_dates,
-                           vt,
-                           mc){
+                           val_type,
+                           inc_per,
+                           groupings,
+                           report_dates){
   ## Make sts objects
   #check about population offset
   # did the user set population offset
@@ -114,18 +113,18 @@ run_farrington <- function(epi_fc_data,
       #if so, did they give the population field
       if (!is.null(quo_popfield)){
         epi_stss <- make_stss(epi_fc_data,
-                              quo_popfield,
                               quo_groupfield,
+                              quo_popfield,
                               groupings)
       } else stop("Population offset is TRUE, but population field not given")
-      #<<>> add to earlier input checks so fails early rather than later
+      #<<>> add to earlier input checks so fails early rather than later?
     } else epi_stss <- make_stss(epi_fc_data,
-                                 quo_popfield = NULL,
                                  quo_groupfield,
+                                 quo_popfield = NULL,
                                  groupings) #popoffset is FALSE, so no pop to sts
   } else epi_stss <- make_stss(epi_fc_data,
-                               quo_popfield = NULL,
                                quo_groupfield,
+                               quo_popfield = NULL,
                                groupings) #if null, default is false, so pop = NULL
 
   ## Set up new control list for Farrington (using their names)
@@ -237,13 +236,12 @@ run_farrington <- function(epi_fc_data,
     #results into output report data form
     far_res <- stss_res_to_output_data(stss_res_list = far_res_list,
                                        epi_fc_data,
-                                       quo_popfield,
-                                       inc_per,
                                        quo_groupfield,
+                                       quo_popfield,
+                                       val_type,
+                                       inc_per,
                                        groupings,
-                                       report_dates,
-                                       vt,
-                                       mc)
+                                       report_dates)
 
   }
 
@@ -262,7 +260,10 @@ run_farrington <- function(epi_fc_data,
 #'@return A list of surveillance time series (sts) objects,
 #'one for each geographic grouping.
 #'
-make_stss <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings){
+make_stss <- function(epi_fc_data,
+                      quo_groupfield,
+                      quo_popfield,
+                      groupings){
   #create a list of surveillance::sts objects, one for each group
   stss <- vector('list', length(groupings))
   for (i in 1:length(groupings)){
@@ -329,13 +330,12 @@ make_stss <- function(epi_fc_data, quo_popfield, quo_groupfield, groupings){
 #'
 stss_res_to_output_data <- function(stss_res_list,
                                     epi_fc_data,
-                                    quo_popfield,
-                                    inc_per,
                                     quo_groupfield,
+                                    quo_popfield,
+                                    val_type,
+                                    inc_per,
                                     groupings,
-                                    report_dates,
-                                    vt,
-                                    mc){
+                                    report_dates){
   #take results of a surveillance event detection and reshape to output data format
   #stss to dfs
   stss_res_dfs <- lapply(stss_res_list, surveillance::as.data.frame)
@@ -387,9 +387,9 @@ stss_res_to_output_data <- function(stss_res_list,
                   obs_date = epoch,
                   value = dplyr::case_when(
                     #if reporting in case counts
-                    vt == "cases" ~ upperbound,
+                    val_type == "cases" ~ upperbound,
                     #if incidence
-                    vt == "incidence" ~ upperbound / !!quo_popfield * inc_per,
+                    val_type == "incidence" ~ upperbound / !!quo_popfield * inc_per,
                     #otherwise
                     TRUE ~ NA_real_),
                   #value = upperbound / !!quo_popfield * inc_per, #Incidence, from stss & epi_fc_data

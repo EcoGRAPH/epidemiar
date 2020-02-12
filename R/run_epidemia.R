@@ -138,26 +138,34 @@
 
 ## Main Modeling (Early Detection, Forecasting) Function
 run_epidemia <- function(epi_data = NULL,
-                         casefield = NULL,
-                         populationfield = NULL,
-                         inc_per = 1000,
-                         groupfield = NULL,
-                         week_type = c("ISO", "CDC"),
-                         report_period = 26,
-                         ed_summary_period = 4,
-                         ed_method = c("none", "farrington"),
-                         ed_control = NULL,
                          env_data = NULL,
-                         obsfield = NULL,
-                         valuefield = NULL,
-                         forecast_future = 4,
-                         fc_control = NULL,
                          env_ref_data = NULL,
                          env_info = NULL,
-                         model_run = FALSE,
-                         model_obj = NULL,
-                         model_cached = NULL,
-                         model_choice = c("poisson-bam", "negbin")){
+                         casefield = NULL,
+                         groupfield = NULL,
+                         populationfield = NULL,
+                         obsfield = NULL,
+                         valuefield = NULL,
+                         fc_clusters = NULL,
+                         fc_model_family = NULL,
+                         report_settings = NULL)
+
+                         # inc_per = 1000,
+                         # week_type = c("ISO", "CDC"),
+                         # report_period = 26,
+                         # ed_summary_period = 4,
+                         # ed_method = c("none", "farrington"),
+                         # ed_control = NULL,
+                         # forecast_future = 4,
+                         # fc_control = NULL,
+                         # model_run = FALSE,
+                         # model_obj = NULL, #clean up & remove
+                         # model_cached = NULL,
+                         # model_choice = c("poisson-bam", "negbin")) # to replace with model_family?
+{
+
+  #Note for model family
+  # need to figure out how to handle naive models
 
 
   # For validation runs, special escapes ------------------------------------
@@ -193,17 +201,23 @@ run_epidemia <- function(epi_data = NULL,
 
   # Preparing: Input checking -----------------------------------------------
 
-  # 1. Test for critical inputs
-  # This will not check if they've assigned the right thing to the argument, or got the argument order correct if not explicit argument declarations
-  # But, no other checks can really proceed if things are missing
-  # NSE is a little tricky: can't test directly on fields-to-be-enquo'd because it'll try to evaluate them, and complain that the object (actually field name) doesn't exist
-  #naming the quosures AS the input fields to create more meaningful error messages if the items are missing
-  nec_nse <- list(casefield = quo_casefield, groupfield = quo_groupfield, obsfield = quo_obsfield,
+  #1. Test for critical inputs This will not check if they've assigned the right
+  #thing to the argument, or got the argument order correct if not explicit
+  #argument declarations. But, no other checks can really proceed if things are
+  #missing.
+
+  #NSE is a little tricky: can't test directly on fields-to-be-enquo'd because
+  #it'll try to evaluate them, and complain that the object (actually field
+  #name) doesn't exist. Renaming the quosures AS the input fields to create more
+  #meaningful error messages if the items are missing.
+
+  #note: population can be missing (case based reports, not incidence)
+  nec_nse <- list(casefield = quo_casefield,
+                  groupfield = quo_groupfield,
+                  obsfield = quo_obsfield,
                   valuefield = quo_valuefield)
-  necessary <- create_named_list(epi_data, env_data, env_ref_data, env_info, fc_control)
-  #ed_control can be NULL if ed_method == None.
-  # rest has defaults
-  # Note: only checking if control list exists, nothing about what is in the list (later checks)
+  necessary <- create_named_list(epi_data, env_data, env_ref_data, env_info, fc_clusters)
+
   #initialize missing info msgs & flag
   missing_msgs <- ""
   missing_flag <- FALSE
@@ -222,102 +236,106 @@ run_epidemia <- function(epi_data = NULL,
     }
     #note: fix this later: Error in create_named_list() : object 'fc_control' not found
   }
+
   #if missing, stop and give error message
   if (missing_flag){
     stop("Missing critical argument(s). Please make sure the following is/are included:\n", missing_msgs)
   }
 
-  # 2. match.arg for arguments with options
-  #Note: using message() instead of warning() to get message to appear right away
 
-  #model_choice = c("poisson-bam", "negbin")
-  #tolower to capture upper and lower case user-input variations since match.arg is case sensitive
-  #but must only try function if ed_method is not null (i.e. was given)
-  if (!is.null(model_choice)){
-    model_choice <- tolower(model_choice)
-  }
-  model_choice <- tryCatch({
-    #including hidden naïve models for skill test in validation
-    match.arg(model_choice, c("poisson-bam", "negbin", "naive-persistence", "naive-averageweek"))
-  }, error = function(e){
-    message("Warning: Given 'model_choice' does not match 'poisson-bam' or 'negbin', running as 'poisson-bam'.")
-    "poisson-bam"
-  }, finally = {
-    if (length(model_choice) > 1){
-      #if model_choice was missing at run_epidemia() call, got assigned c("poisson-bam", "negbin")
-      message("Note: 'model_choice' was missing, running as 'poisson-bam'.")
-      #no return, because in match.arg() it will take the first item, which is "poisson-bam".
-    }
-  })
-
-  #ed_method = c("none", "farrington")
-  #tolower to capture upper and lower case user-input variations since match.arg is case sensitive
-  #but must only try function if ed_method is not null (i.e. was given)
-  if (!is.null(ed_method)){
-    ed_method <- tolower(ed_method)
-  }
-  ed_method <- tryCatch({
-    match.arg(ed_method, c("none", "farrington"))
-  }, error = function(e){
-    message("Warning: Given 'ed_method' does not match 'none' or 'farrington', running as 'none'.")
-    "none"
-  }, finally = {
-    if (length(ed_method) > 1){
-      #if ed_method was missing at run_epidemia() call, got assigned c("none", "farrington")
-      message("Note: 'ed_method' was missing, running as 'none'.")
-      #no return, because in match.arg() it will take the first item, which is "none".
-    }
-  })
-
-  #week_type = c("ISO", "CDC")
-  week_type <- tryCatch({
-    match.arg(week_type, c("ISO", "CDC"))
-  }, error = function(e){
-    message("Warning: Given 'week_type' does not match 'ISO' or 'CDC', running as 'ISO'.")
-    "ISO"
-  }, finally = {
-    if (length(week_type) > 1){
-      #if week_type was missing at run_epidemia() call, got assigned c("ISO", "CDC")
-      message("Note: 'week_type' was missing, running as 'ISO'.")
-      #no return, because in match.arg() it will take the first item, which is "ISO".
-    }
-  })
-
-  # 3. More input checking
-  check_results <- input_check(epi_data,
-                               quo_casefield,
-                               quo_popfield,
-                               inc_per,
-                               quo_groupfield,
-                               week_type,
-                               report_period,
-                               ed_summary_period,
-                               ed_method,
-                               ed_control,
-                               env_data,
-                               quo_obsfield,
-                               quo_valuefield,
-                               forecast_future,
-                               fc_control,
-                               env_ref_data,
-                               env_info,
-                               model_obj,
-                               model_cached,
-                               model_choice)
-  #if warnings, just give message and continue
-  if (check_results$warn_flag){
-    message(check_results$warn_msgs)
-  }
-  #if then if errors, stop and return error messages
-  if (check_results$err_flag){
-    #prevent possible truncation of all error messages
-    options(warning.length = 4000L)
-    stop(check_results$err_msgs)
-  }
+  # # 2. match.arg for arguments with options
+  # #Note: using message() instead of warning() to get message to appear right away
+  #
+  # #model_choice = c("poisson-bam", "negbin")
+  # #tolower to capture upper and lower case user-input variations since match.arg is case sensitive
+  # #but must only try function if ed_method is not null (i.e. was given)
+  # if (!is.null(model_choice)){
+  #   model_choice <- tolower(model_choice)
+  # }
+  # model_choice <- tryCatch({
+  #   #including hidden naïve models for skill test in validation
+  #   match.arg(model_choice, c("poisson-bam", "negbin", "naive-persistence", "naive-averageweek"))
+  # }, error = function(e){
+  #   message("Warning: Given 'model_choice' does not match 'poisson-bam' or 'negbin', running as 'poisson-bam'.")
+  #   "poisson-bam"
+  # }, finally = {
+  #   if (length(model_choice) > 1){
+  #     #if model_choice was missing at run_epidemia() call, got assigned c("poisson-bam", "negbin")
+  #     message("Note: 'model_choice' was missing, running as 'poisson-bam'.")
+  #     #no return, because in match.arg() it will take the first item, which is "poisson-bam".
+  #   }
+  # })
+  #
+  # #ed_method = c("none", "farrington")
+  # #tolower to capture upper and lower case user-input variations since match.arg is case sensitive
+  # #but must only try function if ed_method is not null (i.e. was given)
+  # if (!is.null(ed_method)){
+  #   ed_method <- tolower(ed_method)
+  # }
+  # ed_method <- tryCatch({
+  #   match.arg(ed_method, c("none", "farrington"))
+  # }, error = function(e){
+  #   message("Warning: Given 'ed_method' does not match 'none' or 'farrington', running as 'none'.")
+  #   "none"
+  # }, finally = {
+  #   if (length(ed_method) > 1){
+  #     #if ed_method was missing at run_epidemia() call, got assigned c("none", "farrington")
+  #     message("Note: 'ed_method' was missing, running as 'none'.")
+  #     #no return, because in match.arg() it will take the first item, which is "none".
+  #   }
+  # })
+  #
+  # #week_type = c("ISO", "CDC")
+  # week_type <- tryCatch({
+  #   match.arg(week_type, c("ISO", "CDC"))
+  # }, error = function(e){
+  #   message("Warning: Given 'week_type' does not match 'ISO' or 'CDC', running as 'ISO'.")
+  #   "ISO"
+  # }, finally = {
+  #   if (length(week_type) > 1){
+  #     #if week_type was missing at run_epidemia() call, got assigned c("ISO", "CDC")
+  #     message("Note: 'week_type' was missing, running as 'ISO'.")
+  #     #no return, because in match.arg() it will take the first item, which is "ISO".
+  #   }
+  # })
 
 
+  ##### <<>> fix later
+  # # 3. More input checking
+  # check_results <- input_check(epi_data,
+  #                              quo_casefield,
+  #                              quo_popfield,
+  #                              inc_per,
+  #                              quo_groupfield,
+  #                              week_type,
+  #                              report_period,
+  #                              ed_summary_period,
+  #                              ed_method,
+  #                              ed_control,
+  #                              env_data,
+  #                              quo_obsfield,
+  #                              quo_valuefield,
+  #                              forecast_future,
+  #                              fc_control,
+  #                              env_ref_data,
+  #                              env_info,
+  #                              model_obj,
+  #                              model_cached,
+  #                              model_choice)
+  # #if warnings, just give message and continue
+  # if (check_results$warn_flag){
+  #   message(check_results$warn_msgs)
+  # }
+  # #if then if errors, stop and return error messages
+  # if (check_results$err_flag){
+  #   #prevent possible truncation of all error messages
+  #   options(warning.length = 4000L)
+  #   stop(check_results$err_msgs)
+  # }
 
-  # Preparing: generating listings and date sets ----------------------------
+
+
+  # Preparing: generating listings, defaults and date sets ----------------------------
 
   #create alphabetical list of unique groups
   #must remain in alpha order for early detection using surveillance package to capture results properly
@@ -325,15 +343,174 @@ run_epidemia <- function(epi_data = NULL,
   #create alphabetical list of all unique environmental variables
   env_variables <- dplyr::pull(env_data, !!quo_obsfield) %>% unique() %>% sort()
 
+
+  # <<>> eventually separate out into own function, here for building
+  #processing or defaults
+
+  if (is.null(report_settings[["report_period"]])){
+    report_settings[["report_period"]] <- 26
+  }
+
+  if (is.null(report_settings[["report_inc_per"]])){
+    report_settings[["report_inc_per"]] <- 1000
+    #okay if not used, if report_value_type is cases instead of incidence
+  }
+
+  if (is.null(report_settings[["epi_interpolate"]])){
+    report_settings[["epi_interpolate"]] <- FALSE
+  }
+
+  if (is.null(report_settings[["ed_summary_period"]])){
+    report_settings[["ed_summary_period"]] <- 4
+  }
+
+  if (is.null(report_settings[["model_run"]])){
+    report_settings[["model_run"]] <- FALSE
+  }
+
+  if (is.null(report_settings[["model_cached"]])){
+    report_settings[["model_cached"]] <- NULL
+  }
+
+  if (is.null(report_settings[["env_lag_length"]])){
+    #maybe make default based on data length, but for now
+    report_settings[["env_lag_length"]] <- 180
+  }
+
+  if (is.null(report_settings[["fc_cyclicals"]])){
+    report_settings[["fc_cyclicals"]] <- FALSE
+  }
+
+  if (is.null(report_settings[["fc_future_period"]])){
+    report_settings[["fc_future_period"]] <- 8
+  }
+
+  #<<>> temporary settings until switch fc_model_family to real input (relabeled model_choice atm)
+  if (is.null(report_settings[["anom_env"]])){
+    report_settings[["anom_env"]] <- dplyr::case_when(
+      fc_model_family == "poisson-gam" ~ TRUE,
+      fc_model_family == "negbin" ~ FALSE,
+      fc_model_family == "naive-persistence" ~ FALSE,
+      fc_model_family == "naive-weekaverage" ~ FALSE,
+      #default to FALSE
+      TRUE ~ FALSE)
+  }
+
+
+  # For things that are being string matched:
+    # tolower to capture upper and lower case user-input variations since match.arg is case sensitive
+    # but must only try function if ed_method is not null (i.e. was given)
+
+  #report_value_type
+  # if provided, prepare for matching
+  if (!is.null(report_settings[["report_value_type"]])){
+    report_settings[["report_value_type"]] <- tolower(report_settings[["report_value_type"]])
+  } else {
+    #if not provided/missing/null
+    message("Note: 'report_value_type' was not provided, returning results in case counts ('cases').")
+    report_settings[["report_value_type"]] <- "cases"
+  }
+  #try match
+  report_settings[["report_value_type"]] <- tryCatch({
+    match.arg(report_settings[["report_value_type"]], c("cases", "incidence"))
+  }, error = function(e){
+    message("Warning: Given 'report_value_type' does not match 'cases' or 'incidence', running as 'cases'.")
+    "cases"
+  }, finally = {
+    #failsafe default
+    "cases"
+  })
+
+  # epi_date_type
+  # if provided, prepare for matching
+  if (!is.null(report_settings[["epi_date_type"]])){
+    report_settings[["epi_date_type"]] <- tolower(report_settings[["epi_date_type"]])
+  } else {
+    #if not provided/missing/null
+    message("Note: 'epi_date_type' was not provided, running as weekly, ISO/WHO standard ('weekISO').")
+    report_settings[["epi_date_type"]] <- "weekISO"
+  }
+  #try match
+  report_settings[["epi_date_type"]] <- tryCatch({
+    match.arg(report_settings[["epi_date_type"]], c("weekISO", "weekCDC")) #"monthly" reserved for future
+  }, error = function(e){
+    message("Warning: Given 'epi_date_type' does not match 'weekISO' or 'weekCDC', running as 'weekISO' (weekly, ISO/WHO standard).")
+    "weekISO"
+  }, finally = {
+    #failsafe default
+    "weekISO"
+  })
+  #<<>> set internal week type?
+
+
+  # ed_method
+  # if provided, prepare for matching
+  if (!is.null(report_settings[["ed_method"]])){
+    report_settings[["ed_method"]] <- tolower(report_settings[["ed_method"]])
+  } else {
+    #if not provided/missing/null
+    message("Note: 'ed_method' was not provided, running as 'none'.")
+    report_settings[["ed_method"]] <- "none"
+  }
+  #try match
+  report_settings[["ed_method"]] <- tryCatch({
+    match.arg(report_settings[["ed_method"]], c("none", "farrington"))
+  }, error = function(e){
+    message("Warning: Given 'ed_method' does not match 'none' or 'farrington', running as 'none'.")
+    "none"
+  }, finally = {
+    #failsafe default to no event detection
+    "none"
+  })
+
+
+  # For more complicated defaults
+
+  #env_var -- what is listed in env_info & also in env_data
+  if (is.null(report_settings[["env_var"]])){
+    #create list of all environmental variables in env_info
+    env_info_variables <- dplyr::pull(env_info, !!quo_obsfield)
+    #env_variables already gen list of env_data
+    report_settings[["env_var"]] <- intersect(env_variables, env_info_variables)
+  }
+
+  #nthreads -- grab calc from forecast
+  #set up default parallel processing number of cores to use number
+  #if user-supplied, use that cap at 2, otherwise create a default number
+  #used in anomalize_env() and forecast_regression()
+  if (!is.null(report_settings[["fc_nthreads"]])) {
+    # nthreads above 2 is not actually helpful
+    report_settings[["fc_nthreads"]] <- ifelse(report_settings[["fc_nthreads"]] > 1, 2, 1)
+  } else {
+    #no ncores value fed in, so test and determine
+    #ncores <- max(parallel::detectCores(logical=FALSE) - 1, 1)
+    #cap at 2 for nthread
+    report_settings[["fc_nthreads"]] <- ifelse(parallel::detectCores(logical=FALSE) > 1, 2, 1)
+  } #end else for ncores not given
+
+
+  # Developer options
+  if (is.null(report_settings[["fc_fit_freq"]])){
+    report_settings[["fc_fit_freq"]] <- "once"
+  }
+  if (is.null(report_settings[["fc_modbsplines"]])){
+    report_settings[["fc_modbsplines"]] <- FALSE
+  }
+  if (is.null(report_settings[["fc_formula"]])){
+    report_settings[["fc_formula"]]NULL
+  }
+
+
+
   ## Create report date information - for passing to interval functions, and report output
-  #REM: report_period is full # of weeks of report.  forecast_future is how many
-  #of those weeks should be in the future.
+  #REM: 'report_period' is full # of weeks of report.
+  #'fc_future_period' is how many of those weeks should be in the future.
   #full report
   report_dates <- list(full = list(min = max(epi_data$obs_date, na.rm = TRUE) -
-                                     lubridate::as.difftime((report_period - forecast_future - 1),
+                                     lubridate::as.difftime((report_settings[["report_period"]] - report_settings[["fc_future_period"]] - 1),
                                                             unit = "weeks"),
                                    max = max(epi_data$obs_date, na.rm = TRUE) +
-                                     lubridate::as.difftime(forecast_future,
+                                     lubridate::as.difftime(report_settings[["fc_future_period"]],
                                                             units = "weeks")))
   report_dates$full$seq <- report_dates$full %>% {seq.Date(.$min, .$max, "week")}
   #dates with known epidemological data
@@ -356,14 +533,27 @@ run_epidemia <- function(epi_data = NULL,
 
   # Preparing: data checks for NA and interpolation -------------------------
 
-  #check for NAs and interpolate as necessary
-  #Note: cases_epidemiar is field name returned (epi)
-  epi_data <- epi_NA_interpolate(epi_data, quo_casefield, quo_groupfield) %>%
-    #and sort by alphabetical groupfield
-    dplyr::arrange(!!quo_groupfield, obs_date)
+  #check for NAs and interpolate as necessary and user set
+  if (report_settings[["epi_interpolate"]] == TRUE){
+    #Note: cases_epidemiar is field name returned (epi)
+    epi_data <- epi_NA_interpolate(epi_data, quo_casefield, quo_groupfield) %>%
+      #force into integer after interpolating (would cause problems with modeling otherwise)
+      dplyr::mutate(cases_epidemiar = floor(cases_epidemiar)) %>%
+      #and sort by alphabetical groupfield
+      dplyr::arrange(!!quo_groupfield, obs_date)
+  } else {
+    epi_data <- epi_data %>%
+      #copy over value
+      dplyr::mutate(cases_epidemiar = !!quo_valuefield) %>%
+      #force into integer, just in case
+      dplyr::mutate(cases_epidemiar = floor(cases_epidemiar)) %>%
+      #and sort by alphabetical groupfield
+      dplyr::arrange(!!quo_groupfield, obs_date)
+  }
+
   #Note: val_epidemiar is field name returned (env)
-  #interpolation is no longer necessary with new extend_env_future()
-  #env_data <- env_NA_interpolate(env_data, quo_obsfield, quo_valuefield, quo_groupfield) %>%
+    #interpolation is no longer necessary with new extend_env_future()
+    #env_data <- env_NA_interpolate(env_data, quo_obsfield, quo_valuefield, quo_groupfield) %>%
   env_data <- env_data %>%
     #first, mark which ones during known time range were observed versus (will be) interpolated
     dplyr::mutate(data_source = ifelse(!is.na(!!quo_valuefield), "Observed", "Interpolated")) %>%
@@ -376,17 +566,6 @@ run_epidemia <- function(epi_data = NULL,
 
   # Set up output report data format ----------------------------------------
 
-  #User selection if return type should be in case counts or incidence (default)
-  #using tolower() to handle case sensitivity of match.arg
-  #but must only call tolower() on it if value_type was given (i.e. not null)
-  #if null, it will default to the first value "incidence"
-  if (!is.null(fc_control[["value_type"]])){
-    fc_control$value_type <- tolower(fc_control[["value_type"]])
-  }
-  fc_control$value_type <- match.arg(fc_control[["value_type"]],
-                                     c("incidence", "cases"))
-  #in future, override here if necessary based on model choice
-
   #create observed data series
   obs_res <- epi_data %>%
     #include only observed data from requested start of report
@@ -394,9 +573,9 @@ run_epidemia <- function(epi_data = NULL,
     dplyr::mutate(series = "obs",
                   value = dplyr::case_when(
                     #if reporting in case counts
-                    fc_control$value_type == "cases" ~ !!quo_casefield,
+                    report_settings[["report_value_type"]] == "cases" ~ !!quo_casefield,
                     #if incidence
-                    fc_control$value_type == "incidence" ~ !!quo_casefield / !!quo_popfield * inc_per,
+                    report_settings[["report_value_type"]] == "incidence" ~ !!quo_casefield / !!quo_popfield * inc_per,
                     #otherwise
                     TRUE ~ NA_real_),
                   #note use of original not interpolated cases
@@ -412,22 +591,29 @@ run_epidemia <- function(epi_data = NULL,
 
   fc_res_all <- run_forecast(epi_data,
                              quo_popfield,
-                             inc_per,
                              quo_groupfield,
-                             groupings,
                              env_data,
                              quo_obsfield,
                              quo_valuefield,
-                             env_variables,
-                             fc_control,
                              env_ref_data,
                              env_info,
-                             report_dates,
-                             week_type,
-                             model_run,
-                             model_cached,
-                             model_choice,
-                             valid_run)
+                             report_settings,
+                             #internal/calculated
+                             valid_run,
+                             groupings,
+                             env_variables,
+                             report_dates
+
+                             #inc_per,
+                             #fc_control,
+                             #week_type,
+                             #model_run,
+                             #model_cached,
+                             #model_choice
+
+                             )
+
+  #<<>> resume editing here after finished with forecasting update
 
   #if we are only generating the model, then end here
   if (model_run){
@@ -439,6 +625,7 @@ run_epidemia <- function(epi_data = NULL,
                        obsfield = quo_name(quo_obsfield),
                        valuefield = quo_name(quo_valuefield))
 
+    #<<>> needs to be updated
     model_meta <- create_named_list(fieldnames,
                                     week_type,
                                     groupings,
@@ -446,9 +633,7 @@ run_epidemia <- function(epi_data = NULL,
                                     env_dt_ranges = fc_res_all$env_dt_ranges,
                                     known_epi_range = report_dates$known,
                                     env_info,
-                                    value_type = fc_control$value_type,
-                                    model_choice,
-                                    theta = fc_control$theta,
+                                    report_value_type = report_settings[["report_value_type"]],
                                     date_created = Sys.Date())
 
     #if a model run, forecast result contains regression object
@@ -479,15 +664,14 @@ run_epidemia <- function(epi_data = NULL,
 
   #run event detection on combined dataset
   ed_res <- run_event_detection(epi_fc_data = obs_fc_epi,
-                                quo_popfield,
-                                inc_per,
                                 quo_groupfield,
+                                quo_popfield,
+                                ed_method = report_settings[["ed_method"]],
+                                ed_control = report_settings[["ed_control"]],
+                                val_type = report_settings[["report_value_type"]],
+                                inc_per = report_settings[["report_inc_per"]],
                                 groupings,
-                                ed_method,
-                                ed_control,
-                                report_dates,
-                                vt = fc_control$value_type,
-                                mc = model_choice)
+                                report_dates)
 
 
   # Combining forecast and event detection results --------------------------
@@ -511,7 +695,7 @@ run_epidemia <- function(epi_data = NULL,
                                                 quo_obsfield,
                                                 env_used = fc_res_all$env_variables_used,
                                                 env_info,
-                                                week_type,
+                                                epi_date_type = report_settings[["epi_date_type"]],
                                                 report_dates)
 
     ##Environmental Anomaly Data (during ED period)
@@ -539,16 +723,15 @@ run_epidemia <- function(epi_data = NULL,
                        valuefield = quo_name(quo_valuefield))
 
     params_meta <- create_named_list(fieldnames,
-                                     week_type,
                                      ed_method,
                                      groupings,
+                                     fc_model_family,
                                      env_variables_used = fc_res_all$env_variables_used,
                                      env_dt_ranges = fc_res_all$env_dt_ranges,
                                      report_dates,
                                      env_info,
-                                     value_type = fc_control$value_type,
-                                     model_choice,
-                                     theta = fc_control$theta,
+                                     epi_date_type = report_settings[["epi_date_type"]],
+                                     report_value_type = report_settings[["report_value_type"]],
                                      date_created = Sys.Date())
     #regression object for future other use or troubleshooting
     regression_object <- fc_res_all$reg_obj

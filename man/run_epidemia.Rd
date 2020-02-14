@@ -4,54 +4,14 @@
 \alias{run_epidemia}
 \title{Run EPIDEMIA forecast models and early detection algorithm.}
 \usage{
-run_epidemia(epi_data = NULL, casefield = NULL,
-  populationfield = NULL, inc_per = 1000, groupfield = NULL,
-  week_type = c("ISO", "CDC"), report_period = 26,
-  ed_summary_period = 4, ed_method = c("none", "farrington"),
-  ed_control = NULL, env_data = NULL, obsfield = NULL,
-  valuefield = NULL, forecast_future = 4, fc_control = NULL,
-  env_ref_data = NULL, env_info = NULL, model_run = FALSE,
-  model_obj = NULL, model_cached = NULL,
-  model_choice = c("poisson-bam", "negbin"))
+run_epidemia(epi_data = NULL, env_data = NULL, env_ref_data = NULL,
+  env_info = NULL, casefield = NULL, groupfield = NULL,
+  populationfield = NULL, obsfield = NULL, valuefield = NULL,
+  fc_clusters = NULL, fc_model_family = NULL, report_settings = NULL)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date
 field "obs_date".}
-
-\item{casefield}{The column name of the field that contains disease case
-counts (unquoted field name).}
-
-\item{populationfield}{Column name of the population field to give population
-numbers over time (unquoted field name). Used to calculated incidence. Also
-optionally used in Farrington method for populationOffset.}
-
-\item{inc_per}{Number for what unit of population the incidence should be
-reported in, e.g. incidence rate of 3 per 1000 people. Parameter ignored if
-fc_control$value_type == "cases" ("incidence" is default, if not set).}
-
-\item{groupfield}{The column name of the field for district or geographic area
-unit division names of epidemiological AND environmental data (unquoted
-field name). If there are no groupings (all one area), user should give a
-field that contains the same value throughout.}
-
-\item{week_type}{String indicating the standard (WHO ISO-8601 or CDC epi
-weeks) that the weeks of the year in epidemiological and environmental
-reference data use ["ISO" or "CDC"]. (Required: epidemiological observation
-dates listed are LAST day of week).}
-
-\item{report_period}{The number of weeks that the entire report will cover.
-The \code{report_period} minus \code{forecast_future} is the number of weeks
-of past (known) data that will be included.}
-
-\item{ed_summary_period}{The number of weeks that will be considered the
-"early detection period". It will count back from the week of last known
-epidemiological data.}
-
-\item{ed_method}{Which method for early detection should be used ("farrington"
-is only current option, or "none").}
-
-\item{ed_control}{All parameters for early detection algorithm, passed through
-to that subroutine.}
 
 \item{env_data}{Daily environmental data for the same groupfields and date
 range as the epidemiological data. It may contain extra data (other
@@ -59,18 +19,6 @@ districts or date ranges). The data must be in long format (one row for each
 date and environmental variable combination), and must start at absolutel
 minimum \code{laglen} (in \code{fc_control}) days before epi_data for
 forecasting.}
-
-\item{obsfield}{Field name of the environmental data variables (unquoted field
-name).}
-
-\item{valuefield}{Field name of the value of the environmental data variable
-observations (unquoted field name).}
-
-\item{forecast_future}{Number of futre weeks from the end of the
-\code{epi_data} to produce forecasts.}
-
-\item{fc_control}{Parameters for forecasting, including which environmental
-variable to include and any geographic clusters.}
 
 \item{env_ref_data}{Historical averages by week of year for environmental
 variables. Used in extended environmental data into the future for long
@@ -80,18 +28,27 @@ display on timeseries in reports.}
 \item{env_info}{Lookup table for environmental data - reference creation
 method (e.g. sum or mean), report labels, etc.}
 
-\item{model_run}{TRUE/FALSE flag for whether to only generate the model
-regression object plus metadata. This model can be cached and used later on
-its own, skipping a large portion of the slow calculations for future runs.}
+\item{casefield}{The column name of the field that contains disease case
+counts (unquoted field name).}
 
-\item{model_obj}{Deprecated, use model_cached.}
+\item{groupfield}{The column name of the field for district or geographic area
+unit division names of epidemiological AND environmental data (unquoted
+field name). If there are no groupings (all one area), user should give a
+field that contains the same value throughout.}
 
-\item{model_cached}{The output of a previous model_run = TRUE run of
-run_epidemia() that produces a model (regression object) and metadata. The
-metadata will be used for input checking and validation. Using a prebuilt
-model saves on processing time, but will need to be updated periodically.}
+\item{populationfield}{Column name of the population field to give population
+numbers over time (unquoted field name). Used to calculated incidence. Also
+optionally used in Farrington method for populationOffset.}
 
-\item{model_choice}{Critical argument to choose the type of model to generate.
+\item{obsfield}{Field name of the environmental data variables (unquoted field
+name).}
+
+\item{valuefield}{Field name of the value of the environmental data variable
+observations (unquoted field name).}
+
+\item{fc_clusters}{Clusters. <<>>}
+
+\item{fc_model_family}{Critical argument to choose the type of model to generate.
 The options are versions that the EPIDEMIA team has used for forecasting.
 The first supported options is "poisson-bam" ("p") which is the original
 epidemiar model: a Poisson regression using bam (for large data GAMs), with
@@ -104,6 +61,8 @@ default for fc_control$anom_env is FALSE and uses the actual observation
 values in the modeling. The fc_control$anom_env can be overruled by the user
 providing a value, but this is not recommended unless you are doing
 comparisons.}
+
+\item{report_settings}{Optional report settings.  <<>>}
 }
 \value{
 Returns a suite of summary and report data.

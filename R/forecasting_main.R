@@ -4,58 +4,37 @@
 #'
 #'@param epi_data Epidemiological data with case numbers per week, with date
 #'  field "obs_date".
-#'@param quo_popfield Quosure of user-given field containing population values.
-#'@param inc_per Number for what unit of population the incidence should be
-#'  reported in, e.g. incidence rate of 3 per 1000 people.
-#'@param quo_groupfield Quosure of the user given geographic grouping field to
-#'  run_epidemia().
-#'@param groupings A unique list of the geographic groupings (from groupfield).
 #'@param env_data Daily environmental data for the same groupfields and date
 #'  range as the epidemiological data. It may contain extra data (other
 #'  districts or date ranges). The data must be in long format (one row for each
 #'  date and environmental variable combination), and must start at absolutel
 #'  minimum \code{laglen} (in \code{fc_control}) days before epi_data for
 #'  forecasting.
-#'@param quo_obsfield Quosure of user given field name of the environmental data
-#'  variables
-#'@param quo_valuefield Quosure of user given field name of the value of the
-#'  environmental data variable observations.
-#'@param env_variables alphabetical list of all unique environmental variables
-#'  present in the original env_data dataset.
-#'@param fc_control Parameters for forecasting, including which environmental
-#'  variable to include and any geographic clusters.
 #'@param env_ref_data Historical averages by week of year for environmental
 #'  variables. Used in extended environmental data into the future for long
 #'  forecast time, to calculate anomalies in early detection period, and to
 #'  display on timeseries in reports.
 #'@param env_info Lookup table for environmental data - reference creation
 #'  method (e.g. sum or mean), report labels, etc.
+#'
+#'@param quo_popfield Quosure of user-given field containing population values.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'@param quo_obsfield Quosure of user given field name of the environmental data
+#'  variables
+#'@param quo_valuefield Quosure of user given field name of the value of the
+#'  environmental data variable observations.
+#'
+#'@param fc_model_family model choice stand in <<>>
+#'@param fc_clusters clusters <<>>
+#'@param report_settings all the settings <<>>
+#'
+#'@param env_variables List of environmental variables <<>>
+#'
+#'@param groupings A unique list of the geographic groupings (from groupfield).
 #'@param report_dates Internally generated set of report date information: min,
 #'  max, list of dates for full report, known epidemiological data period,
 #'  forecast period, and early detection period.
-#'@param week_type String indicating the standard (WHO ISO-8601 or CDC epi
-#'  weeks) that the weeks of the year in epidemiological and environmental
-#'  reference data use ["ISO" or "CDC"].
-#'@param model_run TRUE/FALSE flag for whether to only generate the model
-#'  regression object plus metadata. This model can be cached and used later on
-#'  its own, skipping a large portion of the slow calculations for future runs.
-#'@param model_cached The output of a previous model_run = TRUE run of
-#'  run_epidemia() that produces a model (regression object) and metadata. The
-#'  metadata will be used for input checking and validation. Using a prebuilt
-#'  model saves on processing time, but will need to be updated periodically.
-#'@param model_choice Critical argument to choose the type of model to generate.
-#'  The options are versions that the EPIDEMIA team has used for forecasting.
-#'  The first supported options is "poisson-gam" ("p") which is the original
-#'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
-#'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
-#'  TRUE for using the anomalies of environmental variables rather than their
-#'  raw values. The second option is "negbin" ("n") which is a negative binomial
-#'  regression using glm, with no external seasonality terms - letting the
-#'  natural cyclical behavior of the environmental variables fill that role. The
-#'  default for fc_control$anom_env is FALSE and uses the actual observation
-#'  values in the modeling. The fc_control$anom_env can be overruled by the user
-#'  providing a value, but this is not recommended unless you are doing
-#'  comparisons.
 #'@param valid_run Internal binary for whether this is part of a validation run.
 #'
 #'
@@ -80,32 +59,14 @@ run_forecast <- function(epi_data,
                           quo_valuefield,
                           env_ref_data,
                           env_info,
+                          fc_model_family,
+                          fc_clusters,
                           report_settings,
                           #internal/calculated
                           valid_run,
                           groupings,
                           env_variables,
                           report_dates){
-
-                         # epi_data,
-                         # quo_popfield,
-                         # inc_per,
-                         # quo_groupfield,
-                         # groupings,
-                         # env_data,
-                         # quo_obsfield,
-                         # quo_valuefield,
-                         # env_variables,
-                         # fc_control,
-                         # env_ref_data,
-                         # env_info,
-                         # report_dates,
-                         # week_type,
-                         # model_run,
-                         # model_cached = NULL,
-                         # model_choice,
-                         # valid_run
-
 
   message("Preparing for forecasting...")
 
@@ -155,7 +116,7 @@ run_forecast <- function(epi_data,
   # anomalizing the environ data, if requested.
 
 
-  if (report_settings[["anom_env"]]){
+  if (report_settings[["env_anomalies"]]){
     message("Anomalizing the environmental variables...")
     env_fc <- anomalize_env(env_fc,
                             quo_groupfield,
@@ -189,7 +150,7 @@ run_forecast <- function(epi_data,
   # model_run_result <- forecast_regression(epi_lag,
   #                                         quo_groupfield,
   #                                         fc_model_family,
-  #                                         nthreads,
+  #                                         nthreads = report_settings[["fc_nthreads"]],
   #                                         model_run,
   #                                         model_cached = report_settings[["model_cached"]],
   #                                         fit_freq = report_settings[["fc_fit_freq"]],
@@ -214,7 +175,7 @@ run_forecast <- function(epi_data,
     forereg_return <- forecast_regression(epi_lag,
                                           quo_groupfield,
                                           fc_model_family,
-                                          nthreads,
+                                          nthreads = report_settings[["fc_nthreads"]],
                                           model_run,
                                           model_cached = report_settings[["model_cached"]],
                                           fit_freq = report_settings[["fc_fit_freq"]],
@@ -237,7 +198,7 @@ run_forecast <- function(epi_data,
       forereg_return <- forecast_regression(epi_lag,
                                             quo_groupfield,
                                             fc_model_family,
-                                            nthreads,
+                                            nthreads = report_settings[["fc_nthreads"]],
                                             model_run,
                                             model_cached = report_settings[["model_cached"]],
                                             fit_freq = report_settings[["fc_fit_freq"]],
@@ -270,7 +231,7 @@ run_forecast <- function(epi_data,
                     #if reporting in case counts
                     report_settings[["report_value_type"]] == "cases" ~ fc_cases,
                     #if incidence
-                    report_settings[["report_value_type"]] == "incidence" ~ fc_cases / !!quo_popfield * inc_per,
+                    report_settings[["report_value_type"]] == "incidence" ~ fc_cases / !!quo_popfield * report_settings[["report_inc_per"]],
                     #otherwise
                     TRUE ~ NA_real_),
                   lab = "Forecast Trend",
@@ -278,14 +239,14 @@ run_forecast <- function(epi_data,
                     #if reporting in case counts
                     report_settings[["report_value_type"]] == "cases" ~ fc_cases_upr,
                     #if incidence
-                    report_settings[["report_value_type"]] == "incidence" ~ fc_cases_upr / !!quo_popfield * inc_per,
+                    report_settings[["report_value_type"]] == "incidence" ~ fc_cases_upr / !!quo_popfield * report_settings[["report_inc_per"]],
                     #otherwise
                     TRUE ~ NA_real_),
                   lower = dplyr::case_when(
                     #if reporting in case counts
                     report_settings[["report_value_type"]] == "cases" ~ fc_cases_lwr,
                     #if incidence
-                    report_settings[["report_value_type"]] == "incidence" ~ fc_cases_lwr / !!quo_popfield * inc_per,
+                    report_settings[["report_value_type"]] == "incidence" ~ fc_cases_lwr / !!quo_popfield * report_settings[["report_inc_per"]],
                     #otherwise
                     TRUE ~ NA_real_)
                   #value = fc_cases / !!quo_popfield * inc_per,
@@ -310,6 +271,19 @@ run_forecast <- function(epi_data,
 #'  lagged environmental data (or anomalies), as output by lag_environ_to_epi().
 #'@param quo_groupfield Quosure of the user given geographic grouping field to
 #'  run_epidemia().
+#'@param fc_model_family model choice stand in
+#'@param nthreads max threads <<>>
+#'@param model_run TRUE/FALSE flag for whether to only generate the model
+#'  regression object plus metadata. This model can be cached and used later on
+#'  its own, skipping a large portion of the slow calculations for future runs.
+#'@param model_cached The output of a previous model_run = TRUE run of
+#'  run_epidemia() that produces a model (regression object) and metadata. The
+#'  metadata will be used for input checking and validation. Using a prebuilt
+#'  model saves on processing time, but will need to be updated periodically.
+#'@param fit_freq String indicating "once" or "weekly" on how often to fit the
+#'  model - once for the whole report, or every week of the report. Unless
+#'  otherwise needed, the value should be "once", as weekly drastically
+#'  increases processing time.
 #'@param groupings A unique list of the geographic groupings (from groupfield).
 #'@param env_variables_used List of environmental variables that were used in
 #'  the modeling.
@@ -319,36 +293,7 @@ run_forecast <- function(epi_data,
 #'@param req_date The end date of requested forecast regression. When fit_freq
 #'  == "once", this is the last date of the full report, the end date of the
 #'  forecast period.
-#'@param ncores The number of physical cores to use in parallel processing, set
-#'  in fc_control$ncores, else the max of the number of physical core available
-#'  minus 1, or 1 core.
-#'@param fit_freq String indicating "once" or "weekly" on how often to fit the
-#'  model - once for the whole report, or every week of the report. Unless
-#'  otherwise needed, the value should be "once", as weekly drastically
-#'  increases processing time.
-#'@param model_run TRUE/FALSE flag for whether to only generate the model
-#'  regression object plus metadata. This model can be cached and used later on
-#'  its own, skipping a large portion of the slow calculations for future runs.
-#'@param model_cached The output of a previous model_run = TRUE run of
-#'  run_epidemia() that produces a model (regression object) and metadata. The
-#'  metadata will be used for input checking and validation. Using a prebuilt
-#'  model saves on processing time, but will need to be updated periodically.
-#'@param model_choice Critical argument to choose the type of model to generate.
-#'  The options are versions that the EPIDEMIA team has used for forecasting.
-#'  The first supported options is "poisson-bam" ("p") which is the original
-#'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
-#'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
-#'  TRUE for using the anomalies of environmental variables rather than their
-#'  raw values. The second option is "negbin" ("n") which is a negative binomial
-#'  regression using glm, with no external seasonality terms - letting the
-#'  natural cyclical behavior of the environmental variables fill that role. The
-#'  default for fc_control$anom_env is FALSE and uses the actual observation
-#'  values in the modeling. The fc_control$anom_env can be overruled by the user
-#'  providing a value, but this is not recommended unless you are doing
-#'  comparisons.
-#'@param theta From fc_control$theta, the value of theta for a "negbin" model.
-#'  If present, will use glm(..., family = MASS::negative.binomial(theta)).  If
-#'  missing, will use MASS::glm.nb().
+#'
 #'
 #'@return Named list containing:
 #'date_preds: Full forecasted resulting dataset.
@@ -499,36 +444,19 @@ forecast_regression <- function(epi_lag,
 
 #'Build the appropriate model
 #'
-#'@param model_choice Critical argument to choose the type of model to generate.
-#'  The options are versions that the EPIDEMIA team has used for forecasting.
-#'  The first supported options is "poisson-bam" ("p") which is the original
-#'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
-#'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
-#'  TRUE for using the anomalies of environmental variables rather than their
-#'  raw values. The second option is "negbin" ("n") which is a negative binomial
-#'  regression using glm, with no external seasonality terms - letting the
-#'  natural cyclical behavior of the environmental variables fill that role. The
-#'  default for fc_control$anom_env is FALSE and uses the actual observation
-#'  values in the modeling. The fc_control$anom_env can be overruled by the user
-#'  providing a value, but this is not recommended unless you are doing
-#'  comparisons.
-#'@param n_groupings Count of the number of geographic groupings in the model.
+#'@param fc_model_family model choice stand in <<>>
 #'@param quo_groupfield Quosure of the user given geographic grouping field to
 #'  run_epidemia().
+#'@param epi_known Epidemiological dataset with basis spline summaries of the
+#'  lagged environmental data (or anomalies), with column marking if "known"
+#'  data and groupings converted to factors.
+#'@param nthreads thread count <<>>
+#'@param n_groupings Count of the number of geographic groupings in the model.
 #'@param modb_eq Pieces of the regression formula that include the modified
 #'  basis functions to account for long term trend (with or without groupings,
 #'  as appropriate).
 #'@param bandsums_eq Pieces of the regression formula that include the b-spline
 #'  bandsummaries of the environmental factors.
-#'@param epi_known Epidemiological dataset with basis spline summaries of the
-#'  lagged environmental data (or anomalies), with column marking if "known"
-#'  data and groupings converted to factors.
-#'@param ncores The number of physical cores to use in parallel processing, set
-#'  in fc_control$ncores, else the max of the number of physical core available
-#'  minus 1, or 1 core.
-#'@param theta From fc_control$theta, the value of theta for a "negbin" model.
-#'  If present, will use glm(..., family = MASS::negative.binomial(theta)).  If
-#'  missing, will use MASS::glm.nb().
 
 #'
 #'@return Regression object
@@ -572,7 +500,7 @@ build_model <- function(fc_model_family,
                          family = poisson(),
                          control = mgcv::gam.control(trace=FALSE),
                          discrete = TRUE,
-                         nthreads)
+                         nthreads = nthreads)
 
 
   } else if (fc_model_family == "negbin"){
@@ -657,19 +585,8 @@ build_model <- function(fc_model_family,
 
 #'Create the appropriate predictions/forecasts.
 #'
-#'@param model_choice Critical argument to choose the type of model to generate.
-#'  The options are versions that the EPIDEMIA team has used for forecasting.
-#'  The first supported options is "poisson-gam" ("p") which is the original
-#'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
-#'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
-#'  TRUE for using the anomalies of environmental variables rather than their
-#'  raw values. The second option is "negbin" ("n") which is a negative binomial
-#'  regression using glm, with no external seasonality terms - letting the
-#'  natural cyclical behavior of the environmental variables fill that role. The
-#'  default for fc_control$anom_env is FALSE and uses the actual observation
-#'  values in the modeling. The fc_control$anom_env can be overruled by the user
-#'  providing a value, but this is not recommended unless you are doing
-#'  comparisons.
+#'@param fc_model_family model choice <<>>
+#'@param nthreads max threads <<>>
 #'@param regress The regression object, either the user-supplied one, or
 #'  the one just generated.
 #'@param epi_lag Epidemiological dataset with basis spline summaries of the
@@ -677,9 +594,6 @@ build_model <- function(fc_model_family,
 #'@param req_date The end date of requested forecast regression. When fit_freq
 #'  == "once", this is the last date of the full report, the end date of the
 #'  forecast period.
-#'@param ncores The number of physical cores to use in parallel processing, set
-#'  in fc_control$ncores, else the max of the number of physical core available
-#'  minus 1, or 1 core.
 #'
 #'@return A dataset from predict() using the regression object generated in
 #'  build_model or a newly created one. The dataset includes the

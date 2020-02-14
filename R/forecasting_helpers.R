@@ -10,8 +10,7 @@
 #'  forecasting.
 #'@param quo_obsfield Quosure of user given field name of the environmental data
 #'  variables
-#'@param fc_control Parameters for forecasting, including which environmental
-#'  variable to include and any geographic clusters.
+#'@param env_var <<>> which environmental variable to include
 #'
 #'@return List of environmental variables that were used in the
 #'  modeling (had to be both listed in model variables input file and present the
@@ -37,7 +36,6 @@ pull_model_envvars <- function(env_data, quo_obsfield, env_var){
 #'  forecasting.
 #'@param quo_groupfield Quosure of the user given geographic grouping field to
 #'  run_epidemia().
-#'@param groupings A unique list of the geographic groupings (from groupfield).
 #'@param quo_obsfield Quosure of user given field name of the environmental data
 #'  variables
 #'@param quo_valuefield Quosure of user given field name of the value of the
@@ -48,28 +46,15 @@ pull_model_envvars <- function(env_data, quo_obsfield, env_var){
 #'  display on timeseries in reports.
 #'@param env_info Lookup table for environmental data - reference creation
 #'  method (e.g. sum or mean), report labels, etc.
+#'@param fc_model_family model choice stand in <<>>
+#'@param epi_date_type weekISO/CDC/month <<>>
+#'@param valid_run Internal boolean for whether this is part of a validation run.
+#'@param groupings A unique list of the geographic groupings (from groupfield).
 #'@param env_variables_used List of environmental variables that were used in
 #'  the modeling
 #'@param report_dates Internally generated set of report date information: min,
 #'  max, list of dates for full report, known epidemiological data period,
 #'  forecast period, and early detection period.
-#'@param week_type String indicating the standard (WHO ISO-8601 or CDC epi
-#'  weeks) that the weeks of the year in epidemiological and environmental
-#'  reference data use ["ISO" or "CDC"].
-#'@param model_choice Critical argument to choose the type of model to generate.
-#'  The options are versions that the EPIDEMIA team has used for forecasting.
-#'  The first supported options is "poisson-gam" ("p") which is the original
-#'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
-#'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
-#'  TRUE for using the anomalies of environmental variables rather than their
-#'  raw values. The second option is "negbin" ("n") which is a negative binomial
-#'  regression using glm, with no external seasonality terms - letting the
-#'  natural cyclical behavior of the environmental variables fill that role. The
-#'  default for fc_control$anom_env is FALSE and uses the actual observation
-#'  values in the modeling. The fc_control$anom_env can be overruled by the user
-#'  providing a value, but this is not recommended unless you are doing
-#'  comparisons.
-#'@param valid_run Internal boolean for whether this is part of a validation run.
 #'
 #'@return Environmental dataset, with data extended into the future forecast
 #'  period. Unknown environmental data with runs of < 2 weeks is
@@ -105,6 +90,12 @@ extend_env_future <- function(env_data,
   # 2: 19/20 recent + 1/20 historical, 3: 18/20 recent + 2/20 historical, ... 20: 1/20 recent + 19/20 historical.
   # Will ALWAYS include part of recent known data (relevant if recent patterns are departure from climate averages)
 
+  # switch epi_date_type to week_type needed for add_datefields()
+  week_type <- dplyr::case_when(
+    epi_date_type == "weekISO" ~ "ISO",
+    epi_date_type == "weekCDC"  ~ "CDC",
+    #default as if mean
+    TRUE             ~ NA_character_)
 
   #Do not need data past end of forecast period (if exists)
   env_trim <- env_data %>%
@@ -377,8 +368,7 @@ env_format_fc <- function(env_data_extd,
 #'  future/forecast period with NA values for to-be-forecasted case numbers.
 #'@param quo_groupfield Quosure of the user given geographic grouping field to
 #'  run_epidemia().
-#'@param fc_control Parameters for forecasting, including which environmental
-#'  variable to include and any geographic clusters.
+#'@param fc_clusters <<>>geographic clusters.
 #'
 #'@return An epidemiological dataset formatted to pass over to BAM/GAM modeling.
 #'
@@ -413,9 +403,7 @@ epi_format_fc <- function(epi_data_extd,
 #'  run_epidemia().
 #'@param env_variables_used List of environmental variables that were used in
 #'  the modeling.
-#'@param ncores The number of physical cores to use in parallel processing, set
-#'  in fc_control$ncores, else the max of the number of physical core available
-#'  minus 1, or 1 core.
+#'@param nthreads mx threasds <<>>
 #'
 #'@return Environmental dataset in same format as env_fc but with the residuals
 #'  from a GAM with geographic unit and cyclical cubic regression spline on day
@@ -451,7 +439,7 @@ anomalize_env <- function(env_fc,
       tempbam <- mgcv::bam(env_fc[,curcol] ~ group_factor + s(doy, bs="cc", by=group_factor),
                            data=env_fc,
                            discrete = TRUE,
-                           nthreads = ncores)
+                           nthreads = nthreads)
     } else {
       #if only 1 geographic area, then run without group_factor
       tempbam <- mgcv::bam(env_fc[,curcol] ~ s(doy, bs="cc"),
@@ -482,7 +470,7 @@ anomalize_env <- function(env_fc,
 #'@param env_fc Environmental data formatted for forecasting by env_format_fc().
 #'@param env_variables_used List of environmental variables that were used in
 #'  the modeling.
-#'@param laglen The maximum number of days in the past to consider interactions
+#'@param lag_len The maximum number of days in the past to consider interactions
 #'  between the environmental variable anomalies and the disease case counts.
 #'
 #'@return Wide dataset based on epidemiological data dates with five

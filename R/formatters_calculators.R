@@ -18,9 +18,9 @@
 #'  the modeling.
 #'@param env_info Lookup table for environmental data - reference creation
 #'  method (e.g. sum or mean), report labels, etc.
-#'@param week_type String indicating the standard (WHO ISO-8601 or CDC epi
+#'@param epi_date_type String indicating the standard (WHO ISO-8601 or CDC epi
 #'  weeks) that the weeks of the year in epidemiological and environmental
-#'  reference data use ["ISO" or "CDC"].
+#'  reference data use ["ISO" or "CDC"]. <<>>
 #'@param report_dates Internally generated set of report date information: min,
 #'  max, list of dates for full report, known epidemiological data period,
 #'  forecast period, and early detection period.
@@ -37,6 +37,14 @@ environ_report_format <- function(env_ext_data,
                                   env_info,
                                   epi_date_type,
                                   report_dates){
+
+  #for adding week, year fields
+  week_type <- dplyr::case_when(
+    epi_date_type == "weekISO" ~ "ISO",
+    epi_date_type == "weekCDC"  ~ "CDC",
+    #default NA
+    TRUE             ~ NA_character_)
+
   #daily env data
   env_data_varused <- env_ext_data %>%
     dplyr::filter(!!quo_obsfield %in% env_used)
@@ -52,12 +60,7 @@ environ_report_format <- function(env_ext_data,
                        dplyr::select(!!quo_obsfield, reference_method),
                      by = rlang::set_names(rlang::quo_name(quo_obsfield),
                                            rlang::quo_name(quo_obsfield))) %>%
-    #add week, year fields
-    week_type <- dplyr::case_when(
-      epi_date_type == "weekISO" ~ "ISO",
-      epi_date_type == "weekCDC"  ~ "CDC",
-      #default as if mean
-      TRUE             ~ NA_character_)
+    #add date fields
     epidemiar::add_datefields(week_type) %>%
     #trim dates to reduce processing (dates are rough, technically just need week prior to start. 8 is not magical)
     dplyr::filter(obs_date >= report_dates$full$min - 8 & obs_date <= report_dates$full$max + 8) %>%
@@ -237,43 +240,3 @@ calc_env_anomalies <- function(env_ts,
     dplyr::ungroup()
 }
 
-## Chooses the appropriate function to return the results in the desired form
-#' Calculate the epidemiological value to be shown as result, and on the reports.
-#'
-#'@param cases Field containing case counts, if a quosure, c_quo_tf should be TRUE.
-#'@param c_quo_tf Binary T/F if case field is a quosure rather than a column name.
-#'@param q_pop Quosure of user-given field containing population values.
-#'@param inc_per Number for what unit of population the incidence should be
-#'  reported in, e.g. incidence rate of 3 per 1000 people. Parameter ignored if
-#'  vt == "cases" ("incidence" is default, if not set).
-#'@param vt From match.arg evaluation of fc_control$value_type, whether to return
-#'  epidemiological report values in "incidence" (default) or "cases".
-#'@param mc From match.arg evaluation of model_choice. Reserved for future overrides on value_type depending on
-#'  model choice selection.
-#'
-#'@return Epidemiolgical return values, either in cases or incidence, depending
-#'  on user settings.
-#'
-# calc_return_value <- function(cases,
-#                               c_quo_tf = FALSE,
-#                               q_pop = NULL,
-#                               inc_per,
-#                               vt,
-#                               mc){
-#   dplyr::case_when(
-#     #if reporting in case counts
-#     #if quosure, evaluate
-#     vt == "cases" & c_quo_tf ~ !!cases,
-#     #otherwise given case field directly
-#     vt == "cases" ~ cases,
-#     #if incidence and case field quosure
-#     vt == "incidence" & c_quo_tf ~ !!cases / !!q_pop * inc_per,
-#     #if incidence
-#     vt == "incidence" ~ cases / !!q_pop * inc_per,
-#     #otherwise
-#     TRUE ~ NA_real_
-#   )
-#   #FAILS.
-#   ##Error: Quosures can only be unquoted within a quasiquotation context.
-#
-# }

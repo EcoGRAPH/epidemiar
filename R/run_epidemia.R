@@ -15,61 +15,35 @@
 #'
 #'@param epi_data Epidemiological data with case numbers per week, with date
 #'  field "obs_date".
-#'@param casefield The column name of the field that contains disease case
-#'  counts (unquoted field name).
-#'@param populationfield Column name of the population field to give population
-#'  numbers over time (unquoted field name). Used to calculated incidence. Also
-#'  optionally used in Farrington method for populationOffset.
-#'@param inc_per Number for what unit of population the incidence should be
-#'  reported in, e.g. incidence rate of 3 per 1000 people. Parameter ignored if
-#'  fc_control$value_type == "cases" ("incidence" is default, if not set).
-#'@param groupfield The column name of the field for district or geographic area
-#'  unit division names of epidemiological AND environmental data (unquoted
-#'  field name). If there are no groupings (all one area), user should give a
-#'  field that contains the same value throughout.
-#'@param week_type String indicating the standard (WHO ISO-8601 or CDC epi
-#'  weeks) that the weeks of the year in epidemiological and environmental
-#'  reference data use ["ISO" or "CDC"]. (Required: epidemiological observation
-#'  dates listed are LAST day of week).
-#'@param report_period The number of weeks that the entire report will cover.
-#'  The \code{report_period} minus \code{forecast_future} is the number of weeks
-#'  of past (known) data that will be included.
-#'@param ed_summary_period The number of weeks that will be considered the
-#'  "early detection period". It will count back from the week of last known
-#'  epidemiological data.
-#'@param ed_method Which method for early detection should be used ("farrington"
-#'  is only current option, or "none").
-#'@param ed_control All parameters for early detection algorithm, passed through
-#'  to that subroutine.
 #'@param env_data Daily environmental data for the same groupfields and date
 #'  range as the epidemiological data. It may contain extra data (other
 #'  districts or date ranges). The data must be in long format (one row for each
 #'  date and environmental variable combination), and must start at absolutel
 #'  minimum \code{laglen} (in \code{fc_control}) days before epi_data for
 #'  forecasting.
-#'@param obsfield Field name of the environmental data variables (unquoted field
-#'  name).
-#'@param valuefield Field name of the value of the environmental data variable
-#'  observations (unquoted field name).
-#'@param forecast_future Number of futre weeks from the end of the
-#'  \code{epi_data} to produce forecasts.
-#'@param fc_control Parameters for forecasting, including which environmental
-#'  variable to include and any geographic clusters.
 #'@param env_ref_data Historical averages by week of year for environmental
 #'  variables. Used in extended environmental data into the future for long
 #'  forecast time, to calculate anomalies in early detection period, and to
 #'  display on timeseries in reports.
 #'@param env_info Lookup table for environmental data - reference creation
 #'  method (e.g. sum or mean), report labels, etc.
-#'@param model_run TRUE/FALSE flag for whether to only generate the model
-#'  regression object plus metadata. This model can be cached and used later on
-#'  its own, skipping a large portion of the slow calculations for future runs.
-#'@param model_obj Deprecated, use model_cached.
-#'@param model_cached The output of a previous model_run = TRUE run of
-#'  run_epidemia() that produces a model (regression object) and metadata. The
-#'  metadata will be used for input checking and validation. Using a prebuilt
-#'  model saves on processing time, but will need to be updated periodically.
-#'@param model_choice Critical argument to choose the type of model to generate.
+#'
+#'@param casefield The column name of the field that contains disease case
+#'  counts (unquoted field name).
+#'@param populationfield Column name of the population field to give population
+#'  numbers over time (unquoted field name). Used to calculated incidence. Also
+#'  optionally used in Farrington method for populationOffset.
+#'@param groupfield The column name of the field for district or geographic area
+#'  unit division names of epidemiological AND environmental data (unquoted
+#'  field name). If there are no groupings (all one area), user should give a
+#'  field that contains the same value throughout.
+#'@param obsfield Field name of the environmental data variables (unquoted field
+#'  name).
+#'@param valuefield Field name of the value of the environmental data variable
+#'  observations (unquoted field name).
+#'
+#'@param fc_clusters Clusters. <<>>
+#'@param fc_model_family Critical argument to choose the type of model to generate.
 #'  The options are versions that the EPIDEMIA team has used for forecasting.
 #'  The first supported options is "poisson-bam" ("p") which is the original
 #'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
@@ -82,6 +56,7 @@
 #'  values in the modeling. The fc_control$anom_env can be overruled by the user
 #'  providing a value, but this is not recommended unless you are doing
 #'  comparisons.
+#'@param report_settings Optional report settings.  <<>>
 #'
 #'
 #'@return Returns a suite of summary and report data.
@@ -141,27 +116,17 @@ run_epidemia <- function(epi_data = NULL,
                          env_data = NULL,
                          env_ref_data = NULL,
                          env_info = NULL,
+                         #fields
                          casefield = NULL,
                          groupfield = NULL,
                          populationfield = NULL,
                          obsfield = NULL,
                          valuefield = NULL,
+                         #required settings
                          fc_clusters = NULL,
                          fc_model_family = NULL,
+                         #optional
                          report_settings = NULL)
-
-                         # inc_per = 1000,
-                         # week_type = c("ISO", "CDC"),
-                         # report_period = 26,
-                         # ed_summary_period = 4,
-                         # ed_method = c("none", "farrington"),
-                         # ed_control = NULL,
-                         # forecast_future = 4,
-                         # fc_control = NULL,
-                         # model_run = FALSE,
-                         # model_obj = NULL, #clean up & remove
-                         # model_cached = NULL,
-                         # model_choice = c("poisson-bam", "negbin")) # to replace with model_family?
 {
 
   #Note for model family
@@ -386,8 +351,8 @@ run_epidemia <- function(epi_data = NULL,
   }
 
   #<<>> temporary settings until switch fc_model_family to real input (relabeled model_choice atm)
-  if (is.null(report_settings[["anom_env"]])){
-    report_settings[["anom_env"]] <- dplyr::case_when(
+  if (is.null(report_settings[["env_anomalies"]])){
+    report_settings[["env_anomalies"]] <- dplyr::case_when(
       fc_model_family == "poisson-gam" ~ TRUE,
       fc_model_family == "negbin" ~ FALSE,
       fc_model_family == "naive-persistence" ~ FALSE,
@@ -424,7 +389,13 @@ run_epidemia <- function(epi_data = NULL,
   # epi_date_type
   # if provided, prepare for matching
   if (!is.null(report_settings[["epi_date_type"]])){
-    report_settings[["epi_date_type"]] <- tolower(report_settings[["epi_date_type"]])
+    #want to keep ISO and CDC capitalized, but drop 'Week' to 'week' if had been entered that way
+    first_char <- substr(report_settings[["epi_date_type"]], 1, 1) %>%
+                  tolower()
+    #remainder of user entry
+    rest_char <- substr(report_settings[["epi_date_type"]], 2, nchar(report_settings[["epi_date_type"]]))
+    #paste back together
+    report_settings[["epi_date_type"]] <- paste0(first_char, rest_char)
   } else {
     #if not provided/missing/null
     message("Note: 'epi_date_type' was not provided, running as weekly, ISO/WHO standard ('weekISO').")
@@ -440,7 +411,12 @@ run_epidemia <- function(epi_data = NULL,
     #failsafe default
     "weekISO"
   })
-  #<<>> set internal week type?
+  # switch epi_date_type to week_type needed for add_datefields()
+  week_type <- dplyr::case_when(
+    report_settings[["epi_date_type"]] == "weekISO" ~ "ISO",
+    report_settings[["epi_date_type"]] == "weekCDC"  ~ "CDC",
+    #default as if mean
+    TRUE             ~ NA_character_)
 
 
   # ed_method
@@ -474,17 +450,15 @@ run_epidemia <- function(epi_data = NULL,
     report_settings[["env_var"]] <- intersect(env_variables, env_info_variables)
   }
 
-  #nthreads -- grab calc from forecast
-  #set up default parallel processing number of cores to use number
+  #nthreads
+  #default value is 1 for 1 core machines, 2 for multi-core (testing shows no additional value past 2)
   #if user-supplied, use that cap at 2, otherwise create a default number
-  #used in anomalize_env() and forecast_regression()
+  #used to decide if run anomalize_env() prior to forecasting
   if (!is.null(report_settings[["fc_nthreads"]])) {
     # nthreads above 2 is not actually helpful
     report_settings[["fc_nthreads"]] <- ifelse(report_settings[["fc_nthreads"]] > 1, 2, 1)
   } else {
-    #no ncores value fed in, so test and determine
-    #ncores <- max(parallel::detectCores(logical=FALSE) - 1, 1)
-    #cap at 2 for nthread
+    #no value fed in, so test and determine
     report_settings[["fc_nthreads"]] <- ifelse(parallel::detectCores(logical=FALSE) > 1, 2, 1)
   } #end else for ncores not given
 
@@ -497,14 +471,14 @@ run_epidemia <- function(epi_data = NULL,
     report_settings[["fc_modbsplines"]] <- FALSE
   }
   if (is.null(report_settings[["fc_formula"]])){
-    report_settings[["fc_formula"]]NULL
+    report_settings[["fc_formula"]] <- NULL
   }
 
 
 
-  ## Create report date information - for passing to interval functions, and report output
-  #REM: 'report_period' is full # of weeks of report.
-  #'fc_future_period' is how many of those weeks should be in the future.
+  # Create report date information: for passing to interval functions, and report output
+  # report_period is full # of weeks of report.
+  # fc_future_period is how many of those weeks should be in the future.
   #full report
   report_dates <- list(full = list(min = max(epi_data$obs_date, na.rm = TRUE) -
                                      lubridate::as.difftime((report_settings[["report_period"]] - report_settings[["fc_future_period"]] - 1),
@@ -544,7 +518,7 @@ run_epidemia <- function(epi_data = NULL,
   } else {
     epi_data <- epi_data %>%
       #copy over value
-      dplyr::mutate(cases_epidemiar = !!quo_valuefield) %>%
+      dplyr::mutate(cases_epidemiar = !!quo_casefield) %>%
       #force into integer, just in case
       dplyr::mutate(cases_epidemiar = floor(cases_epidemiar)) %>%
       #and sort by alphabetical groupfield
@@ -575,7 +549,7 @@ run_epidemia <- function(epi_data = NULL,
                     #if reporting in case counts
                     report_settings[["report_value_type"]] == "cases" ~ !!quo_casefield,
                     #if incidence
-                    report_settings[["report_value_type"]] == "incidence" ~ !!quo_casefield / !!quo_popfield * inc_per,
+                    report_settings[["report_value_type"]] == "incidence" ~ !!quo_casefield / !!quo_popfield * report_settings[["report_inc_per"]],
                     #otherwise
                     TRUE ~ NA_real_),
                   #note use of original not interpolated cases
@@ -597,23 +571,15 @@ run_epidemia <- function(epi_data = NULL,
                              quo_valuefield,
                              env_ref_data,
                              env_info,
+                             fc_model_family,
+                             fc_clusters,
                              report_settings,
                              #internal/calculated
                              valid_run,
                              groupings,
                              env_variables,
-                             report_dates
+                             report_dates)
 
-                             #inc_per,
-                             #fc_control,
-                             #week_type,
-                             #model_run,
-                             #model_cached,
-                             #model_choice
-
-                             )
-
-  #<<>> resume editing here after finished with forecasting update
 
   #if we are only generating the model, then end here
   if (model_run){

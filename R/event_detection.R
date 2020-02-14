@@ -5,24 +5,21 @@
 #'
 #'@param epi_fc_data Internal pass of epidemiological data complete with future
 #'  forecast values.
-#'@param quo_popfield Quosure of user-given field containing population values.
-#'@param inc_per Number for what unit of population the incidence should be
-#'  reported in, e.g. incidence rate of 3 per 1000 people.
 #'@param quo_groupfield Quosure of the user given geographic grouping field to
 #'  run_epidemia().
-#'@param groupings A unique list of the geographic groupings (from groupfield).
+#'@param quo_popfield Quosure of user-given field containing population values.
 #'@param ed_method Which method for early detection should be used ("Farrington"
 #'  is only current option, or "None").
 #'@param ed_control All parameters for early detection algorithm, passed through
 #'  to that subroutine.
+#'@param val_type From match.arg evaluation of fc_control$value_type, whether to return
+#'  epidemiological report values in "incidence" (default) or "cases".
+#'@param inc_per Number for what unit of population the incidence should be
+#'  reported in, e.g. incidence rate of 3 per 1000 people.
+#'@param groupings A unique list of the geographic groupings (from groupfield).
 #'@param report_dates Internally generated set of report date information: min,
 #'  max, list of dates for full report, known epidemiological data period,
 #'  forecast period, and early detection period.
-#'@param vt From match.arg evaluation of fc_control$value_type, whether to return
-#'  epidemiological report values in "incidence" (default) or "cases".
-#'@param mc From match.arg evaluation of model_choice. Reserved for future overrides on value_type depending on
-#'  model choice selection.
-
 #'
 #'@return Returns a list of three generated series:
 #' "ed" : early detection alerts (ed period of most recent epi data)
@@ -85,10 +82,8 @@ run_event_detection <- function(epi_fc_data,
 #'@param report_dates Internally generated set of report date information: min,
 #'  max, list of dates for full report, known epidemiological data period,
 #'  forecast period, and early detection period.
-#'@param vt From match.arg evaluation of fc_control$value_type, whether to return
+#'@param val_type From match.arg evaluation of fc_control$value_type, whether to return
 #'  epidemiological report values in "incidence" (default) or "cases".
-#'@param mc From match.arg evaluation of model_choice. Reserved for future overrides on value_type depending on
-#'  model choice selection.
 
 #'
 #'@return Returns a list of three generated series from the Farrington algorithm:
@@ -317,11 +312,8 @@ make_stss <- function(epi_fc_data,
 #'@param report_dates Internally generated set of report date information: min,
 #'  max, list of dates for full report, known epidemiological data period,
 #'  forecast period, and early detection period.
-#'@param vt From match.arg evaluation of fc_control$value_type, whether to return
+#'@param val_type From match.arg evaluation of fc_control$value_type, whether to return
 #'  epidemiological report values in "incidence" (default) or "cases".
-#'@param mc From match.arg evaluation of model_choice. Reserved for future overrides on value_type depending on
-#'  model choice selection.
-
 #'
 #'@return Returns a list of three series from the Farrington sts result output:
 #' "ed" : early detection alerts (ed period of most recent epi data)
@@ -419,7 +411,9 @@ stss_res_to_output_data <- function(stss_res_list,
 #' "ew" : early warning alerts (forecast/future portion)
 #' "thresh" : threshold values per week
 #'
-run_no_detection <- function(epi_fc_data, quo_groupfield, report_dates){
+run_no_detection <- function(epi_fc_data,
+                             quo_groupfield,
+                             report_dates){
 
 
   #early detection (KNOWN - pre-forecast) event detection alert series

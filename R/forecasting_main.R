@@ -26,7 +26,6 @@
 #'  environmental data variable observations.
 #'
 #'@param fc_model_family model choice stand in <<>>
-#'@param fc_clusters clusters <<>>
 #'@param report_settings all the settings <<>>
 #'
 #'@param env_variables List of environmental variables <<>>
@@ -60,7 +59,6 @@ run_forecast <- function(epi_data,
                           env_ref_data,
                           env_info,
                           fc_model_family,
-                          fc_clusters,
                           report_settings,
                           #internal/calculated
                           valid_run,
@@ -89,7 +87,7 @@ run_forecast <- function(epi_data,
                                      quo_valuefield,
                                      env_ref_data,
                                      env_info,
-                                     fc_model_family,
+                                     fc_model_family, #reduced processing for naive models
                                      #pull from report_settings
                                      epi_date_type = report_settings[["epi_date_type"]],
                                      #calculated/internal
@@ -111,7 +109,7 @@ run_forecast <- function(epi_data,
                           quo_obsfield)
   epi_fc <- epi_format_fc(epi_data_extd,
                           quo_groupfield,
-                          fc_clusters)
+                          fc_clusters = report_settings[["fc_clusters"]])
 
   # anomalizing the environ data, if requested.
 
@@ -169,16 +167,13 @@ run_forecast <- function(epi_data,
 
   #Split regression call depending on {once|week} model fit frequency
 
-  if (report_settings[["fc_fit_freq"]] == "once"){
+  if (report_settings[["dev_fc_fit_freq"]] == "once"){
     message("Generating forecasts...")
     #for single fit, call with last week (and subfunction has switch to return all)
     forereg_return <- forecast_regression(epi_lag,
                                           quo_groupfield,
                                           fc_model_family,
-                                          nthreads = report_settings[["fc_nthreads"]],
-                                          model_run = report_settings[["model_run"]],
-                                          model_cached = report_settings[["model_cached"]],
-                                          fit_freq = report_settings[["fc_fit_freq"]],
+                                          report_settings,
                                           #internal calculated
                                           groupings,
                                           env_variables_used,
@@ -187,7 +182,7 @@ run_forecast <- function(epi_data,
     preds_catch <- forereg_return$date_preds
     reg_obj <- forereg_return$regress
 
-  } else if (report_settings[["fc_fit_freq"]] == "week") {
+  } else if (report_settings[["dev_fc_fit_freq"]] == "week") {
     # for each week of report, run forecast
     # initialize: prediction returns 4 columns
     preds_catch <- data.frame()
@@ -198,10 +193,7 @@ run_forecast <- function(epi_data,
       forereg_return <- forecast_regression(epi_lag,
                                             quo_groupfield,
                                             fc_model_family,
-                                            nthreads = report_settings[["fc_nthreads"]],
-                                            model_run = report_settings[["model_run"]],
-                                            model_cached = report_settings[["model_cached"]],
-                                            fit_freq = report_settings[["fc_fit_freq"]],
+                                            report_settings,
                                             #internal calculated
                                             groupings,
                                             env_variables_used,
@@ -215,7 +207,7 @@ run_forecast <- function(epi_data,
       reg_obj <- forereg_return$regress
     }
 
-  } else stop("Model fit frequency unknown") #shouldn't happen with default "once"
+  } else stop("Dev setting model fit frequency unknown") #shouldn't happen with default "once"
 
 
   # Interval calculation
@@ -272,18 +264,7 @@ run_forecast <- function(epi_data,
 #'@param quo_groupfield Quosure of the user given geographic grouping field to
 #'  run_epidemia().
 #'@param fc_model_family model choice stand in
-#'@param nthreads max threads <<>>
-#'@param model_run TRUE/FALSE flag for whether to only generate the model
-#'  regression object plus metadata. This model can be cached and used later on
-#'  its own, skipping a large portion of the slow calculations for future runs.
-#'@param model_cached The output of a previous model_run = TRUE run of
-#'  run_epidemia() that produces a model (regression object) and metadata. The
-#'  metadata will be used for input checking and validation. Using a prebuilt
-#'  model saves on processing time, but will need to be updated periodically.
-#'@param fit_freq String indicating "once" or "weekly" on how often to fit the
-#'  model - once for the whole report, or every week of the report. Unless
-#'  otherwise needed, the value should be "once", as weekly drastically
-#'  increases processing time.
+#'@param report_settings report settings
 #'@param groupings A unique list of the geographic groupings (from groupfield).
 #'@param env_variables_used List of environmental variables that were used in
 #'  the modeling.
@@ -304,20 +285,18 @@ run_forecast <- function(epi_data,
 forecast_regression <- function(epi_lag,
                                 quo_groupfield,
                                 fc_model_family,
-                                nthreads,
-                                model_run,
-                                model_cached = NULL,
-                                fit_freq,
+                                report_settings,
                                 #internal calculated
                                 groupings,
                                 env_variables_used,
                                 report_dates,
                                 req_date){
 
-  if (fit_freq == "once"){
+
+  if (report_settings[["fc_fit_freq"]]){
     #single fits use all the data available
     last_known_date <-  report_dates$known$max
-  } else if (fit_freq == "week"){
+  } else if (report_settings[["fc_fit_freq"]]){
     # for "week" model fits, forecasts are done knowing up to just before that date
     last_known_date <- req_date - lubridate::as.difftime(1, units = "days")
   }
@@ -348,7 +327,7 @@ forecast_regression <- function(epi_lag,
 
 
   ## If model_cached is NOT given, then create model / run regression
-  if (is.null(model_cached)){
+  if (is.null(report_settings[["model_cached"]])){
 
     #create variable bandsummaries equation piece
     #  e.g. 'bandsummaries_{var1} * cluster_id' for however many env var bandsummaries there are
@@ -380,7 +359,7 @@ forecast_regression <- function(epi_lag,
     regress <- build_model(fc_model_family,
                            quo_groupfield,
                            epi_known,
-                           nthreads,
+                           report_settings,
                            #calc/internal
                            n_groupings,
                            modb_eq,
@@ -388,6 +367,8 @@ forecast_regression <- function(epi_lag,
 
   } else {
     #if model_cached given, then use that as regress instead of building a new one (above)
+
+    model_cached <- report_settings[["model_cached"]]
 
     #message with model input
     message("Using given cached ", model_cached$model_info$fc_model_family, " model, created ",
@@ -398,13 +379,13 @@ forecast_regression <- function(epi_lag,
   }
 
   ## If model run, return regression object to run_forecast() at this point
-  if (model_run){
+  if (report_settings[["model_run"]]){
     return(regress)
   }
 
   ## Creating predictions switching point on model choice
   preds <- create_predictions(fc_model_family,
-                              nthreads,
+                              nthreads = report_settings[["fc_nthreads"]],
                               regress,
                               epi_lag,
                               req_date)
@@ -426,11 +407,11 @@ forecast_regression <- function(epi_lag,
     #and convert factor back to character for the groupings (originally converted b/c of bam/gam requirements)
     dplyr::mutate(!!rlang::quo_name(quo_groupfield) := as.character(!!quo_groupfield))
 
-  if (fit_freq == "once"){
+  if (report_settings[["fc_fit_freq"]] == "once"){
     #for single model fit, this has all the data we need, just trim to report dates
     date_preds <- epi_preds %>%
       dplyr::filter(.data$obs_date >= report_dates$full$min)
-  } else if (fit_freq == "week"){
+  } else if (report_settings[["fc_fit_freq"]] == "week"){
     #prediction of interest are last ones (equiv to req_date) per groupfield
     date_preds <- epi_preds %>%
       dplyr::group_by(!!quo_groupfield) %>%
@@ -450,7 +431,7 @@ forecast_regression <- function(epi_lag,
 #'@param epi_known Epidemiological dataset with basis spline summaries of the
 #'  lagged environmental data (or anomalies), with column marking if "known"
 #'  data and groupings converted to factors.
-#'@param nthreads thread count <<>>
+#'@param report_settings report settings
 #'@param n_groupings Count of the number of geographic groupings in the model.
 #'@param modb_eq Pieces of the regression formula that include the modified
 #'  basis functions to account for long term trend (with or without groupings,
@@ -465,84 +446,15 @@ forecast_regression <- function(epi_lag,
 build_model <- function(fc_model_family,
                         quo_groupfield,
                         epi_known,
-                        nthreads,
+                        report_settings,
                         #calc/internal
                         n_groupings,
                         modb_eq,
                         bandsums_eq){
 
-  #POISSON-BAM (set as default in first round input checking)
-  if (fc_model_family == "poisson-bam"){
+  #first, deal with naive models
 
-    message("Building Poisson model using bam() and forced cyclical...")
-
-    #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create
-    #expression to give to modeling function
-    #different versions if multiple geographic area groupings or not
-    if (n_groupings > 1){
-      reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                        rlang::quo_name(quo_groupfield),
-                                        " + s(doy, bs=\"cc\", by=",
-                                        rlang::quo_name(quo_groupfield),
-                                        ") + ",
-                                        modb_eq, " + ",
-                                        bandsums_eq))
-    } else {
-      reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                        "s(doy, bs=\"cc\") + ",
-                                        modb_eq, " + ",
-                                        bandsums_eq))
-    }
-
-    # run bam
-    # Using discrete = TRUE was much faster than using parallel with bam.
-    regress <- mgcv::bam(reg_eq, data = epi_known,
-                         family = stats::poisson(),
-                         control = mgcv::gam.control(trace=FALSE),
-                         discrete = TRUE,
-                         nthreads = nthreads)
-
-
-  } else if (fc_model_family == "negbin"){
-    #NEGATIVE BINOMIAL using GLM
-
-    message("Building negative binomial model...")
-
-    #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create
-    #expression to give to modeling function
-    #different versions if multiple geographic area groupings or not
-    #No cycical (as opposed to bam with s())
-    if (n_groupings > 1){
-      reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                        rlang::quo_name(quo_groupfield), " + ",
-                                        modb_eq, " + ",
-                                        bandsums_eq))
-    } else {
-      reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                        modb_eq, " + ",
-                                        bandsums_eq))
-    }
-
-    # run glm
-    # Which negative binomial function depends on if fc_control$theta exists
-    #<<>> temp set theta to null until switch to real model family
-    theta <- NULL
-
-    if(!is.null(theta)){
-      message("Theta value provided. Running with glm(..., family = MASS::negative.binomial(theta = ", theta, "))...")
-      regress <- stats::glm(reg_eq,
-                            data = epi_known,
-                            #theta value REQUIRED
-                            family = MASS::negative.binomial(theta=2.31))
-                            #family = MASS::negative.binomial(theta = theta))
-    } else {
-      message("Theta estimate (fc_control$theta) not provided, running with MASS::glm.nb()...")
-      regress <- MASS::glm.nb(reg_eq,
-                              data = epi_known)
-    }
-
-
-  } else if (fc_model_family == "naive-persistence"){
+  if (fc_model_family == "naive-persistence"){
 
     #naive model
     #persistence (carry forward)
@@ -561,7 +473,6 @@ build_model <- function(fc_model_family,
       dplyr::select(-dplyr::starts_with("modbs"))
 
 
-
   } else if (fc_model_family == "naive-averageweek"){
 
     #naive model
@@ -576,9 +487,175 @@ build_model <- function(fc_model_family,
 
 
   } else {
-    #Shouldn't happen, just in case.
-    stop("Error in selecting model choice.")
-  }
+    #user supplied family
+
+    #cyclical or not
+    if (report_settings[["fc_cyclicals"]]) {
+      #TRUE, include cyclicals
+
+      #need different formulas if 1+ or only 1 geographic grouping
+      if (n_groupings > 1){
+        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                          rlang::quo_name(quo_groupfield),
+                                          " + s(doy, bs=\"cc\", by=",
+                                          rlang::quo_name(quo_groupfield),
+                                          ") + ",
+                                          modb_eq, " + ",
+                                          bandsums_eq))
+      } else {
+        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                          "s(doy, bs=\"cc\") + ",
+                                          modb_eq, " + ",
+                                          bandsums_eq))
+      }
+
+      # run bam
+      #<<>> formula override add here report_settings[["dev_fc_formula"]]
+      regress <- mgcv::bam(reg_eq,
+                           data = epi_known,
+                           family = fc_model_family,
+                           control = mgcv::gam.control(trace=FALSE),
+                           discrete = TRUE,
+                           nthreads = report_settings[["fc_nthreads"]])
+
+
+
+    } else {
+      # FALSE, no cyclicals
+      #need different formulas if 1+ or only 1 geographic grouping
+      if (n_groupings > 1){
+        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                          rlang::quo_name(quo_groupfield), " + ",
+                                          modb_eq, " + ",
+                                          bandsums_eq))
+      } else {
+        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                          modb_eq, " + ",
+                                          bandsums_eq))
+      }
+
+
+      # run bam
+      regress <- mgcv::bam(reg_eq,
+                           data = epi_known,
+                           family = fc_model_family,
+                           control = mgcv::gam.control(trace=FALSE))
+
+
+    } #end cyclicals if else
+
+  } #end else, user supplied family
+
+
+  # #POISSON-BAM (set as default in first round input checking)
+  # if (fc_model_family == "poisson-bam"){
+  #
+  #   message("Building Poisson model using bam() and forced cyclical...")
+  #
+  #   #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create
+  #   #expression to give to modeling function
+  #   #different versions if multiple geographic area groupings or not
+  #   if (n_groupings > 1){
+  #     reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+  #                                       rlang::quo_name(quo_groupfield),
+  #                                       " + s(doy, bs=\"cc\", by=",
+  #                                       rlang::quo_name(quo_groupfield),
+  #                                       ") + ",
+  #                                       modb_eq, " + ",
+  #                                       bandsums_eq))
+  #   } else {
+  #     reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+  #                                       "s(doy, bs=\"cc\") + ",
+  #                                       modb_eq, " + ",
+  #                                       bandsums_eq))
+  #   }
+  #
+  #   # run bam
+  #   # Using discrete = TRUE was much faster than using parallel with bam.
+  #   regress <- mgcv::bam(reg_eq, data = epi_known,
+  #                        family = stats::poisson(),
+  #                        control = mgcv::gam.control(trace=FALSE),
+  #                        discrete = TRUE,
+  #                        nthreads = nthreads)
+  #
+  #
+  # } else if (fc_model_family == "negbin"){
+  #   #NEGATIVE BINOMIAL using GLM
+  #
+  #   message("Building negative binomial model...")
+  #
+  #   #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create
+  #   #expression to give to modeling function
+  #   #different versions if multiple geographic area groupings or not
+  #   #No cycical (as opposed to bam with s())
+  #   if (n_groupings > 1){
+  #     reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+  #                                       rlang::quo_name(quo_groupfield), " + ",
+  #                                       modb_eq, " + ",
+  #                                       bandsums_eq))
+  #   } else {
+  #     reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+  #                                       modb_eq, " + ",
+  #                                       bandsums_eq))
+  #   }
+  #
+  #   # run glm
+  #   # Which negative binomial function depends on if fc_control$theta exists
+  #   #<<>> temp set theta to null until switch to real model family
+  #   theta <- NULL
+  #
+  #   if(!is.null(theta)){
+  #     message("Theta value provided. Running with glm(..., family = MASS::negative.binomial(theta = ", theta, "))...")
+  #     regress <- stats::glm(reg_eq,
+  #                           data = epi_known,
+  #                           #theta value REQUIRED
+  #                           family = MASS::negative.binomial(theta=2.31))
+  #                           #family = MASS::negative.binomial(theta = theta))
+  #   } else {
+  #     message("Theta estimate (fc_control$theta) not provided, running with MASS::glm.nb()...")
+  #     regress <- MASS::glm.nb(reg_eq,
+  #                             data = epi_known)
+  #   }
+  #
+  #
+  # } else if (fc_model_family == "naive-persistence"){
+  #
+  #   #naive model
+  #   #persistence (carry forward)
+  #   #no regression object
+  #
+  #   #create "model" using known data.
+  #   #Will fill down in create_predictions
+  #   regress <- epi_known %>%
+  #     #grouping by geographical unit
+  #     dplyr::group_by(!!quo_groupfield) %>%
+  #     #prediction is 1 lag (previous week)
+  #     #fit is name of value from regression models
+  #     dplyr::mutate(fit = dplyr::lag(.data$cases_epidemiar, n = 1)) %>%
+  #     #cleaning up as not needed, and for bug hunting
+  #     dplyr::select(-dplyr::starts_with("band")) %>%
+  #     dplyr::select(-dplyr::starts_with("modbs"))
+  #
+  #
+  #
+  # } else if (fc_model_family == "naive-averageweek"){
+  #
+  #   #naive model
+  #   #average of week of year (from historical data)
+  #   #not a regression object
+  #
+  #   #create "model" (averages) using known data.
+  #   regress <- epi_known %>%
+  #     #calculate averages per geographic group per week of year
+  #     dplyr::group_by(!!quo_groupfield, .data$week_epidemiar) %>%
+  #     dplyr::summarize(fit = mean(.data$cases_epidemiar, na.rm = TRUE))
+  #
+  #
+  # } else {
+  #   #Shouldn't happen, just in case.
+  #   stop("Error in selecting model choice.")
+  # }
+
 } # end build_model()
 
 
@@ -606,40 +683,9 @@ create_predictions <- function(fc_model_family,
                                epi_lag,
                                req_date){
 
-  #POISSON-BAM (set as default in first round input checking)
-  if (fc_model_family == "poisson-bam"){
 
-    message("Creating Poisson predictions...")
-
-
-    ## Create predictions from either newly generated model, or given one
-
-    #output prediction (through req_date)
-    preds <- mgcv::predict.bam(regress,
-                               newdata = epi_lag %>% dplyr::filter(.data$obs_date <= req_date),
-                               se.fit = TRUE,       # included for backwards compatibility
-                               type="response",
-                               discrete = TRUE,
-                               n.threads = nthreads)
-
-
-
-  } else if (fc_model_family == "negbin"){
-    #NEGATIVE BINOMIAL using GLM
-
-    message("Creating negative binomial predictions...")
-
-
-    ## Create predictions from either newly generated model, or given one
-
-    #output prediction (through req_date)
-    preds <- stats::predict.glm(regress,
-                                newdata = epi_lag %>% dplyr::filter(.data$obs_date <= req_date),
-                                se.fit = TRUE,       # included for backwards compatibility
-                                type="response")
-
-
-  } else if (fc_model_family == "naive-persistence"){
+  #handle naive models
+  if (fc_model_family == "naive-persistence"){
 
     message("Creating predictions using persistence naive model...")
 
@@ -693,8 +739,111 @@ create_predictions <- function(fc_model_family,
 
 
   } else {
-    #Shouldn't happen, just in case.
-    stop("Error in selecting model choice.")
+    #user supplied family, use predict.bam on regression object (regress)
+
+    #output prediction (through req_date)
+    preds <- mgcv::predict.bam(regress,
+                               newdata = epi_lag %>% dplyr::filter(.data$obs_date <= req_date),
+                               se.fit = TRUE,       # included for backwards compatibility
+                               type="response",
+                               discrete = TRUE,
+                               n.threads = nthreads)
+
+
   }
+
+
+
+
+  # #POISSON-BAM (set as default in first round input checking)
+  # if (fc_model_family == "poisson-bam"){
+  #
+  #   message("Creating Poisson predictions...")
+  #
+  #
+  #   ## Create predictions from either newly generated model, or given one
+  #
+  #   #output prediction (through req_date)
+  #   preds <- mgcv::predict.bam(regress,
+  #                              newdata = epi_lag %>% dplyr::filter(.data$obs_date <= req_date),
+  #                              se.fit = TRUE,       # included for backwards compatibility
+  #                              type="response",
+  #                              discrete = TRUE,
+  #                              n.threads = nthreads)
+  #
+  #
+  #
+  # } else if (fc_model_family == "negbin"){
+  #   #NEGATIVE BINOMIAL using GLM
+  #
+  #   message("Creating negative binomial predictions...")
+  #
+  #
+  #   ## Create predictions from either newly generated model, or given one
+  #
+  #   #output prediction (through req_date)
+  #   preds <- stats::predict.glm(regress,
+  #                               newdata = epi_lag %>% dplyr::filter(.data$obs_date <= req_date),
+  #                               se.fit = TRUE,       # included for backwards compatibility
+  #                               type="response")
+  #
+  #
+  # } else if (fc_model_family == "naive-persistence"){
+  #
+  #   message("Creating predictions using persistence naive model...")
+  #
+  #   #persistence model just carries forward the last known value
+  #   #the important part is the forecast / trailing end part
+  #   #manipulating to be in quasi-same format as the other models return
+  #
+  #   #cleaning up as not needed, and for bug hunting
+  #   epi_lag <- epi_lag %>%
+  #     dplyr::select(-dplyr::starts_with("band")) %>%
+  #     dplyr::select(-dplyr::starts_with("modbs"))
+  #
+  #   #regress is a tibble not regression object here
+  #   # has a variable fit with lag of 1 on known data
+  #   #epi_lag has the newer rows
+  #   preds <- epi_lag %>%
+  #     #filter to requested date
+  #     dplyr::filter(.data$obs_date <= req_date) %>%
+  #     #join to get "fit" values from "model"
+  #     #join on all shared columns (i.e. everything in regress not "fit") to prevent renaming
+  #     dplyr::left_join(regress, by = names(regress)[!names(regress) %in% c("fit")]) %>%
+  #     #important at end/fc section, when we fill down
+  #     tidyr::fill(.data$fit, .direction = "down") %>%
+  #     #format into nominal regression predict output
+  #     dplyr::select(.data$fit) %>%
+  #     as.data.frame()
+  #
+  # } else if (fc_model_family == "naive-averageweek"){
+  #
+  #   message("Creating predictions using average week of year naive model...")
+  #
+  #   #average week null model calculates the average cases of that
+  #   # week of year from historical data
+  #   #manipulating to be in quasi-same format as the other models return
+  #
+  #   #regress is the averages per week of year from known data
+  #
+  #   epi_lag <- epi_lag %>%
+  #     #filter to requested date
+  #     dplyr::filter(.data$obs_date <= req_date)
+  #
+  #   #join back
+  #   preds <- epi_lag %>%
+  #     #join to get average values
+  #     #join on all shared columns (i.e. everything in regress not "fit") to prevent renaming
+  #     # and so don't need column names not passed into this function
+  #     dplyr::left_join(regress, by = names(regress)[!names(regress) %in% c("fit")]) %>%
+  #     #format into nominal regression output
+  #     dplyr::select(.data$fit) %>%
+  #     as.data.frame()
+  #
+  #
+  # } else {
+  #   #Shouldn't happen, just in case.
+  #   stop("Error in selecting model choice.")
+  # }
 
 } #end create_predictions()

@@ -6,8 +6,7 @@
 \usage{
 run_forecast(epi_data, quo_popfield, quo_groupfield, env_data,
   quo_obsfield, quo_valuefield, env_ref_data, env_info, fc_model_family,
-  fc_clusters, report_settings, valid_run, groupings, env_variables,
-  report_dates)
+  report_settings, valid_run, groupings, env_variables, report_dates)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date
@@ -40,8 +39,6 @@ display on timeseries in reports.}
 method (e.g. sum or mean), report labels, etc.}
 
 \item{fc_model_family}{model choice stand in <<>>}
-
-\item{fc_clusters}{clusters <<>>}
 
 \item{report_settings}{all the settings <<>>}
 

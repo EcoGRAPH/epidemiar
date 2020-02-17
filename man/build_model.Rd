@@ -4,7 +4,7 @@
 \alias{build_model}
 \title{Build the appropriate model}
 \usage{
-build_model(fc_model_family, quo_groupfield, epi_known, nthreads,
+build_model(fc_model_family, quo_groupfield, epi_known, report_settings,
   n_groupings, modb_eq, bandsums_eq)
 }
 \arguments{
@@ -17,7 +17,7 @@ run_epidemia().}
 lagged environmental data (or anomalies), with column marking if "known"
 data and groupings converted to factors.}
 
-\item{nthreads}{thread count <<>>}
+\item{report_settings}{report settings}
 
 \item{n_groupings}{Count of the number of geographic groupings in the model.}
 

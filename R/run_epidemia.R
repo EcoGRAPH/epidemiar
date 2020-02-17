@@ -42,7 +42,6 @@
 #'@param valuefield Field name of the value of the environmental data variable
 #'  observations (unquoted field name).
 #'
-#'@param fc_clusters Clusters. <<>>
 #'@param fc_model_family Critical argument to choose the type of model to generate.
 #'  The options are versions that the EPIDEMIA team has used for forecasting.
 #'  The first supported options is "poisson-bam" ("p") which is the original
@@ -125,7 +124,6 @@ run_epidemia <- function(epi_data = NULL,
                          obsfield = NULL,
                          valuefield = NULL,
                          #required settings
-                         fc_clusters = NULL,
                          fc_model_family = NULL,
                          #optional
                          report_settings = NULL)
@@ -183,7 +181,7 @@ run_epidemia <- function(epi_data = NULL,
                   groupfield = quo_groupfield,
                   obsfield = quo_obsfield,
                   valuefield = quo_valuefield)
-  necessary <- create_named_list(epi_data, env_data, env_ref_data, env_info, fc_clusters)
+  necessary <- create_named_list(epi_data, env_data, env_ref_data, env_info)
 
   #initialize missing info msgs & flag
   missing_msgs <- ""
@@ -352,11 +350,9 @@ run_epidemia <- function(epi_data = NULL,
     report_settings[["fc_future_period"]] <- 8
   }
 
-  #<<>> temporary settings until switch fc_model_family to real input (relabeled model_choice atm)
+  #default false, with explicit false for naive models (probably ok w/out, just being careful)
   if (is.null(report_settings[["env_anomalies"]])){
     report_settings[["env_anomalies"]] <- dplyr::case_when(
-      fc_model_family == "poisson-gam" ~ TRUE,
-      fc_model_family == "negbin" ~ FALSE,
       fc_model_family == "naive-persistence" ~ FALSE,
       fc_model_family == "naive-weekaverage" ~ FALSE,
       #default to FALSE
@@ -465,15 +461,28 @@ run_epidemia <- function(epi_data = NULL,
   } #end else for ncores not given
 
 
+  #fc_clusters
+  #default is one cluster, probably not what you actually want for any type of large system
+  if (is.null(report_settings[["fc_clusters"]])){
+    #create tbl of only one cluster
+    #groupings already exist as list of geographic groups
+    cluster_tbl <- tibble::tibble(group_temp = groupings, cluster_id = 1) %>%
+      #and fix names with NSE
+      dplyr::rename(!!rlang::quo_name(quo_groupfield) := .data$group_temp)
+    #assign
+    report_settings[["fc_clusters"]] <- cluster_tbl
+  }
+
+
   # Developer options
-  if (is.null(report_settings[["fc_fit_freq"]])){
-    report_settings[["fc_fit_freq"]] <- "once"
+  if (is.null(report_settings[["dev_fc_fit_freq"]])){
+    report_settings[["dev_fc_fit_freq"]] <- "once"
   }
-  if (is.null(report_settings[["fc_modbsplines"]])){
-    report_settings[["fc_modbsplines"]] <- FALSE
+  if (is.null(report_settings[["dev_fc_modbsplines"]])){
+    report_settings[["dev_fc_modbsplines"]] <- FALSE
   }
-  if (is.null(report_settings[["fc_formula"]])){
-    report_settings[["fc_formula"]] <- NULL
+  if (is.null(report_settings[["dev_fc_formula"]])){
+    report_settings[["dev_fc_formula"]] <- NULL
   }
 
 
@@ -574,7 +583,6 @@ run_epidemia <- function(epi_data = NULL,
                              env_ref_data,
                              env_info,
                              fc_model_family,
-                             fc_clusters,
                              report_settings,
                              #internal/calculated
                              valid_run,

@@ -4,9 +4,8 @@
 \alias{forecast_regression}
 \title{Run forecast regression}
 \usage{
-forecast_regression(epi_lag, quo_groupfield, fc_model_family, nthreads,
-  model_run, model_cached = NULL, fit_freq, groupings,
-  env_variables_used, report_dates, req_date)
+forecast_regression(epi_lag, quo_groupfield, fc_model_family,
+  report_settings, groupings, env_variables_used, report_dates, req_date)
 }
 \arguments{
 \item{epi_lag}{Epidemiological dataset with basis spline summaries of the
@@ -17,21 +16,7 @@ run_epidemia().}
 
 \item{fc_model_family}{model choice stand in}
 
-\item{nthreads}{max threads <<>>}
-
-\item{model_run}{TRUE/FALSE flag for whether to only generate the model
-regression object plus metadata. This model can be cached and used later on
-its own, skipping a large portion of the slow calculations for future runs.}
-
-\item{model_cached}{The output of a previous model_run = TRUE run of
-run_epidemia() that produces a model (regression object) and metadata. The
-metadata will be used for input checking and validation. Using a prebuilt
-model saves on processing time, but will need to be updated periodically.}
-
-\item{fit_freq}{String indicating "once" or "weekly" on how often to fit the
-model - once for the whole report, or every week of the report. Unless
-otherwise needed, the value should be "once", as weekly drastically
-increases processing time.}
+\item{report_settings}{report settings}
 
 \item{groupings}{A unique list of the geographic groupings (from groupfield).}
 

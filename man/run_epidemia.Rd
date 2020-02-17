@@ -7,7 +7,7 @@
 run_epidemia(epi_data = NULL, env_data = NULL, env_ref_data = NULL,
   env_info = NULL, casefield = NULL, groupfield = NULL,
   populationfield = NULL, obsfield = NULL, valuefield = NULL,
-  fc_clusters = NULL, fc_model_family = NULL, report_settings = NULL)
+  fc_model_family = NULL, report_settings = NULL)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date
@@ -45,8 +45,6 @@ name).}
 
 \item{valuefield}{Field name of the value of the environmental data variable
 observations (unquoted field name).}
-
-\item{fc_clusters}{Clusters. <<>>}
 
 \item{fc_model_family}{Critical argument to choose the type of model to generate.
 The options are versions that the EPIDEMIA team has used for forecasting.

@@ -510,8 +510,8 @@ lag_environ_to_epi <- function(epi_fc,
     valuevar <- colnames(env_fc)[curcol]
     #wide data for all lags of that env var
     meandat <- datalagger %>%
-      dplyr::select(!!quo_groupfield, .data$obs_date, .data$lag, .data$valuevar) %>%
-      tidyr::spread(key = .data$lag, value = .data$valuevar)
+      dplyr::select(!!quo_groupfield, .data$obs_date, .data$lag, valuevar) %>%
+      tidyr::spread(key = .data$lag, value = valuevar)
     #rename lag columns (but not groupfield or Date)
     names(meandat)[-(1:2)] <- paste0(valuevar, "_", names(meandat)[-(1:2)])
 

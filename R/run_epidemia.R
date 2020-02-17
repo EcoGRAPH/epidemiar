@@ -109,6 +109,8 @@
 #'
 #'@importFrom magrittr %>%
 #'@importFrom rlang !!
+#'@importFrom rlang :=
+#'@importFrom rlang .data
 
 
 ## Main Modeling (Early Detection, Forecasting) Function
@@ -499,7 +501,7 @@ run_epidemia <- function(epi_data = NULL,
   report_dates$forecast$seq <- report_dates$forecast %>% {seq.Date(.$min, .$max, "week")}
   #early detection summary period (ED runs over full report, this is for summary in defined ED period)
   report_dates$ed_sum <- list(min = report_dates$known$max -
-                                lubridate::as.difftime(ed_summary_period - 1, units = "weeks"),
+                                lubridate::as.difftime(report_settings[["ed_summary_period"]] - 1, units = "weeks"),
                               max = report_dates$known$max)
   report_dates$ed_sum$seq <- report_dates$ed_sum %>% {seq.Date(.$min, .$max, "week")}
 
@@ -512,17 +514,17 @@ run_epidemia <- function(epi_data = NULL,
     #Note: cases_epidemiar is field name returned (epi)
     epi_data <- epi_NA_interpolate(epi_data, quo_casefield, quo_groupfield) %>%
       #force into integer after interpolating (would cause problems with modeling otherwise)
-      dplyr::mutate(cases_epidemiar = floor(cases_epidemiar)) %>%
+      dplyr::mutate(cases_epidemiar = floor(.data$cases_epidemiar)) %>%
       #and sort by alphabetical groupfield
-      dplyr::arrange(!!quo_groupfield, obs_date)
+      dplyr::arrange(!!quo_groupfield, .data$obs_date)
   } else {
     epi_data <- epi_data %>%
       #copy over value
       dplyr::mutate(cases_epidemiar = !!quo_casefield) %>%
       #force into integer, just in case
-      dplyr::mutate(cases_epidemiar = floor(cases_epidemiar)) %>%
+      dplyr::mutate(cases_epidemiar = floor(.data$cases_epidemiar)) %>%
       #and sort by alphabetical groupfield
-      dplyr::arrange(!!quo_groupfield, obs_date)
+      dplyr::arrange(!!quo_groupfield, .data$obs_date)
   }
 
   #Note: val_epidemiar is field name returned (env)
@@ -532,9 +534,9 @@ run_epidemia <- function(epi_data = NULL,
     #first, mark which ones during known time range were observed versus (will be) interpolated
     dplyr::mutate(data_source = ifelse(!is.na(!!quo_valuefield), "Observed", "Interpolated")) %>%
     #copy over value
-    mutate(val_epidemiar = !!quo_valuefield) %>%
+    dplyr::mutate(val_epidemiar = !!quo_valuefield) %>%
     #and sort by alphabetical groupfield
-    dplyr::arrange(!!quo_groupfield, !!quo_obsfield, obs_date)
+    dplyr::arrange(!!quo_groupfield, !!quo_obsfield, .data$obs_date)
 
 
 
@@ -543,7 +545,7 @@ run_epidemia <- function(epi_data = NULL,
   #create observed data series
   obs_res <- epi_data %>%
     #include only observed data from requested start of report
-    dplyr::filter(obs_date >= report_dates$full$min) %>%
+    dplyr::filter(.data$obs_date >= report_dates$full$min) %>%
     dplyr::mutate(series = "obs",
                   value = dplyr::case_when(
                     #if reporting in case counts
@@ -557,7 +559,7 @@ run_epidemia <- function(epi_data = NULL,
                   lab = "Observed",
                   upper = NA,
                   lower = NA) %>%
-    dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
+    dplyr::select(!!quo_groupfield, .data$obs_date, .data$series, .data$value, .data$lab, .data$upper, .data$lower)
 
 
 
@@ -582,14 +584,14 @@ run_epidemia <- function(epi_data = NULL,
 
 
   #if we are only generating the model, then end here
-  if (model_run){
+  if (report_settings[["model_run"]]){
     message("Model run only, returning regression object and model information.")
 
-    fieldnames <- list(casefield = quo_name(quo_casefield),
-                       populationfield = quo_name(quo_popfield),
-                       groupfield = quo_name(quo_groupfield),
-                       obsfield = quo_name(quo_obsfield),
-                       valuefield = quo_name(quo_valuefield))
+    fieldnames <- list(casefield = rlang::quo_name(quo_casefield),
+                       populationfield = rlang::quo_name(quo_popfield),
+                       groupfield = rlang::quo_name(quo_groupfield),
+                       obsfield = rlang::quo_name(quo_obsfield),
+                       valuefield = rlang::quo_name(quo_valuefield))
 
     #<<>> needs to be updated
     model_meta <- create_named_list(fieldnames,
@@ -617,16 +619,16 @@ run_epidemia <- function(epi_data = NULL,
   #need to calculate event detection on existing epi data & FUTURE FORECASTED results
   future_fc <- fc_res_all$fc_epi %>%
     #get future forecasted results ONLY
-    dplyr::filter(obs_date %in% report_dates$forecast$seq)
+    dplyr::filter(.data$obs_date %in% report_dates$forecast$seq)
   #combine existing and future
   obs_fc_epi <- dplyr::bind_rows(epi_data, future_fc) %>%
-    dplyr::mutate(cases_epidemiar = ifelse(!rlang::are_na(cases_epidemiar),
-                                           cases_epidemiar,
-                                           fc_cases)) %>%
+    dplyr::mutate(cases_epidemiar = ifelse(!rlang::are_na(.data$cases_epidemiar),
+                                           .data$cases_epidemiar,
+                                           .data$fc_cases)) %>%
     #will be lost by end, but need for event detection methods using surveillance::sts objects
     epidemiar::add_datefields() %>%
     #arrange (for viewing/checking)
-    dplyr::arrange(!!quo_groupfield, obs_date)
+    dplyr::arrange(!!quo_groupfield, .data$obs_date)
 
   #run event detection on combined dataset
   ed_res <- run_event_detection(epi_fc_data = obs_fc_epi,
@@ -682,22 +684,20 @@ run_epidemia <- function(epi_data = NULL,
 
     ## Parameters and metadata that might be useful in report generation
     # all of these may not be needed
-    fieldnames <- list(casefield = quo_name(quo_casefield),
-                       populationfield = quo_name(quo_popfield),
-                       groupfield = quo_name(quo_groupfield),
-                       obsfield = quo_name(quo_obsfield),
-                       valuefield = quo_name(quo_valuefield))
+    fieldnames <- list(casefield = rlang::quo_name(quo_casefield),
+                       populationfield = rlang::quo_name(quo_popfield),
+                       groupfield = rlang::quo_name(quo_groupfield),
+                       obsfield = rlang::quo_name(quo_obsfield),
+                       valuefield = rlang::quo_name(quo_valuefield))
 
     params_meta <- create_named_list(fieldnames,
-                                     ed_method,
                                      groupings,
                                      fc_model_family,
                                      env_variables_used = fc_res_all$env_variables_used,
                                      env_dt_ranges = fc_res_all$env_dt_ranges,
                                      report_dates,
                                      env_info,
-                                     epi_date_type = report_settings[["epi_date_type"]],
-                                     report_value_type = report_settings[["report_value_type"]],
+                                     report_settings,
                                      date_created = Sys.Date())
     #regression object for future other use or troubleshooting
     regression_object <- fc_res_all$reg_obj

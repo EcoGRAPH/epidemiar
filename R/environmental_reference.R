@@ -72,22 +72,22 @@ env_daily_to_ref <- function(daily_env_data,
   env_weekly <- daily_env_data %>%
     #get reference/summarizing method from user supplied env_info
     dplyr::inner_join(env_info %>%
-                        dplyr::select(!!quo_obsfield, reference_method),
+                        dplyr::select(!!quo_obsfield, .data$reference_method),
                       by = rlang::set_names(rlang::quo_name(quo_obsfield),
                                             rlang::quo_name(quo_obsfield))) %>%
     #add week, year fields
     epidemiar::add_datefields(week_type) %>%
     #group by grouping, env var, and date week
-    dplyr::group_by(!!quo_groupfield, !!quo_obsfield, year_epidemiar, week_epidemiar) %>%
+    dplyr::group_by(!!quo_groupfield, !!quo_obsfield, .data$year_epidemiar, .data$week_epidemiar) %>%
     #calculate with case_when at row level (fx is not vectorized, so can't be used inside summarize)
-    dplyr::mutate(val_epidemiar = case_when(
-      reference_method == "sum"  ~ sum(!!quo_valuefield, na.rm = TRUE),
-      reference_method == "mean" ~ mean(!!quo_valuefield, na.rm = TRUE),
+    dplyr::mutate(val_epidemiar = dplyr::case_when(
+      .data$reference_method == "sum"  ~ sum(!!quo_valuefield, na.rm = TRUE),
+      .data$reference_method == "mean" ~ mean(!!quo_valuefield, na.rm = TRUE),
       #default is mean, but since inner_join with info table should not be invoked
       TRUE                       ~ mean(!!quo_valuefield, na.rm = TRUE))) %>%
     #now summarize
     #val_epi is the same for the whole grouped set, so just taking the first value
-    dplyr::summarize(val_epidemiar = first(val_epidemiar)) %>%
+    dplyr::summarize(val_epidemiar = dplyr::first(.data$val_epidemiar)) %>%
     #ungroup to end
     dplyr::ungroup()
 
@@ -95,24 +95,24 @@ env_daily_to_ref <- function(daily_env_data,
   message("Summarizing weekly values over years")
   env_ref <- env_weekly %>%
     #dropping year from grouping list
-    dplyr::group_by(!!quo_groupfield, !!quo_obsfield, week_epidemiar) %>%
+    dplyr::group_by(!!quo_groupfield, !!quo_obsfield, .data$week_epidemiar) %>%
     #summarize over years
-    dplyr::summarize(ref_value = mean(val_epidemiar, na.rm = TRUE),
-                     ref_sd = sd(val_epidemiar, na.rm = TRUE),
-                     ref_yrcount = n(),
-                     ref_max = max(val_epidemiar, na.rm = TRUE),
-                     ref_uq = quantile(val_epidemiar, probs = 0.75, na.rm = TRUE),
-                     ref_median = median(val_epidemiar, na.rm = TRUE),
-                     ref_lq = quantile(val_epidemiar, probs = 0.25, na.rm = TRUE),
-                     ref_min = min(val_epidemiar, na.rm = TRUE)) %>%
+    dplyr::summarize(ref_value = mean(.data$val_epidemiar, na.rm = TRUE),
+                     ref_sd = stats::sd(.data$val_epidemiar, na.rm = TRUE),
+                     ref_yrcount = dplyr::n(),
+                     ref_max = max(.data$val_epidemiar, na.rm = TRUE),
+                     ref_uq = stats::quantile(.data$val_epidemiar, probs = 0.75, na.rm = TRUE),
+                     ref_median = stats::median(.data$val_epidemiar, na.rm = TRUE),
+                     ref_lq = stats::quantile(.data$val_epidemiar, probs = 0.25, na.rm = TRUE),
+                     ref_min = min(.data$val_epidemiar, na.rm = TRUE)) %>%
     #clean up NaN and Inf values (if entire week missing data)
-    dplyr::mutate(ref_value = ifelse(is.finite(ref_value), ref_value, NA),
-                  ref_sd = ifelse(is.finite(ref_sd), ref_sd, NA),
-                  ref_max = ifelse(is.finite(ref_max), ref_max, NA),
-                  ref_uq = ifelse(is.finite(ref_uq), ref_uq, NA),
-                  ref_median = ifelse(is.finite(ref_median), ref_median, NA),
-                  ref_lq = ifelse(is.finite(ref_lq), ref_lq, NA),
-                  ref_min = ifelse(is.finite(ref_min), ref_min, NA)) %>%
+    dplyr::mutate(ref_value = ifelse(is.finite(.data$ref_value), .data$ref_value, NA),
+                  ref_sd = ifelse(is.finite(.data$ref_sd), .data$ref_sd, NA),
+                  ref_max = ifelse(is.finite(.data$ref_max), .data$ref_max, NA),
+                  ref_uq = ifelse(is.finite(.data$ref_uq), .data$ref_uq, NA),
+                  ref_median = ifelse(is.finite(.data$ref_median), .data$ref_median, NA),
+                  ref_lq = ifelse(is.finite(.data$ref_lq), .data$ref_lq, NA),
+                  ref_min = ifelse(is.finite(.data$ref_min), .data$ref_min, NA)) %>%
     #ungroup to end
     dplyr::ungroup()
 

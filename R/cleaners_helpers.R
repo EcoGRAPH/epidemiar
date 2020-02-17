@@ -18,7 +18,7 @@ epi_NA_interpolate <- function(epi_data, quo_casefield, quo_groupfield){
   epi_data %>%
     dplyr::group_by(!!quo_groupfield) %>%
     #confirm date sorting
-    dplyr::arrange(obs_date) %>%
+    dplyr::arrange(.data$obs_date) %>%
     #interpolate
     dplyr::mutate(cases_epidemiar = epidemiar::na_approx(!!quo_casefield)) %>%
     #finish by ungrouping
@@ -47,10 +47,10 @@ env_NA_interpolate <- function(env_data, quo_obsfield, quo_valuefield, quo_group
     #two levels of group_by
     dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
     #confirm date sorting
-    dplyr::arrange(obs_date) %>%
+    dplyr::arrange(.data$obs_date) %>%
     #interpolate
     dplyr::mutate(val_epidemiar = !!quo_valuefield,
-                  val_epidemiar = epidemiar::na_approx(val_epidemiar)) %>%
+                  val_epidemiar = epidemiar::na_approx(.data$val_epidemiar)) %>%
     #finish by ungrouping
     dplyr::ungroup()
 }

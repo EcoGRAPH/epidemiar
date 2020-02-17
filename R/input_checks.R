@@ -394,7 +394,7 @@ input_check <- function(epi_data,
       #subset to env variables as dictated by the model
       env_model_data <- pull_model_envvars(env_data, quo_obsfield, fc_control)
       #get earliest dates available
-      env_start_dts <- env_model_data %>% dplyr::group_by(!!quo_obsfield) %>% summarize(start_dt = min(obs_date))
+      env_start_dts <- env_model_data %>% dplyr::group_by(!!quo_obsfield) %>% dplyr::summarize(start_dt = min(.data$obs_date))
       #date needed by laglength and first epidemiological data date
       need_dt <- min(epi_data$obs_date) - as.difftime(fc_control$lag_length, units = "days")
       #all env dates equal or before needed date?

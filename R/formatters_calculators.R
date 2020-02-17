@@ -57,37 +57,37 @@ environ_report_format <- function(env_ext_data,
   env_data_varused_sum <- env_data_varused %>%
     #get reference/summarizing method from user supplied env_info
     dplyr::left_join(env_info %>%
-                       dplyr::select(!!quo_obsfield, reference_method),
+                       dplyr::select(!!quo_obsfield, .data$reference_method),
                      by = rlang::set_names(rlang::quo_name(quo_obsfield),
                                            rlang::quo_name(quo_obsfield))) %>%
     #add date fields
     epidemiar::add_datefields(week_type) %>%
     #trim dates to reduce processing (dates are rough, technically just need week prior to start. 8 is not magical)
-    dplyr::filter(obs_date >= report_dates$full$min - 8 & obs_date <= report_dates$full$max + 8) %>%
+    dplyr::filter(.data$obs_date >= report_dates$full$min - 8 & .data$obs_date <= report_dates$full$max + 8) %>%
     #group by grouping, env var, and date week
-    dplyr::group_by(!!quo_groupfield, !!quo_obsfield, year_epidemiar, week_epidemiar) %>%
+    dplyr::group_by(!!quo_groupfield, !!quo_obsfield, .data$year_epidemiar, .data$week_epidemiar) %>%
     #calculate with case_when at row level (fx is not vectorized, so can't be used inside summarize)
-    dplyr::mutate(val_epidemiar = case_when(
-      reference_method == "sum"  ~ sum(val_epidemiar, na.rm = TRUE),
-      reference_method == "mean" ~ mean(val_epidemiar, na.rm = TRUE),
+    dplyr::mutate(val_epidemiar = dplyr::case_when(
+      .data$reference_method == "sum"  ~ sum(.data$val_epidemiar, na.rm = TRUE),
+      .data$reference_method == "mean" ~ mean(.data$val_epidemiar, na.rm = TRUE),
       #default is mean
-      TRUE                       ~ mean(val_epidemiar, na.rm = TRUE))) %>%
+      TRUE                       ~ mean(.data$val_epidemiar, na.rm = TRUE))) %>%
     #now summarize
     #max Date of that week is how the weekly dates are set up
-    dplyr::summarize(obs_date = max(obs_date),
+    dplyr::summarize(obs_date = max(.data$obs_date),
                      #val_epi is the same for the whole grouped set, so just taking the first value
-                     val_epidemiar = first(val_epidemiar),
+                     val_epidemiar = dplyr::first(.data$val_epidemiar),
                      #will be same throughout week
-                     reference_method = first(reference_method),
+                     reference_method = dplyr::first(.data$reference_method),
                      #observed/interpolated/extended -- Mode, whatever source was most often that week.
-                     data_source = Mode(data_source, na.rm = TRUE)) %>%
+                     data_source = Mode(.data$data_source, na.rm = TRUE)) %>%
     #ungroup to end
     dplyr::ungroup()
 
   #filter exact dates
   environ_timeseries <- env_data_varused_sum %>%
-    dplyr::filter(obs_date >= report_dates$full$min & obs_date <= report_dates$full$max) %>%
-    dplyr::arrange(!!quo_groupfield, obs_date, !!quo_obsfield)
+    dplyr::filter(.data$obs_date >= report_dates$full$min & .data$obs_date <= report_dates$full$max) %>%
+    dplyr::arrange(!!quo_groupfield, .data$obs_date, !!quo_obsfield)
 
   # add climatology data
   # climatology is based on week number
@@ -95,8 +95,9 @@ environ_report_format <- function(env_ext_data,
   environ_timeseries <- environ_timeseries %>%
     #join
     dplyr::left_join(env_ref_varused %>%
-                       dplyr::select(!!quo_obsfield, !!quo_groupfield, week_epidemiar,
-                                     ref_value, starts_with("ref_")),
+                       dplyr::select(!!quo_obsfield, !!quo_groupfield,
+                                     .data$week_epidemiar,
+                                     .data$ref_value, dplyr::starts_with("ref_")),
                      #NSE fun
                      by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
                                              rlang::quo_name(quo_obsfield),
@@ -130,43 +131,43 @@ create_summary_data <- function(ed_res,
   #Early Detection
   ed_summary <- ed_res %>%
     #get the alert series
-    dplyr::filter(series == "ed") %>%
+    dplyr::filter(.data$series == "ed") %>%
     #filter to early detection period
-    dplyr::filter(obs_date %in% report_dates$ed_sum$seq) %>%
+    dplyr::filter(.data$obs_date %in% report_dates$ed_sum$seq) %>%
     #group (because need to look at period per group level)
     dplyr::group_by(!!quo_groupfield) %>%
     #summarize to 1 obs per grouping
-    dplyr::summarize(ed_alert_count = if_else(all(is.na(value)), NA_real_, sum(value, na.rm = TRUE))) %>%
+    dplyr::summarize(ed_alert_count = dplyr::if_else(all(is.na(.data$value)), NA_real_, sum(.data$value, na.rm = TRUE))) %>%
     # create 3 levels (0, 1, 2 = >1)
-    dplyr::mutate(warning_level = if_else(ed_alert_count > 1, 2, ed_alert_count),
+    dplyr::mutate(warning_level = dplyr::if_else(.data$ed_alert_count > 1, 2, .data$ed_alert_count),
                   #factor to label
-                  ed_sum_level = factor(warning_level, levels = 0:2,
+                  ed_sum_level = factor(.data$warning_level, levels = 0:2,
                                         labels = alert_level, ordered = TRUE)) %>%
     #ungroup
     dplyr::ungroup() %>%
     #select minimal cols
-    dplyr::select(!!quo_groupfield, ed_alert_count, ed_sum_level)
+    dplyr::select(!!quo_groupfield, .data$ed_alert_count, .data$ed_sum_level)
 
 
   #Early Warning: ED results on forecast
   ew_summary <- ed_res %>%
     #get the alert series
-    dplyr::filter(series == "ew",
+    dplyr::filter(.data$series == "ew",
                   #get the forecast results ##not needed anymore b/c of new ew series, but just for completeness
-                  obs_date %in% report_dates$forecast$seq) %>%
+                  .data$obs_date %in% report_dates$forecast$seq) %>%
     #group
     dplyr::group_by(!!quo_groupfield) %>%
     #summarize to 1 obs per grouping
-    dplyr::summarize(ew_alert_count = if_else(all(is.na(value)), NA_real_, sum(value, na.rm = TRUE))) %>%
+    dplyr::summarize(ew_alert_count = dplyr::if_else(all(is.na(.data$value)), NA_real_, sum(.data$value, na.rm = TRUE))) %>%
     # create 3 levels (0, 1, 2 = >1)
-    dplyr::mutate(warning_level = if_else(ew_alert_count > 1, 2, ew_alert_count),
+    dplyr::mutate(warning_level = dplyr::if_else(.data$ew_alert_count > 1, 2, .data$ew_alert_count),
                   #factor to label
-                  ew_level = factor(warning_level, levels = 0:2,
+                  ew_level = factor(.data$warning_level, levels = 0:2,
                                     labels = alert_level, ordered = TRUE)) %>%
     #ungroup
     dplyr::ungroup() %>%
     #select minimal cols
-    dplyr::select(!!quo_groupfield, ew_alert_count, ew_level)
+    dplyr::select(!!quo_groupfield, .data$ew_alert_count, .data$ew_level)
 
   #join results
   summary_data <- dplyr::inner_join(ed_summary, ew_summary,
@@ -197,11 +198,11 @@ create_epi_summary <- function(obs_res,
 
   epi <- obs_res %>%
     #epi data is weekly, get the data for the early detection summary period
-    dplyr::filter(obs_date %in% report_dates$ed_sum$seq) %>%
+    dplyr::filter(.data$obs_date %in% report_dates$ed_sum$seq) %>%
     #group by groupings
     dplyr::group_by(!!quo_groupfield) %>%
     #get mean incidence
-    dplyr::summarize(mean_inc = mean(value, na.rm = TRUE))
+    dplyr::summarize(mean_inc = mean(.data$value, na.rm = TRUE))
 
 }
 
@@ -231,12 +232,12 @@ calc_env_anomalies <- function(env_ts,
   # anomalies
   anom_env <- env_ts %>%
     # only mapping those in the early detection period
-    dplyr::filter(obs_date %in% report_dates$ed_sum$seq) %>%
+    dplyr::filter(.data$obs_date %in% report_dates$ed_sum$seq) %>%
     dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
     # anomaly value is observed value minus the ref value from env_ref
-    dplyr::mutate(anom = val_epidemiar - ref_value) %>%
+    dplyr::mutate(anom = .data$val_epidemiar - .data$ref_value) %>%
     # summarized over ED period
-    dplyr::summarize(anom_ed_mean = mean(anom, na.rm = TRUE)) %>%
+    dplyr::summarize(anom_ed_mean = mean(.data$anom, na.rm = TRUE)) %>%
     dplyr::ungroup()
 }
 

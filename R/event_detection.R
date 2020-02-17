@@ -199,7 +199,7 @@ run_farrington <- function(epi_fc_data,
   wks_diff_grps <- epi_fc_data %>%
     dplyr::group_by(!!quo_groupfield) %>%
     dplyr::count() %>%
-    dplyr::pull(n) %>%
+    dplyr::pull(.data$n) %>%
     range() %>% diff()
 
   #only run if b > 0. If 0 full years available (or b=0 requested), then "none"
@@ -265,11 +265,11 @@ make_stss <- function(epi_fc_data,
     g <- groupings[i]
     g_data <- dplyr::filter(epi_fc_data, !!quo_groupfield == g) %>%
       #confirming sorting by date
-      dplyr::arrange(obs_date)
+      dplyr::arrange(.data$obs_date)
     #Surveillance::sts() expecting a dataframe
     g_df <- as.data.frame(g_data)
     #get NA interpolated case field
-    g_cases <- dplyr::select(g_df, cases_epidemiar) %>%
+    g_cases <- dplyr::select(g_df, .data$cases_epidemiar) %>%
       #sts() likes matrices
       as.matrix()
     #if population field given, get population
@@ -338,14 +338,14 @@ stss_res_to_output_data <- function(stss_res_list,
   #flatten out of list (now that we have the grouping labels)
   stss_res_flat <- do.call(rbind, stss_res_grp) %>%
     #fix group name field with dplyr programming
-    dplyr::rename(!!quo_name(quo_groupfield) := group_temp) %>%
+    dplyr::rename(!!rlang::quo_name(quo_groupfield) := .data$group_temp) %>%
     #and convert to character for joining
     dplyr::mutate(!!rlang::quo_name(quo_groupfield) := as.character(!!quo_groupfield))
 
   #recover population (for incidence calculations), not present if popoffset was FALSE #<<pop>>
   stss_res_flat <- stss_res_flat %>%
     dplyr::left_join(epi_fc_data %>%
-                       dplyr::select(!!quo_groupfield, !!quo_popfield, obs_date),
+                       dplyr::select(!!quo_groupfield, !!quo_popfield, .data$obs_date),
                      by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
                                              "obs_date"),
                                            c(rlang::quo_name(quo_groupfield),
@@ -353,30 +353,30 @@ stss_res_to_output_data <- function(stss_res_list,
 
   #gather early detection (KNOWN - pre-forecast) event detection alert series
   ed_alert_res <- stss_res_flat %>%
-    dplyr::filter(epoch %in% report_dates$known$seq) %>%
+    dplyr::filter(.data$epoch %in% report_dates$known$seq) %>%
     dplyr::mutate(series = "ed",
-                  obs_date = epoch,
-                  value = alarm,
+                  obs_date = .data$epoch,
+                  value = .data$alarm,
                   lab = "Early Detection Alert",
                   upper = NA,
                   lower = NA) %>%
-    dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
+    dplyr::select(!!quo_groupfield, .data$obs_date, .data$series, .data$value, .data$lab, .data$upper, .data$lower)
 
   #gather early WARNING event detection alert series
   ew_alert_res <- stss_res_flat %>%
-    dplyr::filter(epoch %in% report_dates$forecast$seq) %>%
+    dplyr::filter(.data$epoch %in% report_dates$forecast$seq) %>%
     dplyr::mutate(series = "ew",
-                  obs_date = epoch,
-                  value = alarm,
+                  obs_date = .data$epoch,
+                  value = .data$alarm,
                   lab = "Early Warning Alert",
                   upper = NA,
                   lower = NA) %>%
-    dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
+    dplyr::select(!!quo_groupfield, .data$obs_date, .data$series, .data$value, .data$lab, .data$upper, .data$lower)
 
   #gather event detection threshold series
   ed_thresh_res <- stss_res_flat %>%
     dplyr::mutate(series = "thresh",
-                  obs_date = epoch,
+                  obs_date = .data$epoch,
                   value = dplyr::case_when(
                     #if reporting in case counts
                     val_type == "cases" ~ upperbound,
@@ -388,7 +388,7 @@ stss_res_to_output_data <- function(stss_res_list,
                   lab = "Alert Threshold",
                   upper = NA,
                   lower = NA) %>%
-    dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
+    dplyr::select(!!quo_groupfield, .data$obs_date, .data$series, .data$value, .data$lab, .data$upper, .data$lower)
 
   #combine ed results
   ed <- rbind(ed_alert_res, ew_alert_res, ed_thresh_res)
@@ -418,33 +418,33 @@ run_no_detection <- function(epi_fc_data,
 
   #early detection (KNOWN - pre-forecast) event detection alert series
   ed_alert_res <- epi_fc_data %>%
-    dplyr::filter(obs_date %in% report_dates$known$seq) %>%
+    dplyr::filter(.data$obs_date %in% report_dates$known$seq) %>%
     dplyr::mutate(series = "ed",
                   value = NA_integer_,
                   lab = "Early Detection Alert",
                   upper = NA,
                   lower = NA) %>%
-    dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
+    dplyr::select(!!quo_groupfield, .data$obs_date, .data$series, .data$value, .data$lab, .data$upper, .data$lower)
 
   #gather early WARNING event detection alert series
   ew_alert_res <- epi_fc_data %>%
-    dplyr::filter(obs_date %in% report_dates$forecast$seq) %>%
+    dplyr::filter(.data$obs_date %in% report_dates$forecast$seq) %>%
     dplyr::mutate(series = "ew",
                   value = NA_integer_,
                   lab = "Early Warning Alert",
                   upper = NA,
                   lower = NA) %>%
-    dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
+    dplyr::select(!!quo_groupfield, .data$obs_date, .data$series, .data$value, .data$lab, .data$upper, .data$lower)
 
   #gather event detection threshold series
   ed_thresh_res <- epi_fc_data %>%
-    dplyr::filter(obs_date %in% report_dates$full$seq) %>%
+    dplyr::filter(.data$obs_date %in% report_dates$full$seq) %>%
     dplyr::mutate(series = "thresh",
                   value = NA_real_,
                   lab = "Alert Threshold",
                   upper = NA,
                   lower = NA) %>%
-    dplyr::select(!!quo_groupfield, obs_date, series, value, lab, upper, lower)
+    dplyr::select(!!quo_groupfield, .data$obs_date, .data$series, .data$value, .data$lab, .data$upper, .data$lower)
 
   #combine ed results
   ed <- rbind(ed_alert_res, ew_alert_res, ed_thresh_res)

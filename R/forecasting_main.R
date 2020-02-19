@@ -448,7 +448,15 @@ build_model <- function(fc_model_family,
                         modb_eq,
                         bandsums_eq){
 
-  #first, deal with naive models
+  #1. check and handle naive models
+  # else is the user supplied model family
+  #2. check on fc_cyclicals, b/c need different bam call if s() used or not
+  #3. within each cyclical if/else section, use formula override if given,
+  #4. else build model:
+  # still within each cyclical if/elese section,
+  # check for number of geo graphic groupings (one or more than one)
+  # and build appropriate regression equations,
+  # and run appropriate bam call
 
   if (fc_model_family == "naive-persistence"){
 
@@ -483,30 +491,43 @@ build_model <- function(fc_model_family,
 
 
   } else {
-    #user supplied family
+    #user supplied model family
+
+    #note, if using formula override AND cyclicals,
+    # dev users should put fc_cyclicals = TRUE, else message about discrete ignored.
 
     #cyclical or not
     if (report_settings[["fc_cyclicals"]]) {
       #TRUE, include cyclicals
 
-      #need different formulas if 1+ or only 1 geographic grouping
-      if (n_groupings > 1){
-        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                          rlang::quo_name(quo_groupfield),
-                                          " + s(doy, bs=\"cc\", by=",
-                                          rlang::quo_name(quo_groupfield),
-                                          ") + ",
-                                          modb_eq, " + ",
-                                          bandsums_eq))
+      #Formula override: report_settings[["dev_fc_formula"]]
+      if (!is.null(report_settings[["dev_fc_formula"]])){
+
+        reg_eq <- report_settings[["dev_fc_formula"]]
+
       } else {
-        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                          "s(doy, bs=\"cc\") + ",
-                                          modb_eq, " + ",
-                                          bandsums_eq))
-      }
+        #build equation
+
+        #need different formulas if 1+ or only 1 geographic grouping
+        if (n_groupings > 1){
+          reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                            rlang::quo_name(quo_groupfield),
+                                            " + s(doy, bs=\"cc\", by=",
+                                            rlang::quo_name(quo_groupfield),
+                                            ") + ",
+                                            modb_eq, " + ",
+                                            bandsums_eq))
+        } else {
+          reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                            "s(doy, bs=\"cc\") + ",
+                                            modb_eq, " + ",
+                                            bandsums_eq))
+        }
+
+      } #end else on dev_fc_formula override
+
 
       # run bam
-      #<<>> formula override add here report_settings[["dev_fc_formula"]]
       regress <- mgcv::bam(reg_eq,
                            data = epi_known,
                            family = fc_model_family,
@@ -518,17 +539,28 @@ build_model <- function(fc_model_family,
 
     } else {
       # FALSE, no cyclicals
-      #need different formulas if 1+ or only 1 geographic grouping
-      if (n_groupings > 1){
-        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                          rlang::quo_name(quo_groupfield), " + ",
-                                          modb_eq, " + ",
-                                          bandsums_eq))
+
+
+      #Formula override: report_settings[["dev_fc_formula"]]
+      if (!is.null(report_settings[["dev_fc_formula"]])){
+
+        reg_eq <- report_settings[["dev_fc_formula"]]
+
       } else {
-        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                          modb_eq, " + ",
-                                          bandsums_eq))
-      }
+        #build equation
+
+        #need different formulas if 1+ or only 1 geographic grouping
+        if (n_groupings > 1){
+          reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                            rlang::quo_name(quo_groupfield), " + ",
+                                            modb_eq, " + ",
+                                            bandsums_eq))
+        } else {
+          reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                            modb_eq, " + ",
+                                            bandsums_eq))
+        }
+      } #end else for override
 
 
       # run bam

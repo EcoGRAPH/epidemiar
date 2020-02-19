@@ -136,10 +136,12 @@ run_epidemia <- function(epi_data = NULL,
   # For validation runs, special escapes ------------------------------------
   valid_run <-  FALSE
   calling_check <- as.list(sys.call(-1))
+  #print(calling_check)
   if (length(calling_check) > 0){
     calling_function <- as.list(sys.call(-1))[[1]]
+    #print(calling_function)
   } else {calling_function <- "directly"}
-  if(calling_function == "run_validation"){
+  if(calling_function == "run_validation" | calling_function == "epidemiar::run_validation"){
     valid_run <-  TRUE
     message("Running model validation...")
     #rename already enquo'd variables
@@ -492,7 +494,8 @@ run_epidemia <- function(epi_data = NULL,
   # fc_future_period is how many of those weeks should be in the future.
   #full report
   report_dates <- list(full = list(min = max(epi_data$obs_date, na.rm = TRUE) -
-                                     lubridate::as.difftime((report_settings[["report_period"]] - report_settings[["fc_future_period"]] - 1),
+                                     lubridate::as.difftime((report_settings[["report_period"]] -
+                                                               report_settings[["fc_future_period"]] - 1),
                                                             unit = "weeks"),
                                    max = max(epi_data$obs_date, na.rm = TRUE) +
                                      lubridate::as.difftime(report_settings[["fc_future_period"]],

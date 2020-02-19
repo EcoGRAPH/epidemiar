@@ -203,7 +203,7 @@ run_forecast <- function(epi_data,
       reg_obj <- forereg_return$regress
     }
 
-  } else stop("Dev setting model fit frequency unknown") #shouldn't happen with default "once"
+  } else stop("Developer setting model fit frequency unknown, please review/remove report_settings$dev_fc_fit_freq parameter.")
 
 
   # Interval calculation
@@ -289,10 +289,10 @@ forecast_regression <- function(epi_lag,
                                 req_date){
 
 
-  if (report_settings[["fc_fit_freq"]]){
+  if (report_settings[["dev_fc_fit_freq"]] == "once"){
     #single fits use all the data available
     last_known_date <-  report_dates$known$max
-  } else if (report_settings[["fc_fit_freq"]]){
+  } else if (report_settings[["dev_fc_fit_freq"]] == "week"){
     # for "week" model fits, forecasts are done knowing up to just before that date
     last_known_date <- req_date - lubridate::as.difftime(1, units = "days")
   }
@@ -403,11 +403,11 @@ forecast_regression <- function(epi_lag,
     #and convert factor back to character for the groupings (originally converted b/c of bam/gam requirements)
     dplyr::mutate(!!rlang::quo_name(quo_groupfield) := as.character(!!quo_groupfield))
 
-  if (report_settings[["fc_fit_freq"]] == "once"){
+  if (report_settings[["dev_fc_fit_freq"]] == "once"){
     #for single model fit, this has all the data we need, just trim to report dates
     date_preds <- epi_preds %>%
       dplyr::filter(.data$obs_date >= report_dates$full$min)
-  } else if (report_settings[["fc_fit_freq"]] == "week"){
+  } else if (report_settings[["dev_fc_fit_freq"]] == "week"){
     #prediction of interest are last ones (equiv to req_date) per groupfield
     date_preds <- epi_preds %>%
       dplyr::group_by(!!quo_groupfield) %>%

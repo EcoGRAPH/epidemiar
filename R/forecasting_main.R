@@ -142,27 +142,23 @@ run_forecast <- function(epi_data,
   epi_lag <- add_datefields(epi_lag, week_type)
 
 
-  #<<>> FIX
-  # # If only model_run, then return to run_epidemia() here
-  # if (model_run){
-  # model_run_result <- forecast_regression(epi_lag,
-  #                                         quo_groupfield,
-  #                                         fc_model_family,
-  #                                         nthreads = report_settings[["fc_nthreads"]],
-  #                                         model_run,
-  #                                         model_cached = report_settings[["model_cached"]],
-  #                                         fit_freq = report_settings[["fc_fit_freq"]],
-  #                                         #internal calculated
-  #                                         groupings,
-  #                                         env_variables_used,
-  #                                         report_dates,
-  #                                         req_date = report_dates$full$max)
-  #
-  #   model_run_only <- create_named_list(env_variables_used,
-  #                                       env_dt_ranges,
-  #                                       reg_obj = model_run_result)
-  #   return(model_run_only)
-  # }
+  # If only model_run, then return to run_epidemia() here
+  if (report_settings[["model_run"]]){
+  model_run_result <- forecast_regression(epi_lag,
+                                          quo_groupfield,
+                                          fc_model_family,
+                                          report_settings,
+                                          #internal calculated
+                                          groupings,
+                                          env_variables_used,
+                                          report_dates,
+                                          req_date = report_dates$full$max)
+
+    model_run_only <- create_named_list(env_variables_used,
+                                        env_dt_ranges,
+                                        reg_obj = model_run_result)
+    return(model_run_only)
+  }
 
 
   #Split regression call depending on {once|week} model fit frequency

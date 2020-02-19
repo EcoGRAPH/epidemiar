@@ -601,16 +601,17 @@ run_epidemia <- function(epi_data = NULL,
                        obsfield = rlang::quo_name(quo_obsfield),
                        valuefield = rlang::quo_name(quo_valuefield))
 
-    #<<>> needs to be updated
-    model_meta <- create_named_list(fieldnames,
-                                    week_type,
+    model_meta <- create_named_list(date_created = Sys.Date(),
+                                    fieldnames,
                                     groupings,
+                                    fc_model_family,
                                     env_variables_used = fc_res_all$env_variables_used,
                                     env_dt_ranges = fc_res_all$env_dt_ranges,
                                     known_epi_range = report_dates$known,
                                     env_info,
-                                    report_value_type = report_settings[["report_value_type"]],
+                                    report_settings,
                                     date_created = Sys.Date())
+
 
     #if a model run, forecast result contains regression object
     model_results <- list(model_obj = fc_res_all$reg_obj,
@@ -698,15 +699,16 @@ run_epidemia <- function(epi_data = NULL,
                        obsfield = rlang::quo_name(quo_obsfield),
                        valuefield = rlang::quo_name(quo_valuefield))
 
-    params_meta <- create_named_list(fieldnames,
+    params_meta <- create_named_list(date_created = Sys.Date(),
+                                     fieldnames,
                                      groupings,
                                      fc_model_family,
                                      env_variables_used = fc_res_all$env_variables_used,
                                      env_dt_ranges = fc_res_all$env_dt_ranges,
                                      report_dates,
                                      env_info,
-                                     report_settings,
-                                     date_created = Sys.Date())
+                                     report_settings)
+
     #regression object for future other use or troubleshooting
     regression_object <- fc_res_all$reg_obj
 

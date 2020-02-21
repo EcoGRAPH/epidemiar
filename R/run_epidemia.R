@@ -4,14 +4,17 @@
 #'Integrated Assessment (EPIDEMIA) Forecasting System is a set of tools coded in
 #'free, open-access software, that integrate surveillance and environmental data
 #'to model and create short-term forecasts for environmentally-mediated
-#'diseases. This function, `epidemiar::run_epidemia()` is the central function
-#'to model and forecast a wide range of environmentally-mediated diseases.
+#'diseases. This function, \code{epidemiar::run_epidemia()} is the central
+#'function to model and forecast a wide range of environmentally-mediated
+#'diseases.
 #'
-#'For more a longer description of the package, see the overview vignette:
-#'\code{vignette("overview-epidemiar", package = "epidemiar")}
+#'For more a longer description of the package, run the following command to see
+#'the overview vignette: \code{vignette("overview-epidemiar", package =
+#'"epidemiar")}
 #'
-#'For more details see the vignette on input data and modeling parameters:
-#'\code{vignette("data-modeling", package = "epidemiar")}
+#'For more details run the following command to see the vignette on input data
+#'and modeling parameters: \code{vignette("data-modeling", package =
+#'"epidemiar")}
 #'
 #'@param epi_data Epidemiological data with case numbers per week, with date
 #'  field "obs_date".
@@ -19,8 +22,8 @@
 #'  range as the epidemiological data. It may contain extra data (other
 #'  districts or date ranges). The data must be in long format (one row for each
 #'  date and environmental variable combination), and must start at absolutel
-#'  minimum \code{laglen} (in \code{fc_control}) days before epi_data for
-#'  forecasting.
+#'  minimum \code{report_settings$env_lag_length} days (default 180) before
+#'  epi_data for forecasting.
 #'@param env_ref_data Historical averages by week of year for environmental
 #'  variables. Used in extended environmental data into the future for long
 #'  forecast time, to calculate anomalies in early detection period, and to
@@ -42,21 +45,22 @@
 #'@param valuefield Field name of the value of the environmental data variable
 #'  observations (unquoted field name).
 #'
-#'@param fc_model_family Critical argument to choose the type of model to generate.
-#'  The options are versions that the EPIDEMIA team has used for forecasting.
-#'  The first supported options is "poisson-bam" ("p") which is the original
-#'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
-#'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
-#'  TRUE for using the anomalies of environmental variables rather than their
-#'  raw values. The second option is "negbin" ("n") which is a negative binomial
-#'  regression using glm, with no external seasonality terms - letting the
-#'  natural cyclical behavior of the environmental variables fill that role. The
-#'  default for fc_control$anom_env is FALSE and uses the actual observation
-#'  values in the modeling. The fc_control$anom_env can be overruled by the user
-#'  providing a value, but this is not recommended unless you are doing
-#'  comparisons.
-#'@param report_settings Optional report settings.  <<>>
+#'@param fc_model_family The \code{\link[stats]{family}} parameter passsed to
+#'  \code{\link[mgcv:bam]{mgcv::bam}}, and the extended families in
+#'  \code{\link[mgcv]{family.mgcv}} can also be used. This sets the type of
+#'  generalized additive model (GAM) to run: it specifies the distribution and
+#'  link to use in model fitting. E.g. for a Poisson regression, the user would
+#'  input "poisson()".
 #'
+#'@param report_settings This is a named list of all the report, forecasting,
+#'  event detection and other settings. All of these have defaults, but they are
+#'  not likely the defaults needed for your system, so each of these should be
+#'  reviewed: \itemize{
+#'\item \code{report_period} = 26: The number of weeks that the entire report will
+#'  cover. The \code{report_period} minus \code{fc_future_period} is the number
+#'  of weeks of past (known) data that will be included.
+#'\item fjdklsajfdksl
+#'}
 #'
 #'@return Returns a suite of summary and report data.
 #'

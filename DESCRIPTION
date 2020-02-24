@@ -14,7 +14,7 @@ Description: The Epidemic Prognosis Incorporating Disease and Environmental Moni
   create short-term forecasts for environmentally-mediated diseases. 
   This R package contains the functions for modeling, forecasting, validation, and 
   early detection & early warning alerts.
-License: GPL-3 + file LICENSE
+License: MIT
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1

@@ -7,12 +7,17 @@
 create_predictions(fc_model_family, nthreads, regress, epi_lag, req_date)
 }
 \arguments{
-\item{fc_model_family}{model choice <<>>}
+\item{fc_model_family}{The \code{\link[stats]{family}} parameter passsed to
+\code{\link[mgcv:bam]{mgcv::bam}}, and the extended families in
+\code{\link[mgcv]{family.mgcv}} can also be used. This sets the type of
+generalized additive model (GAM) to run: it specifies the distribution and
+link to use in model fitting. E.g. for a Poisson regression, the user would
+input "poisson()".}
 
-\item{nthreads}{max threads <<>>}
+\item{nthreads}{Extract of `report_settings$fc_nthreads`}
 
-\item{regress}{The regression object, either the user-supplied one, or
-the one just generated.}
+\item{regress}{The regression object, either the user-supplied one from
+`report_settings$model_cached`, or the one just generated.}
 
 \item{epi_lag}{Epidemiological dataset with basis spline summaries of the
 lagged environmental data (or anomalies), with groupings as a factor.}

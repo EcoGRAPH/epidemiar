@@ -7,9 +7,12 @@
 env_NA_interpolate(env_data, quo_obsfield, quo_valuefield, quo_groupfield)
 }
 \arguments{
-\item{env_data}{Input data tibble with environmental data: geographic
-groupings in groupfield, environmental variable identified in obsfield, and
-data values in valuefield. Contains a date column "obs_date".}
+\item{env_data}{Daily environmental data for the same groupfields and date
+range as the epidemiological data. It may contain extra data (other
+districts or date ranges). The data must be in long format (one row for each
+date and environmental variable combination), and must start at absolutel
+minimum \code{report_settings$env_lag_length} days (default 180) before
+epi_data for forecasting.}
 
 \item{quo_obsfield}{Quosure of the user given field that holds the
 environmental variable identifiers/names/IDs.}

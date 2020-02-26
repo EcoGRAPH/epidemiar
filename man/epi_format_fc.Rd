@@ -13,7 +13,8 @@ future/forecast period with NA values for to-be-forecasted case numbers.}
 \item{quo_groupfield}{Quosure of the user given geographic grouping field to
 run_epidemia().}
 
-\item{fc_clusters}{<<>>geographic clusters.}
+\item{fc_clusters}{Extract from `report_settings$fc_clusters`, the
+geographic clusters to use in modeling.}
 }
 \value{
 An epidemiological dataset formatted to pass over to BAM/GAM modeling.

@@ -11,13 +11,13 @@ pull_model_envvars(env_data, quo_obsfield, env_var)
 range as the epidemiological data. It may contain extra data (other
 districts or date ranges). The data must be in long format (one row for each
 date and environmental variable combination), and must start at absolutel
-minimum \code{laglen} (in \code{fc_control}) days before epi_data for
-forecasting.}
+minimum \code{report_settings$env_lag_length} days (default 180) before
+epi_data for forecasting.}
 
 \item{quo_obsfield}{Quosure of user given field name of the environmental data
-variables}
+variables.}
 
-\item{env_var}{<<>> which environmental variable to include}
+\item{env_var}{Extract from report_settings$env_var, a user list of environmental variables to attempt to use for modeling}
 }
 \value{
 List of environmental variables that were used in the

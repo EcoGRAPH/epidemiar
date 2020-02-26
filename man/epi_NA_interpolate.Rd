@@ -7,8 +7,8 @@
 epi_NA_interpolate(epi_data, quo_casefield, quo_groupfield)
 }
 \arguments{
-\item{epi_data}{Input data tibble with case counts in casefield, grouping
-field groupfield, and date column "obs_date".}
+\item{epi_data}{Epidemiological data with case numbers per week, with date
+field "obs_date".}
 
 \item{quo_casefield}{Quosure of user given casefield to run_epidemia().}
 

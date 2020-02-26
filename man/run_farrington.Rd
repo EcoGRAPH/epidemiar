@@ -16,14 +16,17 @@ run_epidemia().}
 
 \item{quo_popfield}{Quosure of user-given field containing population values.}
 
-\item{ed_control}{All parameters for early detection algorithm, passed through
-to that subroutine.}
+\item{ed_control}{An extract of report_settings$ed_control - all parameters
+for early detection algorithm, passed through to that subroutine.}
 
-\item{val_type}{From match.arg evaluation of fc_control$value_type, whether to return
-epidemiological report values in "incidence" (default) or "cases".}
+\item{val_type}{An extract of report_settings$report_value_type after defaults
+applies - whether to return epidemiological report values in "incidence" or
+"cases" (default).}
 
-\item{inc_per}{Number for what unit of population the incidence should be
-reported in, e.g. incidence rate of 3 per 1000 people.}
+\item{inc_per}{An extract of report_settings$report_inc_per after defaults
+applies - number for what unit of population the incidence should be
+reported in, e.g. incidence rate per 1000 people. Ignored when
+report_settings$report_value_type is 'cases'.}
 
 \item{groupings}{A unique list of the geographic groupings (from groupfield).}
 

@@ -13,14 +13,14 @@ extend_env_future(env_data, quo_groupfield, quo_obsfield, quo_valuefield,
 range as the epidemiological data. It may contain extra data (other
 districts or date ranges). The data must be in long format (one row for each
 date and environmental variable combination), and must start at absolutel
-minimum \code{laglen} (in \code{fc_control}) days before epi_data for
-forecasting.}
+minimum \code{report_settings$env_lag_length} days (default 180) before
+epi_data for forecasting.}
 
 \item{quo_groupfield}{Quosure of the user given geographic grouping field to
 run_epidemia().}
 
 \item{quo_obsfield}{Quosure of user given field name of the environmental data
-variables}
+variables.}
 
 \item{quo_valuefield}{Quosure of user given field name of the value of the
 environmental data variable observations.}
@@ -33,16 +33,21 @@ display on timeseries in reports.}
 \item{env_info}{Lookup table for environmental data - reference creation
 method (e.g. sum or mean), report labels, etc.}
 
-\item{fc_model_family}{model choice stand in <<>>}
+\item{fc_model_family}{The \code{\link[stats]{family}} parameter passsed to
+\code{\link[mgcv:bam]{mgcv::bam}}, and the extended families in
+\code{\link[mgcv]{family.mgcv}} can also be used. This sets the type of
+generalized additive model (GAM) to run: it specifies the distribution and
+link to use in model fitting. E.g. for a Poisson regression, the user would
+input "poisson()".}
 
-\item{epi_date_type}{weekISO/CDC/month <<>>}
+\item{epi_date_type}{Extract from `report_settings$epi_date_type`}
 
-\item{valid_run}{Internal boolean for whether this is part of a validation run.}
+\item{valid_run}{Internal TRUE/FALSE for whether this is part of a validation run.}
 
 \item{groupings}{A unique list of the geographic groupings (from groupfield).}
 
 \item{env_variables_used}{List of environmental variables that were used in
-the modeling}
+the modeling (in `report_settings$env_var` & found in env_data)}
 
 \item{report_dates}{Internally generated set of report date information: min,
 max, list of dates for full report, known epidemiological data period,

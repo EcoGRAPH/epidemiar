@@ -4,11 +4,11 @@
 
 #' Interpolates missing epi data.
 #'
-#' @param epi_data Input data tibble with case counts in casefield, grouping
-#'   field groupfield, and date column "obs_date".
 #' @param quo_casefield Quosure of user given casefield to run_epidemia().
 #' @param quo_groupfield Quosure of the user given geographic grouping field to
 #'   run_epidemia().
+#'
+#'@inheritParams run_epidemia
 #'
 #' @return Same data as epi_data with new interpolated case field,
 #'   cases_epidemiar.
@@ -27,15 +27,14 @@ epi_NA_interpolate <- function(epi_data, quo_casefield, quo_groupfield){
 
 #' Interpolates missing environmental data.
 #'
-#' @param env_data Input data tibble with environmental data: geographic
-#'   groupings in groupfield, environmental variable identified in obsfield, and
-#'   data values in valuefield. Contains a date column "obs_date".
 #' @param quo_obsfield Quosure of the user given field that holds the
 #'   environmental variable identifiers/names/IDs.
 #' @param quo_valuefield Quosure of the user given field that holds the
 #'   environmental variable observation value.
 #' @param quo_groupfield Quosure of the user given geographic grouping field to
 #'   run_epidemia().
+#'
+#'@inheritParams run_epidemia
 #'
 #' @return Same data as env_data, with new interpolated field, val_epidemiar, of
 #'   the environmental variable data.

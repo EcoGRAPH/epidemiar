@@ -2,40 +2,21 @@
 
 #' Runs the forecast modeling
 #'
-#'@param epi_data Epidemiological data with case numbers per week, with date
-#'  field "obs_date".
-#'@param env_data Daily environmental data for the same groupfields and date
-#'  range as the epidemiological data. It may contain extra data (other
-#'  districts or date ranges). The data must be in long format (one row for each
-#'  date and environmental variable combination), and must start at absolutel
-#'  minimum \code{laglen} (in \code{fc_control}) days before epi_data for
-#'  forecasting.
-#'@param env_ref_data Historical averages by week of year for environmental
-#'  variables. Used in extended environmental data into the future for long
-#'  forecast time, to calculate anomalies in early detection period, and to
-#'  display on timeseries in reports.
-#'@param env_info Lookup table for environmental data - reference creation
-#'  method (e.g. sum or mean), report labels, etc.
-#'
 #'@param quo_popfield Quosure of user-given field containing population values.
 #'@param quo_groupfield Quosure of the user given geographic grouping field to
 #'  run_epidemia().
 #'@param quo_obsfield Quosure of user given field name of the environmental data
-#'  variables
+#'  variables.
 #'@param quo_valuefield Quosure of user given field name of the value of the
 #'  environmental data variable observations.
-#'
-#'@param fc_model_family model choice stand in <<>>
-#'@param report_settings all the settings <<>>
-#'
-#'@param env_variables List of environmental variables <<>>
-#'
+#'@param env_variables List of environmental variables that exist in env_data.
 #'@param groupings A unique list of the geographic groupings (from groupfield).
 #'@param report_dates Internally generated set of report date information: min,
 #'  max, list of dates for full report, known epidemiological data period,
 #'  forecast period, and early detection period.
-#'@param valid_run Internal binary for whether this is part of a validation run.
+#'@param valid_run Internal TRUE/FALSE for whether this is part of a validation run.
 #'
+#'@inheritParams run_epidemia
 #'
 #'@return Named list containing:
 #'fc_epi: Full forecasted resulting dataset.
@@ -257,20 +238,14 @@ run_forecast <- function(epi_data,
 #'
 #'@param epi_lag Epidemiological dataset with basis spline summaries of the
 #'  lagged environmental data (or anomalies), as output by lag_environ_to_epi().
-#'@param quo_groupfield Quosure of the user given geographic grouping field to
-#'  run_epidemia().
-#'@param fc_model_family model choice stand in
-#'@param report_settings report settings
-#'@param groupings A unique list of the geographic groupings (from groupfield).
 #'@param env_variables_used List of environmental variables that were used in
 #'  the modeling.
-#'@param report_dates Internally generated set of report date information: min,
-#'  max, list of dates for full report, known epidemiological data period,
-#'  forecast period, and early detection period.
 #'@param req_date The end date of requested forecast regression. When fit_freq
 #'  == "once", this is the last date of the full report, the end date of the
 #'  forecast period.
 #'
+#'@inheritParams run_epidemia
+#'@inheritParams run_forecast
 #'
 #'@return Named list containing:
 #'date_preds: Full forecasted resulting dataset.
@@ -421,20 +396,18 @@ forecast_regression <- function(epi_lag,
 
 #'Build the appropriate model
 #'
-#'@param fc_model_family model choice stand in <<>>
-#'@param quo_groupfield Quosure of the user given geographic grouping field to
-#'  run_epidemia().
 #'@param epi_known Epidemiological dataset with basis spline summaries of the
 #'  lagged environmental data (or anomalies), with column marking if "known"
 #'  data and groupings converted to factors.
-#'@param report_settings report settings
 #'@param n_groupings Count of the number of geographic groupings in the model.
 #'@param modb_eq Pieces of the regression formula that include the modified
 #'  basis functions to account for long term trend (with or without groupings,
 #'  as appropriate).
 #'@param bandsums_eq Pieces of the regression formula that include the b-spline
 #'  bandsummaries of the environmental factors.
-
+#'
+#'@inheritParams run_epidemia
+#'@inheritParams run_forecast
 #'
 #'@return Regression object
 #'
@@ -575,130 +548,22 @@ build_model <- function(fc_model_family,
   } #end else, user supplied family
 
 
-  # #POISSON-BAM (set as default in first round input checking)
-  # if (fc_model_family == "poisson-bam"){
-  #
-  #   message("Building Poisson model using bam() and forced cyclical...")
-  #
-  #   #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create
-  #   #expression to give to modeling function
-  #   #different versions if multiple geographic area groupings or not
-  #   if (n_groupings > 1){
-  #     reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-  #                                       rlang::quo_name(quo_groupfield),
-  #                                       " + s(doy, bs=\"cc\", by=",
-  #                                       rlang::quo_name(quo_groupfield),
-  #                                       ") + ",
-  #                                       modb_eq, " + ",
-  #                                       bandsums_eq))
-  #   } else {
-  #     reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-  #                                       "s(doy, bs=\"cc\") + ",
-  #                                       modb_eq, " + ",
-  #                                       bandsums_eq))
-  #   }
-  #
-  #   # run bam
-  #   # Using discrete = TRUE was much faster than using parallel with bam.
-  #   regress <- mgcv::bam(reg_eq, data = epi_known,
-  #                        family = stats::poisson(),
-  #                        control = mgcv::gam.control(trace=FALSE),
-  #                        discrete = TRUE,
-  #                        nthreads = nthreads)
-  #
-  #
-  # } else if (fc_model_family == "negbin"){
-  #   #NEGATIVE BINOMIAL using GLM
-  #
-  #   message("Building negative binomial model...")
-  #
-  #   #due to dplyr NSE and bandsum eq and modb_eq pieces, easier to create
-  #   #expression to give to modeling function
-  #   #different versions if multiple geographic area groupings or not
-  #   #No cycical (as opposed to bam with s())
-  #   if (n_groupings > 1){
-  #     reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-  #                                       rlang::quo_name(quo_groupfield), " + ",
-  #                                       modb_eq, " + ",
-  #                                       bandsums_eq))
-  #   } else {
-  #     reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-  #                                       modb_eq, " + ",
-  #                                       bandsums_eq))
-  #   }
-  #
-  #   # run glm
-  #   # Which negative binomial function depends on if fc_control$theta exists
-  #   #<<>> temp set theta to null until switch to real model family
-  #   theta <- NULL
-  #
-  #   if(!is.null(theta)){
-  #     message("Theta value provided. Running with glm(..., family = MASS::negative.binomial(theta = ", theta, "))...")
-  #     regress <- stats::glm(reg_eq,
-  #                           data = epi_known,
-  #                           #theta value REQUIRED
-  #                           family = MASS::negative.binomial(theta=2.31))
-  #                           #family = MASS::negative.binomial(theta = theta))
-  #   } else {
-  #     message("Theta estimate (fc_control$theta) not provided, running with MASS::glm.nb()...")
-  #     regress <- MASS::glm.nb(reg_eq,
-  #                             data = epi_known)
-  #   }
-  #
-  #
-  # } else if (fc_model_family == "naive-persistence"){
-  #
-  #   #naive model
-  #   #persistence (carry forward)
-  #   #no regression object
-  #
-  #   #create "model" using known data.
-  #   #Will fill down in create_predictions
-  #   regress <- epi_known %>%
-  #     #grouping by geographical unit
-  #     dplyr::group_by(!!quo_groupfield) %>%
-  #     #prediction is 1 lag (previous week)
-  #     #fit is name of value from regression models
-  #     dplyr::mutate(fit = dplyr::lag(.data$cases_epidemiar, n = 1)) %>%
-  #     #cleaning up as not needed, and for bug hunting
-  #     dplyr::select(-dplyr::starts_with("band")) %>%
-  #     dplyr::select(-dplyr::starts_with("modbs"))
-  #
-  #
-  #
-  # } else if (fc_model_family == "naive-averageweek"){
-  #
-  #   #naive model
-  #   #average of week of year (from historical data)
-  #   #not a regression object
-  #
-  #   #create "model" (averages) using known data.
-  #   regress <- epi_known %>%
-  #     #calculate averages per geographic group per week of year
-  #     dplyr::group_by(!!quo_groupfield, .data$week_epidemiar) %>%
-  #     dplyr::summarize(fit = mean(.data$cases_epidemiar, na.rm = TRUE))
-  #
-  #
-  # } else {
-  #   #Shouldn't happen, just in case.
-  #   stop("Error in selecting model choice.")
-  # }
-
 } # end build_model()
 
 
 
 #'Create the appropriate predictions/forecasts.
 #'
-#'@param fc_model_family model choice <<>>
-#'@param nthreads max threads <<>>
-#'@param regress The regression object, either the user-supplied one, or
-#'  the one just generated.
+#'@param nthreads Extract of `report_settings$fc_nthreads`
+#'@param regress The regression object, either the user-supplied one from
+#'  `report_settings$model_cached`, or the one just generated.
 #'@param epi_lag Epidemiological dataset with basis spline summaries of the
 #'  lagged environmental data (or anomalies), with groupings as a factor.
 #'@param req_date The end date of requested forecast regression. When fit_freq
 #'  == "once", this is the last date of the full report, the end date of the
 #'  forecast period.
+#'
+#'@inheritParams run_epidemia
 #'
 #'@return A dataset from predict() using the regression object generated in
 #'  build_model or a newly created one. The dataset includes the
@@ -779,99 +644,5 @@ create_predictions <- function(fc_model_family,
 
 
   }
-
-
-
-
-  # #POISSON-BAM (set as default in first round input checking)
-  # if (fc_model_family == "poisson-bam"){
-  #
-  #   message("Creating Poisson predictions...")
-  #
-  #
-  #   ## Create predictions from either newly generated model, or given one
-  #
-  #   #output prediction (through req_date)
-  #   preds <- mgcv::predict.bam(regress,
-  #                              newdata = epi_lag %>% dplyr::filter(.data$obs_date <= req_date),
-  #                              se.fit = TRUE,       # included for backwards compatibility
-  #                              type="response",
-  #                              discrete = TRUE,
-  #                              n.threads = nthreads)
-  #
-  #
-  #
-  # } else if (fc_model_family == "negbin"){
-  #   #NEGATIVE BINOMIAL using GLM
-  #
-  #   message("Creating negative binomial predictions...")
-  #
-  #
-  #   ## Create predictions from either newly generated model, or given one
-  #
-  #   #output prediction (through req_date)
-  #   preds <- stats::predict.glm(regress,
-  #                               newdata = epi_lag %>% dplyr::filter(.data$obs_date <= req_date),
-  #                               se.fit = TRUE,       # included for backwards compatibility
-  #                               type="response")
-  #
-  #
-  # } else if (fc_model_family == "naive-persistence"){
-  #
-  #   message("Creating predictions using persistence naive model...")
-  #
-  #   #persistence model just carries forward the last known value
-  #   #the important part is the forecast / trailing end part
-  #   #manipulating to be in quasi-same format as the other models return
-  #
-  #   #cleaning up as not needed, and for bug hunting
-  #   epi_lag <- epi_lag %>%
-  #     dplyr::select(-dplyr::starts_with("band")) %>%
-  #     dplyr::select(-dplyr::starts_with("modbs"))
-  #
-  #   #regress is a tibble not regression object here
-  #   # has a variable fit with lag of 1 on known data
-  #   #epi_lag has the newer rows
-  #   preds <- epi_lag %>%
-  #     #filter to requested date
-  #     dplyr::filter(.data$obs_date <= req_date) %>%
-  #     #join to get "fit" values from "model"
-  #     #join on all shared columns (i.e. everything in regress not "fit") to prevent renaming
-  #     dplyr::left_join(regress, by = names(regress)[!names(regress) %in% c("fit")]) %>%
-  #     #important at end/fc section, when we fill down
-  #     tidyr::fill(.data$fit, .direction = "down") %>%
-  #     #format into nominal regression predict output
-  #     dplyr::select(.data$fit) %>%
-  #     as.data.frame()
-  #
-  # } else if (fc_model_family == "naive-averageweek"){
-  #
-  #   message("Creating predictions using average week of year naive model...")
-  #
-  #   #average week null model calculates the average cases of that
-  #   # week of year from historical data
-  #   #manipulating to be in quasi-same format as the other models return
-  #
-  #   #regress is the averages per week of year from known data
-  #
-  #   epi_lag <- epi_lag %>%
-  #     #filter to requested date
-  #     dplyr::filter(.data$obs_date <= req_date)
-  #
-  #   #join back
-  #   preds <- epi_lag %>%
-  #     #join to get average values
-  #     #join on all shared columns (i.e. everything in regress not "fit") to prevent renaming
-  #     # and so don't need column names not passed into this function
-  #     dplyr::left_join(regress, by = names(regress)[!names(regress) %in% c("fit")]) %>%
-  #     #format into nominal regression output
-  #     dplyr::select(.data$fit) %>%
-  #     as.data.frame()
-  #
-  #
-  # } else {
-  #   #Shouldn't happen, just in case.
-  #   stop("Error in selecting model choice.")
-  # }
 
 } #end create_predictions()

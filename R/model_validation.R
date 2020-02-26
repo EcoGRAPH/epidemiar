@@ -25,26 +25,16 @@
 #'  know last week's numbers.
 #'@param per_timesteps When creating a timeseries of validation results, create
 #'  a moving window with per_timesteps width number of time points. Should be a
-#'  minimum of 10 timesteps.
+#'  minimum of 10 timesteps. In beta-testing.
 #'@param skill_test Logical parameter indicating whether or not to run
 #'  validations also on two naïve models for a skill test comparison. The naïve
 #'  models are "persistence": the last known value (case counts) carried
 #'  forward, and "average week" where the predicted value is the average of that
 #'  week of the year, as calculated from historical data.
-#'@param epi_data See description in `run_epidemia()`.
-#'@param env_data See description in `run_epidemia()`.
-#'@param env_ref_data See description in `run_epidemia()`.
-#'@param env_info See description in `run_epidemia()`.
-#'@param casefield See description in `run_epidemia()`.
-#'@param groupfield See description in `run_epidemia()`.
-#'@param populationfield See description in `run_epidemia()`.
-#'@param obsfield See description in `run_epidemia()`.
-#'@param valuefield See description in `run_epidemia()`.
-#'@param fc_model_family See description in `run_epidemia()`.
-#'@param report_settings See description in `run_epidemia()`.
 #'@param ... Accepts other arguments that may normally part of `run_epidemia()`,
 #'  but ignored for validation runs.
 #'
+#'@inheritParams run_epidemia
 #'
 #'@return Returns a nested list of validation results. Statistics are calculated
 #'  on the n-week ahead forecast and the actual observed case counts. Statistics

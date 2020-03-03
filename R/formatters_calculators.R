@@ -241,3 +241,16 @@ calc_env_anomalies <- function(env_ts,
     dplyr::ungroup()
 }
 
+
+#' Formats report_settings for including in metadata part of final report data
+#'
+#'@param rpt_settings Report settings after processing defaults and matching.
+#'
+#'@return Named list of report_settings, in alphabetical order and no developer settings
+#'
+format_report_settings <- function(rpt_settings){
+  #order alphabetically
+  clean_settings <- rpt_settings[order(names(rpt_settings))]
+  #remove dev
+  clean_settings <- clean_settings[!grepl("[$dev]", names(clean_settings))]
+}

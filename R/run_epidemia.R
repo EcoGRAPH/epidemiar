@@ -467,6 +467,7 @@ run_epidemia <- function(epi_data = NULL,
                        obsfield = rlang::quo_name(quo_obsfield),
                        valuefield = rlang::quo_name(quo_valuefield))
 
+
     model_meta <- create_named_list(date_created = Sys.Date(),
                                     fieldnames,
                                     groupings,
@@ -475,7 +476,7 @@ run_epidemia <- function(epi_data = NULL,
                                     env_dt_ranges = fc_res_all$env_dt_ranges,
                                     known_epi_range = report_dates$known,
                                     env_info,
-                                    report_settings,
+                                    report_settings = format_report_settings(report_settings),
                                     date_created = Sys.Date())
 
 
@@ -573,7 +574,7 @@ run_epidemia <- function(epi_data = NULL,
                                      env_dt_ranges = fc_res_all$env_dt_ranges,
                                      report_dates,
                                      env_info,
-                                     report_settings)
+                                     report_settings = format_report_settings(report_settings))
 
     #regression object for future other use or troubleshooting
     regression_object <- fc_res_all$reg_obj

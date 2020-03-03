@@ -4,63 +4,20 @@
 \alias{input_check}
 \title{Functions to check input to epidemiar}
 \usage{
-input_check(epi_data, quo_casefield, quo_popfield, inc_per, quo_groupfield,
-  week_type, report_period, ed_summary_period, ed_method, ed_control,
-  env_data, quo_obsfield, quo_valuefield, forecast_future, fc_control,
-  env_ref_data, env_info, model_obj, model_cached, model_choice)
+input_check(epi_data, env_data, env_ref_data, env_info, quo_casefield,
+  quo_popfield, quo_groupfield, quo_obsfield, quo_valuefield,
+  fc_model_family, report_settings)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date
 field "obs_date".}
 
-\item{quo_casefield}{Quosure of user given field containing the disease case
-counts.}
-
-\item{quo_popfield}{Quosure of user-given field containing population values.}
-
-\item{inc_per}{Number for what unit of population the incidence should be
-reported in, e.g. incidence rate of 3 per 1000 people.}
-
-\item{quo_groupfield}{Quosure of the user given geographic grouping field to
-run_epidemia().}
-
-\item{week_type}{String indicating the standard (WHO ISO-8601 or CDC epi
-weeks) that the weeks of the year in epidemiological and environmental
-reference data use ["ISO" or "CDC"]. (Required: epidemiological observation
-dates listed are LAST day of week).}
-
-\item{report_period}{The number of weeks that the entire report will cover.
-The \code{report_period} minus \code{forecast_future} is the number of weeks
-of past (known) data that will be included.}
-
-\item{ed_summary_period}{The number of weeks that will be considered the
-"early detection period". It will count back from the week of last known
-epidemiological data.}
-
-\item{ed_method}{Which method for early detection should be used ("Farrington"
-is only current option, or "None").}
-
-\item{ed_control}{All parameters for early detection algorithm, passed through
-to that subroutine.}
-
 \item{env_data}{Daily environmental data for the same groupfields and date
 range as the epidemiological data. It may contain extra data (other
 districts or date ranges). The data must be in long format (one row for each
 date and environmental variable combination), and must start at absolutel
-minimum \code{laglen} (in \code{fc_control}) days before epi_data for
-forecasting.}
-
-\item{quo_obsfield}{Quosure of user given field name of the environmental data
-variables}
-
-\item{quo_valuefield}{Quosure of user given field name of the value of the
-environmental data variable observations.}
-
-\item{forecast_future}{Number of futre weeks from the end of the
-\code{epi_data} to produce forecasts.}
-
-\item{fc_control}{Parameters for forecasting, including which environmental
-variable to include and any geographic clusters.}
+minimum \code{report_settings$env_lag_length} days (default 180) before
+epi_data for forecasting.}
 
 \item{env_ref_data}{Historical averages by week of year for environmental
 variables. Used in extended environmental data into the future for long
@@ -70,26 +27,112 @@ display on timeseries in reports.}
 \item{env_info}{Lookup table for environmental data - reference creation
 method (e.g. sum or mean), report labels, etc.}
 
-\item{model_obj}{Deprecated, use model_cached.}
+\item{quo_casefield}{Quosure of user given field containing the disease case
+counts.}
 
-\item{model_cached}{The output of a previous model_run = TRUE run of
-run_epidemia() that produces a model (regression object) and metadata. The
-metadata will be used for input checking and validation. Using a prebuilt
-model saves on processing time, but will need to be updated periodically.}
+\item{quo_popfield}{Quosure of user-given field containing population values.}
 
-\item{model_choice}{Critical argument to choose the type of model to generate.
-The options are versions that the EPIDEMIA team has used for forecasting.
-The first supported options is "poisson-gam" ("p") which is the original
-epidemiar model: a Poisson regression using bam (for large data GAMs), with
-a smoothed cyclical for seasonality. The default for fc_control$anom_env is
-TRUE for using the anomalies of environmental variables rather than their
-raw values. The second option is "negbin" ("n") which is a negative binomial
-regression using glm, with no external seasonality terms - letting the
-natural cyclical behavior of the environmental variables fill that role. The
-default for fc_control$anom_env is FALSE and uses the actual observation
-values in the modeling. The fc_control$anom_env can be overruled by the user
-providing a value, but this is not recommended unless you are doing
-comparisons.}
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+
+\item{quo_obsfield}{Quosure of user given field name of the environmental data
+variables}
+
+\item{quo_valuefield}{Quosure of user given field name of the value of the
+environmental data variable observations.}
+
+\item{fc_model_family}{The \code{\link[stats]{family}} parameter passsed to
+\code{\link[mgcv:bam]{mgcv::bam}}, and the extended families in
+\code{\link[mgcv]{family.mgcv}} can also be used. This sets the type of
+generalized additive model (GAM) to run: it specifies the distribution and
+link to use in model fitting. E.g. for a Poisson regression, the user would
+input "poisson()". If a cached model is being used, set the parameter to `"cached"`.}
+
+\item{report_settings}{This is a named list of all the report, forecasting,
+ event detection and other settings. All of these have defaults, but they are
+ not likely the defaults needed for your system, so each of these should be
+ reviewed:
+
+ \itemize{
+
+ \item \code{report_period} = 26: The number of weeks that the entire report
+ will cover. The \code{report_period} minus \code{fc_future_period} is the
+ number of weeks of past (known) data that will be included. Default is 26
+ weeks.
+
+ \item \code{report_value_type} = "cases": How to report the results, either
+ in terms of "cases" (default) or "incidence".
+
+ \item \code{report_inc_per} = 1000: If reporting incidence, what should be
+ denominator be?  Default is per 1000 persons.
+
+ \item \code{epi_date_type} = "weekISO": String indicating the standard (WHO
+ ISO-8601 or CDC epi weeks) that the weeks of the year in epidemiological and
+ environmental reference data use ("weekISO" or "weekCDC"). Required:
+ epidemiological observation dates listed are LAST day of week.
+
+ \item \code{epi_interpolate} = FALSE: TRUE/FALSE flag for if the given
+ epidemiological data be linearly interpolated for any explicitly missing
+ values before modeling? Note: epidemiological data cannot have implicit
+ missing data (missing row as opposed to a row with NA).
+
+ \item \code{model_run} = FALSE: TRUE/FALSE flag for whether to only generate
+ the model regression object plus metadata. This model can be cached and used
+ later on its own, skipping a large portion of the slow calculations for
+ future runs.
+
+ \item \code{model_cached} = NULL: The output of a previous model_run = TRUE
+ run of run_epidemia() that produces a model (regression object) and
+ metadata. The metadata will be used for input checking and validation. Using
+ a prebuilt model saves on processing time, but will need to be updated
+ periodically. If using a cached model, also set `fc_model_family = "cached"`.
+
+ \item \code{env_var}: List environmental variables to actually use in the
+ modelling. (You can therefore have extra variables or data in the
+ environmental dataset.) Input should be a one column tibble, header row as
+ `obsfield` and each row with entries of the variables (must match what is in
+ env_data, env_ref-data, and env_info). Default is to use all environmental
+ variables that are present in all three of env_data, env_ref_data, and env_info.
+
+ \item \code{env_lag_length} = 180: The number of days of past environmental
+ data to include for the lagged effects. The distributed lags are summarized
+ using a thin plate basis function. Default is 180 days.
+
+ \item \code{env_anomalies} = FALSE: TRUE/FALSE indicating if the
+ environmental variables should be replaced with their anomalies. The
+ variables were transformed by taking the residuals from a GAM with
+ geographic unit and cyclical cubic regression spline on day of year per
+ geographic group.
+
+ \item \code{fc_future_period} = 8: Number of future weeks from the end of
+ the \code{epi_data} to produce forecasts. Default is 8 weeks.
+
+ \item \code{fc_cyclicals} = FALSE: TRUE/FALSE flag on whether to include a
+ smooth term based on day of year in the modelling (as one way of accounting
+ for seasonality).
+
+ \item \code{fc_nthreads}: The number of parallel threads that can be used by
+ `mgcv::bam()`. Default is 1 for computers with 1 physical core, else 2.
+
+ \item \code{ed_summary_period} = 4: The number of weeks that will be
+ considered the "early detection period". It will count back from the week of
+ last known epidemiological data. Default is 4 weeks.
+
+ \item \code{ed_method} = 'none': Which method for early detection should be
+ used ("farrington" is only current option, or "none").
+
+ \item \code{ed_control} = Controls passed along to the event detection
+ method.  E.g. for `ed_method = 'farrington'`, these are passed to
+ \code{\link[surveillance:farringtonFlexible]{surveillance::farringtonFlexible()}}.
+ Currently, these parameters are supported for Farrington: `b`, `w`,
+ `reweight`, `weightsThreshold`, `trend`, `pThresholdTrend`,
+ `populationOffset`, `noPeriods`, `pastWeeksNotIncluded`, `thresholdMethod`.
+ Any control not included will use surveillance package defaults, with the
+ exception of `b`, the number of past years to include: epidemiar default is
+ to use as many years are available in the data.
+
+
+ }}
 }
 \value{
 Returns a flag if there were any errors, plus accompanying error

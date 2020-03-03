@@ -12,7 +12,7 @@ create_predictions(fc_model_family, nthreads, regress, epi_lag, req_date)
 \code{\link[mgcv]{family.mgcv}} can also be used. This sets the type of
 generalized additive model (GAM) to run: it specifies the distribution and
 link to use in model fitting. E.g. for a Poisson regression, the user would
-input "poisson()".}
+input "poisson()". If a cached model is being used, set the parameter to `"cached"`.}
 
 \item{nthreads}{Extract of `report_settings$fc_nthreads`}
 

@@ -19,7 +19,7 @@ run_epidemia().}
 \code{\link[mgcv]{family.mgcv}} can also be used. This sets the type of
 generalized additive model (GAM) to run: it specifies the distribution and
 link to use in model fitting. E.g. for a Poisson regression, the user would
-input "poisson()".}
+input "poisson()". If a cached model is being used, set the parameter to `"cached"`.}
 
 \item{report_settings}{This is a named list of all the report, forecasting,
  event detection and other settings. All of these have defaults, but they are
@@ -58,14 +58,14 @@ input "poisson()".}
  run of run_epidemia() that produces a model (regression object) and
  metadata. The metadata will be used for input checking and validation. Using
  a prebuilt model saves on processing time, but will need to be updated
- periodically.
+ periodically. If using a cached model, also set `fc_model_family = "cached"`.
 
  \item \code{env_var}: List environmental variables to actually use in the
  modelling. (You can therefore have extra variables or data in the
  environmental dataset.) Input should be a one column tibble, header row as
  `obsfield` and each row with entries of the variables (must match what is in
  env_data, env_ref-data, and env_info). Default is to use all environmental
- data present in all three: env_data, env_ref_data, and env_info.
+ variables that are present in all three of env_data, env_ref_data, and env_info.
 
  \item \code{env_lag_length} = 180: The number of days of past environmental
  data to include for the lagged effects. The distributed lags are summarized

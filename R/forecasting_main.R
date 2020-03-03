@@ -194,35 +194,62 @@ run_forecast <- function(epi_data,
                   fc_cases_lwr = .data$fit-1.96*sqrt(.data$fit))
 
   # extract fc series into report format
-  fc_res <- preds_catch %>%
-    dplyr::mutate(series = "fc",
-                  value = dplyr::case_when(
-                    #if reporting in case counts
-                    report_settings[["report_value_type"]] == "cases" ~ fc_cases,
-                    #if incidence
-                    report_settings[["report_value_type"]] == "incidence" ~ fc_cases / !!quo_popfield * report_settings[["report_inc_per"]],
-                    #otherwise
-                    TRUE ~ NA_real_),
-                  lab = "Forecast Trend",
-                  upper = dplyr::case_when(
-                    #if reporting in case counts
-                    report_settings[["report_value_type"]] == "cases" ~ fc_cases_upr,
-                    #if incidence
-                    report_settings[["report_value_type"]] == "incidence" ~ fc_cases_upr / !!quo_popfield * report_settings[["report_inc_per"]],
-                    #otherwise
-                    TRUE ~ NA_real_),
-                  lower = dplyr::case_when(
-                    #if reporting in case counts
-                    report_settings[["report_value_type"]] == "cases" ~ fc_cases_lwr,
-                    #if incidence
-                    report_settings[["report_value_type"]] == "incidence" ~ fc_cases_lwr / !!quo_popfield * report_settings[["report_inc_per"]],
-                    #otherwise
-                    TRUE ~ NA_real_)
-                  #value = fc_cases / !!quo_popfield * inc_per,
-                  #upper = fc_cases_upr / !!quo_popfield * inc_per,
-                  #lower = fc_cases_lwr / !!quo_popfield * inc_per
-    ) %>%
+  # if else off of report_value_type of reporting in terms of cases or incidence
+  # using full if else blocks to do all 3 at once, rather than if_elses in each variable
+  if (report_settings[["report_value_type"]] == "cases"){
+    fc_res <- preds_catch %>%
+      dplyr::mutate(series = "fc",
+                    lab = "Forecast Trend",
+                    value = .data$fc_cases,
+                    upper = .data$fc_cases_upr,
+                    lower = .data$fc_cases_lwr)
+  } else if (report_settings[["report_value_type"]] == "incidence"){
+    fc_res <- preds_catch %>%
+      dplyr::mutate(series = "fc",
+                    lab = "Forecast Trend",
+                    value = .data$fc_cases / !!quo_popfield * report_settings[["report_inc_per"]],
+                    upper = .data$fc_cases_upr / !!quo_popfield * report_settings[["report_inc_per"]],
+                    lower = .data$fc_cases_lwr / !!quo_popfield * report_settings[["report_inc_per"]])
+
+  } else { #shouldn't happen
+    fc_res <- preds_catch %>%
+      dplyr::mutate(series = "fc",
+                    lab = "Forecast Trend",
+                    value = NA_real_,
+                    upper = NA_real_,
+                    lower = NA_real_)
+
+  }
+
+  #select only the needed columns
+  fc_res <- fc_res %>%
     dplyr::select(!!quo_groupfield, .data$obs_date, .data$series, .data$value, .data$lab, .data$upper, .data$lower)
+
+  # case_when evaluates ALL RHS. Not appropriate to use here as populationfield may not exist.
+  # value = dplyr::case_when(
+  #   #if reporting in case counts
+  #   report_settings[["report_value_type"]] == "cases" ~ fc_cases,
+  #   #if incidence
+  #   report_settings[["report_value_type"]] == "incidence" ~ fc_cases / !!quo_popfield * report_settings[["report_inc_per"]],
+  #   #otherwise
+  #   TRUE ~ NA_real_),
+  #
+  # upper = dplyr::case_when(
+  #   #if reporting in case counts
+  #   report_settings[["report_value_type"]] == "cases" ~ fc_cases_upr,
+  #   #if incidence
+  #   report_settings[["report_value_type"]] == "incidence" ~ fc_cases_upr / !!quo_popfield * report_settings[["report_inc_per"]],
+  #   #otherwise
+  #   TRUE ~ NA_real_),
+  #
+  # lower = dplyr::case_when(
+  #   #if reporting in case counts
+  #   report_settings[["report_value_type"]] == "cases" ~ fc_cases_lwr,
+  #   #if incidence
+  #   report_settings[["report_value_type"]] == "incidence" ~ fc_cases_lwr / !!quo_popfield * report_settings[["report_inc_per"]],
+  #   #otherwise
+  #   TRUE ~ NA_real_)
+
 
   # return list with res and other needed items
   fc_res_full <- create_named_list(fc_epi = preds_catch,

@@ -349,18 +349,25 @@ stss_res_to_output_data <- function(stss_res_list,
   ed_thresh_res <- stss_res_flat %>%
     dplyr::mutate(series = "thresh",
                   obs_date = .data$epoch,
-                  value = dplyr::case_when(
-                    #if reporting in case counts
-                    val_type == "cases" ~ upperbound,
-                    #if incidence
-                    val_type == "incidence" ~ upperbound / !!quo_popfield * inc_per,
-                    #otherwise
-                    TRUE ~ NA_real_),
-                  #value = upperbound / !!quo_popfield * inc_per, #Incidence, from stss & epi_fc_data
+                  #value calculations change depending on report_value_type
+                  #case_when is not viable because it evaluates ALL RHS
+                  value = if(val_type == "cases"){
+                      .data$upperbound
+                    } else if (val_type == "incidence"){
+                      .data$upperbound / !!quo_popfield * inc_per
+                    } else {NA_real_},
+                  # value = dplyr::case_when(
+                  #   #if reporting in case counts
+                  #   val_type == "cases" ~ upperbound,
+                  #   #if incidence
+                  #   val_type == "incidence" ~ upperbound / !!quo_popfield * inc_per,
+                  #   #otherwise
+                  #   TRUE ~ NA_real_),
                   lab = "Alert Threshold",
                   upper = NA,
                   lower = NA) %>%
     dplyr::select(!!quo_groupfield, .data$obs_date, .data$series, .data$value, .data$lab, .data$upper, .data$lower)
+
 
   #combine ed results
   ed <- rbind(ed_alert_res, ew_alert_res, ed_thresh_res)

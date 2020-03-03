@@ -415,15 +415,22 @@ run_epidemia <- function(epi_data = NULL,
     #include only observed data from requested start of report
     dplyr::filter(.data$obs_date >= report_dates$full$min) %>%
     dplyr::mutate(series = "obs",
-                  value = dplyr::case_when(
-                    #if reporting in case counts
-                    report_settings[["report_value_type"]] == "cases" ~ !!quo_casefield,
-                    #if incidence
-                    report_settings[["report_value_type"]] == "incidence" ~ !!quo_casefield / !!quo_popfield * report_settings[["report_inc_per"]],
-                    #otherwise
-                    TRUE ~ NA_real_),
+                  #value calculations change depending on report_value_type
+                  #case_when is not viable because it evaluates ALL RHS
+                  #condition is scalar, so vectorized ifelse is not appropriate
+                  value = if(report_settings[["report_value_type"]] == "cases"){
+                            !!quo_casefield
+                          } else if (report_settings[["report_value_type"]] == "incidence"){
+                            !!quo_casefield / !!quo_popfield * report_settings[["report_inc_per"]]
+                          } else {NA_real_},
+                  # value = dplyr::case_when(
+                  #   #if reporting in case counts
+                  #   report_settings[["report_value_type"]] == "cases" ~ !!quo_casefield,
+                  #   #if incidence
+                  #   report_settings[["report_value_type"]] == "incidence" ~ !!quo_casefield / !!quo_popfield * report_settings[["report_inc_per"]],
+                  #   #otherwise
+                  #   TRUE ~ NA_real_),
                   #note use of original not interpolated cases
-                  #value = !!quo_casefield / !!quo_popfield * inc_per,
                   lab = "Observed",
                   upper = NA,
                   lower = NA) %>%

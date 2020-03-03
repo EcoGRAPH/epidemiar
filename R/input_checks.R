@@ -1,70 +1,242 @@
+
+#'Set defaults of any missing report_settings parameters
+#'
+#'Function sets defaults to report_settings parameters.
+#'
+#'@param raw_settings The report_settings object as given by the user.
+#'@param env_variables List of all unique environmental variables in env_data.
+#'@param quo_obsfield Quosure of user given field name of the environmental data
+#'  variables.
+#'@param groupings List of all unique geographical groupings in epi_data.
+#'@param quo_groupfield Quosure of the user given geographic grouping field to
+#'  run_epidemia().
+#'
+#'@inheritParams run_epidemia
+#'
+#'@return Returns a full report_settings object, using user supplied values or
+#'  defaults is option was missing.
+#'
+
+set_report_defaults <- function(raw_settings,
+                                env_info,
+                                env_ref_data,
+                                env_variables,
+                                quo_obsfield,
+                                groupings,
+                                quo_groupfield){
+
+  #set up list in case no report_settings were given
+  if (is.null(raw_settings)){
+    new_settings <- list()
+  } else {
+    #copy over to begin before editing below
+    new_settings <- raw_settings
+  }
+
+  if (is.null(raw_settings[["report_period"]])){
+    new_settings[["report_period"]] <- 26
+  }
+
+  if (is.null(raw_settings[["report_inc_per"]])){
+    new_settings[["report_inc_per"]] <- 1000
+    #okay if not used, if report_value_type is cases instead of incidence
+  }
+
+  if (is.null(raw_settings[["epi_interpolate"]])){
+    new_settings[["epi_interpolate"]] <- FALSE
+  }
+
+  if (is.null(raw_settings[["ed_summary_period"]])){
+    new_settings[["ed_summary_period"]] <- 4
+  }
+
+  if (is.null(raw_settings[["model_run"]])){
+    new_settings[["model_run"]] <- FALSE
+  }
+
+  if (is.null(raw_settings[["model_cached"]])){
+    new_settings[["model_cached"]] <- NULL
+  }
+
+  if (is.null(raw_settings[["env_lag_length"]])){
+    #maybe make default based on data length, but for now
+    new_settings[["env_lag_length"]] <- 180
+  }
+
+  if (is.null(raw_settings[["fc_cyclicals"]])){
+    new_settings[["fc_cyclicals"]] <- FALSE
+  }
+
+  if (is.null(raw_settings[["fc_future_period"]])){
+    new_settings[["fc_future_period"]] <- 8
+  }
+
+  #default false, with explicit false for naive models (probably ok w/out, just being careful)
+  if (is.null(raw_settings[["env_anomalies"]])){
+    new_settings[["env_anomalies"]] <- dplyr::case_when(
+      fc_model_family == "naive-persistence" ~ FALSE,
+      fc_model_family == "naive-weekaverage" ~ FALSE,
+      #default to FALSE
+      TRUE ~ FALSE)
+  }
+
+
+  # For things that are being string matched:
+  # tolower to capture upper and lower case user-input variations since match.arg is case sensitive
+  # but must only try function if ed_method is not null (i.e. was given)
+
+  #report_value_type
+  # if provided, prepare for matching
+  if (!is.null(raw_settings[["report_value_type"]])){
+    new_settings[["report_value_type"]] <- tolower(raw_settings[["report_value_type"]])
+  } else {
+    #if not provided/missing/null
+    message("Note: 'report_value_type' was not provided, returning results in case counts ('cases').")
+    new_settings[["report_value_type"]] <- "cases"
+  }
+  #try match
+  new_settings[["report_value_type"]] <- tryCatch({
+    match.arg(new_settings[["report_value_type"]], c("cases", "incidence"))
+  }, error = function(e){
+    message("Warning: Given 'report_value_type' does not match 'cases' or 'incidence', running as 'cases'.")
+    "cases"
+  }, finally = {
+    #failsafe default
+    "cases"
+  })
+
+  # epi_date_type
+  # if provided, prepare for matching
+  if (!is.null(raw_settings[["epi_date_type"]])){
+    #want to keep ISO and CDC capitalized, but drop 'Week' to 'week' if had been entered that way
+    first_char <- substr(raw_settings[["epi_date_type"]], 1, 1) %>%
+      tolower()
+    #remainder of user entry
+    rest_char <- substr(raw_settings[["epi_date_type"]], 2, nchar(raw_settings[["epi_date_type"]]))
+    #paste back together
+    new_settings[["epi_date_type"]] <- paste0(first_char, rest_char)
+  } else {
+    #if not provided/missing/null
+    message("Note: 'epi_date_type' was not provided, running as weekly, ISO/WHO standard ('weekISO').")
+    new_settings[["epi_date_type"]] <- "weekISO"
+  }
+  #try match
+  new_settings[["epi_date_type"]] <- tryCatch({
+    match.arg(new_settings[["epi_date_type"]], c("weekISO", "weekCDC")) #"monthly" reserved for future
+  }, error = function(e){
+    message("Warning: Given 'epi_date_type' does not match 'weekISO' or 'weekCDC', running as 'weekISO' (weekly, ISO/WHO standard).")
+    "weekISO"
+  }, finally = {
+    #failsafe default
+    "weekISO"
+  })
+
+
+  # ed_method
+  # if provided, prepare for matching
+  if (!is.null(raw_settings[["ed_method"]])){
+    new_settings[["ed_method"]] <- tolower(raw_settings[["ed_method"]])
+  } else {
+    #if not provided/missing/null
+    message("Note: 'ed_method' was not provided, running as 'none'.")
+    new_settings[["ed_method"]] <- "none"
+  }
+  #try match
+  new_settings[["ed_method"]] <- tryCatch({
+    match.arg(new_settings[["ed_method"]], c("none", "farrington"))
+  }, error = function(e){
+    message("Warning: Given 'ed_method' does not match 'none' or 'farrington', running as 'none'.")
+    "none"
+  }, finally = {
+    #failsafe default to no event detection
+    "none"
+  })
+
+
+  # For more complicated defaults
+
+  #env_var -- what is listed in env_data, env_ref_data, & env_info
+  if (is.null(raw_settings[["env_var"]])){
+
+    #create list of all environmental variables in env_info
+    env_info_variables <- dplyr::pull(env_info, !!quo_obsfield)
+
+    #create list of all environmental variables in env_ref_data
+    env_ref_variables <- dplyr::pull(env_ref_data, !!quo_obsfield)
+
+    #env_variables already gen list of env_data
+
+    #Two sets of intersection to create list that are present in all three
+    env_data_info <- dplyr::intersect(env_variables, env_info_variables)
+    default_env_var <- dplyr::intersect(env_data_info, env_ref_variables)
+    new_settings[["env_var"]] <- dplyr::tibble(obs_temp = default_env_var) %>%
+                                 #rename NSE fun
+                                 dplyr::rename(!!rlang::quo_name(quo_obsfield) := .data$obs_temp)
+
+    #message result
+    message("No user supplied list of environmetal variables to use. Using: ", paste(default_env_var, ""),
+            " based on presence in env_data, env_ref_data, and env_info.\n")
+  }
+
+  #nthreads
+  #default value is 1 for 1 core machines, 2 for multi-core (testing shows no additional value past 2)
+  #if user-supplied, use that cap at 2, otherwise create a default number
+  #used to decide if run anomalize_env() prior to forecasting
+  if (!is.null(raw_settings[["fc_nthreads"]])) {
+    # nthreads above 2 is not actually helpful
+    new_settings[["fc_nthreads"]] <- ifelse(raw_settings[["fc_nthreads"]] > 1, 2, 1)
+  } else {
+    #no value fed in, so test and determine
+    new_settings[["fc_nthreads"]] <- ifelse(parallel::detectCores(logical=FALSE) > 1, 2, 1)
+  } #end else for ncores not given
+
+
+  #fc_clusters
+  #default is one cluster, probably not what you actually want for any type of large system
+  if (is.null(raw_settings[["fc_clusters"]])){
+    #create tbl of only one cluster
+    #groupings already exist as list of geographic groups
+    cluster_tbl <- tibble::tibble(group_temp = groupings, cluster_id = 1) %>%
+      #and fix names with NSE
+      dplyr::rename(!!rlang::quo_name(quo_groupfield) := .data$group_temp)
+    #assign
+    new_settings[["fc_clusters"]] <- cluster_tbl
+  }
+
+
+  # Developer options
+  if (is.null(raw_settings[["dev_fc_fit_freq"]])){
+    new_settings[["dev_fc_fit_freq"]] <- "once"
+  }
+  if (is.null(raw_settings[["dev_fc_modbsplines"]])){
+    new_settings[["dev_fc_modbsplines"]] <- FALSE
+  }
+  if (is.null(raw_settings[["dev_fc_formula"]])){
+    new_settings[["dev_fc_formula"]] <- NULL
+  }
+
+  new_settings
+
+}
+
+
+
 #'Functions to check input to epidemiar
 #'
 #'Function does basic existance checks and variety of logic checks on input data
 #'to run_epidemia().
 #'
-#'@param epi_data Epidemiological data with case numbers per week, with date
-#'  field "obs_date".
 #'@param quo_casefield Quosure of user given field containing the disease case
 #'  counts.
 #'@param quo_popfield Quosure of user-given field containing population values.
-#'@param inc_per Number for what unit of population the incidence should be
-#'  reported in, e.g. incidence rate of 3 per 1000 people.
 #'@param quo_groupfield Quosure of the user given geographic grouping field to
 #'  run_epidemia().
-#'@param week_type String indicating the standard (WHO ISO-8601 or CDC epi
-#'  weeks) that the weeks of the year in epidemiological and environmental
-#'  reference data use ["ISO" or "CDC"]. (Required: epidemiological observation
-#'  dates listed are LAST day of week).
-#'@param report_period The number of weeks that the entire report will cover.
-#'  The \code{report_period} minus \code{forecast_future} is the number of weeks
-#'  of past (known) data that will be included.
-#'@param ed_summary_period The number of weeks that will be considered the
-#'  "early detection period". It will count back from the week of last known
-#'  epidemiological data.
-#'@param ed_method Which method for early detection should be used ("Farrington"
-#'  is only current option, or "None").
-#'@param ed_control All parameters for early detection algorithm, passed through
-#'  to that subroutine.
-#'@param env_data Daily environmental data for the same groupfields and date
-#'  range as the epidemiological data. It may contain extra data (other
-#'  districts or date ranges). The data must be in long format (one row for each
-#'  date and environmental variable combination), and must start at absolutel
-#'  minimum \code{laglen} (in \code{fc_control}) days before epi_data for
-#'  forecasting.
 #'@param quo_obsfield Quosure of user given field name of the environmental data
 #'  variables
 #'@param quo_valuefield Quosure of user given field name of the value of the
 #'  environmental data variable observations.
-#'@param forecast_future Number of futre weeks from the end of the
-#'  \code{epi_data} to produce forecasts.
-#'@param fc_control Parameters for forecasting, including which environmental
-#'  variable to include and any geographic clusters.
-#'@param env_ref_data Historical averages by week of year for environmental
-#'  variables. Used in extended environmental data into the future for long
-#'  forecast time, to calculate anomalies in early detection period, and to
-#'  display on timeseries in reports.
-#'@param env_info Lookup table for environmental data - reference creation
-#'  method (e.g. sum or mean), report labels, etc.
-#'@param model_obj Deprecated, use model_cached.
-#'@param model_cached The output of a previous model_run = TRUE run of
-#'  run_epidemia() that produces a model (regression object) and metadata. The
-#'  metadata will be used for input checking and validation. Using a prebuilt
-#'  model saves on processing time, but will need to be updated periodically.
-#'@param model_choice Critical argument to choose the type of model to generate.
-#'  The options are versions that the EPIDEMIA team has used for forecasting.
-#'  The first supported options is "poisson-gam" ("p") which is the original
-#'  epidemiar model: a Poisson regression using bam (for large data GAMs), with
-#'  a smoothed cyclical for seasonality. The default for fc_control$anom_env is
-#'  TRUE for using the anomalies of environmental variables rather than their
-#'  raw values. The second option is "negbin" ("n") which is a negative binomial
-#'  regression using glm, with no external seasonality terms - letting the
-#'  natural cyclical behavior of the environmental variables fill that role. The
-#'  default for fc_control$anom_env is FALSE and uses the actual observation
-#'  values in the modeling. The fc_control$anom_env can be overruled by the user
-#'  providing a value, but this is not recommended unless you are doing
-#'  comparisons.
 #'
+#'@inheritParams run_epidemia
 #'
 #'@return Returns a flag if there were any errors, plus accompanying error
 #'  messages. Also returns a flag and messages for warnings, as well.
@@ -73,25 +245,16 @@
 #'
 
 input_check <- function(epi_data,
-                        quo_casefield,
-                        quo_popfield,
-                        inc_per,
-                        quo_groupfield,
-                        week_type,
-                        report_period,
-                        ed_summary_period,
-                        ed_method,
-                        ed_control,
                         env_data,
-                        quo_obsfield,
-                        quo_valuefield,
-                        forecast_future,
-                        fc_control,
                         env_ref_data,
                         env_info,
-                        model_obj,
-                        model_cached,
-                        model_choice){
+                        quo_casefield,
+                        quo_popfield,
+                        quo_groupfield,
+                        quo_obsfield,
+                        quo_valuefield,
+                        fc_model_family,
+                        report_settings){
 
   # Want ALL data checks to happen, whether or not error happen before the end of the tests.
   # Want to collect all errors, and return all of them to console
@@ -111,8 +274,7 @@ input_check <- function(epi_data,
   # Existing & Types --------------------------------------------------------
 
   # Quick test for some simple settings
-  # inc_per (0 could be "cases" so allow when that is built)
-  if (!is.numeric(inc_per) || inc_per <= 0){
+  if (!is.numeric(report_settings[["report_inc_per"]]) || report_settings[["report_inc_per"]] <= 0){
     err_flag <- TRUE
     err_msgs <- paste(err_msgs, "'inc_per' must be numeric and a positive number.\n")
   }
@@ -219,65 +381,69 @@ input_check <- function(epi_data,
   rpt_len_flag <- FALSE
 
   # check data types
-  if (!(is.numeric(report_period) | is.integer(report_period))){
+  if (!(is.numeric(report_settings[["report_period"]]) | is.integer(report_settings[["report_period"]]))){
     err_flag <- TRUE
-    err_msgs <- paste(err_msgs, "'report_period' must be numeric or integer type - integer number of weeks only.\n")
+    err_msgs <- paste(err_msgs, "'report_settings$report_period' must be numeric or integer type - integer number of weeks only.\n")
     rpt_len_flag <- TRUE
   }
-  if (!(is.numeric(forecast_future) | is.integer(forecast_future))){
+  if (!(is.numeric(report_settings[["fc_future_period"]]) | is.integer(report_settings[["fc_future_period"]]))){
     err_flag <- TRUE
-    err_msgs <- paste(err_msgs, "'forecast_future' must be numeric or integer type - integer number of weeks only.\n")
+    err_msgs <- paste(err_msgs, "'report_settings$forecast_future' must be numeric or integer type - integer number of weeks only.\n")
     rpt_len_flag <- TRUE
-  } else if (forecast_future > 12){
+  } else if (report_settings[["fc_future_period"]] > 13){
     # warn on long forecasts
     warn_flag <- TRUE
-    warn_msgs <- paste(warn_msgs, "Warning: It is not recommended to forecast more than 12 weeks into the future. You are forecasting for ", forecast_future, " weeks.\n")
+    warn_msgs <- paste(warn_msgs, "Warning: It is not recommended to forecast more than 12 weeks into the future. You are forecasting for ", report_settings[["fc_future_period"]], " weeks.\n")
   }
-  if (!(is.numeric(ed_summary_period) | is.integer(ed_summary_period))){
+  if (!(is.numeric(report_settings[["ed_summary_period"]]) | is.integer(report_settings[["ed_summary_period"]]))){
     err_flag <- TRUE
-    err_msgs <- paste(err_msgs, "'ed_summary_period' must be numeric or integer type - integer number of weeks only.\n")
+    err_msgs <- paste(err_msgs, "'report_settings$ed_summary_period' must be numeric or integer type - integer number of weeks only.\n")
     rpt_len_flag <- TRUE
   }
 
   # report length must be equal to or larger than forecast and ED period together
   if (!rpt_len_flag){
-    if (report_period < ed_summary_period + forecast_future){
+    if (report_settings[["report_period"]] < report_settings[["ed_summary_period"]] + report_settings[["fc_future_period"]]){
       err_flag <- TRUE
-      err_msgs <- paste(err_msgs, "The report length ", report_period, " must be longer than the early detection period ", ed_summary_period, " plus the forecast ", forecast_future, ".\n")
+      err_msgs <- paste(err_msgs, "The report length ", report_settings[["report_period"]], " must be longer than the early detection period ", report_settings[["ed_summary_period"]], " plus the forecast ", report_settings[["fc_future_period"]], ".\n")
     }
   }
 
 
   # Models & Caching --------------------------------------------------------
 
-  #use model_cached not old model_obj
-  if (!is.null(model_obj) & is.null(model_cached)){
-    err_flag <- TRUE
-    err_msgs <- paste(err_msgs, "Please use the new 'model_cached' argument, and not deprecated 'model_obj'.\n")
+  #check if fc_model_family is cached that a cached model was given, else fail with error
+  if (fc_model_family == "cached"){
+    if (is.null(report_settings[["model_cached"]])){
+      err_flag <- TRUE
+      err_msgs <- paste(err_msgs, "If 'fc_model_family' == 'cached', a cached model must be supplied in 'report_settings$model_cached'.\n")
+    }
   }
 
+
   #if given a full model
-  if (!is.null(model_cached)){
+  if (!is.null(report_settings[["model_cached"]])){
 
     #check that $model_info and $model_obj exists in model_cached
-    if (all(c("model_obj", "model_info") %in% names(model_cached))){
+    if (all(c("model_obj", "model_info") %in% names(report_settings[["model_cached"]]))){
 
       #if model looks okay so far, then check further
-      #make sure model_choice matches between cached model and settings.
-      #model choice already checked
-      if (!model_cached$model_info$model_choice == model_choice){
-        err_flag <- TRUE
-        err_msgs <- paste(err_msgs, "The model choice of the given cached model, \"", model_cached$model_info$model_choice, "\", does not match the current setting of 'model_choice' of \"", model_choice, "\".\n")
-      } #end model_choice
 
       #make sure given model (if given) is a regression object (using basic "lm" as test)
       #model_cached$model_obj
-      classes <- class(model_cached$model_obj)
+      classes <- class(report_settings[["model_cached"]][["model_obj"]])
       if (!"lm" %in% classes){
         err_flag <- TRUE
-        err_msgs <- paste(err_msgs, "The object in 'model_cached$model_obj' is not a regression object, found classes are: ", classes, ".\n")
+        err_msgs <- paste(err_msgs, "The object in 'report_settings$model_cached$model_obj' is not a regression object, found classes are: ", classes, ".\n")
       } #end lm check
 
+      #if using a cached model, the model family from the cached model will be used
+      #warn about overriding any user input family
+      if (fc_model_family != "cached"){
+        warn_flag <- TRUE
+        warn_msgs <- paste(warn_msgs, "Warning: the cached model family ", report_settings$model_cached$model_info$fc_model_family, " will override any user input.",
+                           "Found 'fc_model_family' set to ",  fc_model_family, "instead of 'cached'.\n")
+      }
 
       #end if names
     } else {
@@ -285,141 +451,110 @@ input_check <- function(epi_data,
       err_msgs <- paste(err_msgs, "The given cached model is missing $model_obj and/or $model_info.\n")
     } #end else on if names
 
-  } #end if is.null model_cached
+  } #end if !is.null model_cached
 
   # things that must exist in model_cached$model_info
-  # model_cached$model_info$model_choice
+  # model_cached$model_info$fc_model_family
   # model_cached$model_info$date_created
   # model_cached$model_info$known_epi_range$max
   #but will probably give decent error messages on their own if missing.
 
 
+
+
   # Control lists -----------------------------------------------------------
 
   # Forecasting
-  #special flag for initial forecasting checks
-  fc_flag <- FALSE
 
-  #fc_control
-  # env_vars, clusters, lag_length
-  if (is.null(fc_control[["env_vars"]])){
+  # model_env
+  # has obsfield
+  if(!rlang::quo_name(quo_obsfield) %in% colnames(report_settings[["env_var"]])){
     err_flag <- TRUE
-    err_msgs <- paste(err_msgs, "List of environmental variables to use for modeling is missing. Check 'fc_control$env_vars'.\n")
-    fc_flag <- TRUE
-  }
-  if (is.null(fc_control[["clusters"]])){
-    err_flag <- TRUE
-    err_msgs <- paste(err_msgs, "Cluster information to use for modeling is missing. Check 'fc_control$clusters'.\n")
-    fc_flag <- TRUE
-  }
-  if (is.null(fc_control[["lag_length"]])){
-    err_flag <- TRUE
-    err_msgs <- paste(err_msgs, "Length of maximum lag in days, 'lag_length', is missing. Check 'fc_control$lag_length'.\n")
-    fc_flag <- TRUE
-  } else if (!(is.numeric(fc_control[["lag_length"]]) | is.integer(fc_control[["lag_length"]]))){
-    err_flag <- TRUE
-    err_msgs <- paste(err_msgs, "'lag_length' must be an integer number of days. Check 'fc_control$lag_length'.\n")
-    fc_flag <- TRUE
-  }
-
-
-  #if no initial fc errors, then continue
-  if (!fc_flag){
-
-    # model_env
-    # has obsfield
-    if(!rlang::quo_name(quo_obsfield) %in% colnames(fc_control$env_vars)){
-      err_flag <- TRUE
-      err_msgs <- paste(err_msgs, "There must be a column ", rlang::quo_name(quo_obsfield), ", to indicate the list of model environmental variables in 'fc_control$env_vars'.\n")
-    } else {
-      #does have obsfield,
-      #check that model variables exist in env data and env ref data
-
-      #but only if no other problems so far, since that could cause errors in the checks below
-      if (!err_flag){
-
-        #pull variables from model info input
-        model_vars <- fc_control$env_vars %>% dplyr::pull(!!quo_obsfield)
-        #pull variables in env data
-        env_in_data <- env_data %>% dplyr::pull(!!quo_obsfield) %>% unique()
-        #pull variables in env ref data
-        env_in_ref <- env_ref_data %>% dplyr::pull(!!quo_obsfield) %>% unique()
-
-        if (!all(model_vars %in% env_in_data)){
-          err_flag <- TRUE
-          err_msgs <- paste(err_msgs, "Model variable(s) given in 'fc_control$env_vars' is/are missing from 'env_data':\n",
-                            model_vars[which(!model_vars %in% env_in_data)], "\n")
-        }
-        if (!all(model_vars %in% env_in_ref)){
-          err_flag <- TRUE
-          err_msgs <- paste(err_msgs, "Model variable(s) given in 'fc_control$env_vars' is/are missing from 'env_ref_data':\n",
-                            model_vars[which(!model_vars %in% env_in_ref)], "\n")
-        }
-      } #end err_flag
-    } #end else obsfield
-
-    #clusters
-    # has groupfield
-    if(!rlang::quo_name(quo_groupfield) %in% colnames(fc_control$clusters)){
-      err_flag <- TRUE
-      err_msgs <- paste(err_msgs, "There must be a column ", rlang::quo_name(quo_groupfield), ", in 'fc_control$clusters'.\n")
-    }
-    # has cluster_id
-    if(!"cluster_id" %in% colnames(fc_control$clusters)){
-      err_flag <- TRUE
-      err_msgs <- paste(err_msgs, "There must be a column 'cluster_id' in 'fc_control$clusters'.\n")
-    }
-    #now check that all geographic groupings from epi data have a cluster assigned
-    #as long as no previous errors
-    if (!err_flag){
-      #groupings in cluster info
-      model_cl <- fc_control$clusters %>% dplyr::pull(!!quo_groupfield)
-      #groupings in epidemiological data
-      groups_epi <- dplyr::pull(epi_data, !!quo_groupfield) %>% unique()
-      #check all in cluster list
-      if (!all(groups_epi %in% model_cl)){
-        err_flag <- TRUE
-        err_msgs <- paste(err_msgs, "Geographic groupings present in the epidemiological data are missing in 'fc_control$clusters':\n",
-                          groups_epi[which(!groups_epi %in% model_cl)])
-      }
-      #Don't need to check environmental data. Extra env data for other groupings not in epidemiological data are just ignored.
-    }
-
-    #lag_length
-    #already checked existance and numeric/integer type
-    #check that enough environmental data exists for lag length selected
+    err_msgs <- paste(err_msgs, "There must be a column ", rlang::quo_name(quo_obsfield), ", to indicate the list of model environmental variables in 'report_settings$env_vars'.\n")
+  } else {
+    #does have obsfield,
+    #check that model variables exist in env data and env ref data
 
     #but only if no other problems so far, since that could cause errors in the checks below
     if (!err_flag){
-      #subset to env variables as dictated by the model
-      env_model_data <- pull_model_envvars(env_data, quo_obsfield, fc_control)
-      #get earliest dates available
-      env_start_dts <- env_model_data %>% dplyr::group_by(!!quo_obsfield) %>% dplyr::summarize(start_dt = min(.data$obs_date))
-      #date needed by laglength and first epidemiological data date
-      need_dt <- min(epi_data$obs_date) - as.difftime(fc_control$lag_length, units = "days")
-      #all env dates equal or before needed date?
-      if (!all(env_start_dts$start_dt <= need_dt)){
-        err_flag <- TRUE
-        err_msgs <- paste(err_msgs, "Not enough environmental data for a lag length of ", fc_control$lag_length,
-                          "days.\n Epidemiological start is", min(epi_data$obs_date),
-                          "therefore environmental data is needed starting", need_dt, "for variables:\n",
-                          env_start_dts[which(!env_start_dts$start_dt <= need_dt),1])
 
+      #pull variables from model info input
+      model_vars <- report_settings[["env_var"]] %>% dplyr::pull(!!quo_obsfield)
+      #pull variables in env data
+      env_in_data <- env_data %>% dplyr::pull(!!quo_obsfield) %>% unique()
+      #pull variables in env ref data
+      env_in_ref <- env_ref_data %>% dplyr::pull(!!quo_obsfield) %>% unique()
+
+      if (!all(model_vars %in% env_in_data)){
+        err_flag <- TRUE
+        err_msgs <- paste(err_msgs, "Model variable(s) given in 'report_settings$env_var' is/are missing from 'env_data':\n",
+                          model_vars[which(!model_vars %in% env_in_data)], "\n")
+      }
+      if (!all(model_vars %in% env_in_ref)){
+        err_flag <- TRUE
+        err_msgs <- paste(err_msgs, "Model variable(s) given in 'report_settings$env_var' is/are missing from 'env_ref_data':\n",
+                          model_vars[which(!model_vars %in% env_in_ref)], "\n")
       }
     } #end err_flag
+  } #end else obsfield
 
-  } #end fc flag
+  #clusters
+  # has groupfield
+  if(!rlang::quo_name(quo_groupfield) %in% colnames(report_settings[["fc_clusters"]])){
+    err_flag <- TRUE
+    err_msgs <- paste(err_msgs, "There must be a column ", rlang::quo_name(quo_groupfield), ", in 'report_settings$clusters'.\n")
+  }
+  # has cluster_id
+  if(!"cluster_id" %in% colnames(report_settings[["fc_clusters"]])){
+    err_flag <- TRUE
+    err_msgs <- paste(err_msgs, "There must be a column 'cluster_id' in 'report_settings$clusters'.\n")
+  }
+  #now check that all geographic groupings from epi data have a cluster assigned
+  #as long as no previous errors
+  if (!err_flag){
+    #groupings in cluster info
+    model_cl <- report_settings[["fc_clusters"]] %>% dplyr::pull(!!quo_groupfield)
+    #groupings in epidemiological data
+    groups_epi <- dplyr::pull(epi_data, !!quo_groupfield) %>% unique()
+    #check all in cluster list
+    if (!all(groups_epi %in% model_cl)){
+      err_flag <- TRUE
+      err_msgs <- paste(err_msgs, "Geographic groupings present in the epidemiological data are missing in 'report_settings$clusters':\n",
+                        groups_epi[which(!groups_epi %in% model_cl)])
+    }
+    #Don't need to check environmental data. Extra env data for other groupings not in epidemiological data are just ignored.
+  }
+
+  #lag_length
+  #already checked existance and numeric/integer type
+  #check that enough environmental data exists for lag length selected
+
+  #but only if no other problems so far, since that could cause errors in the checks below
+  if (!err_flag){
+    #subset to env variables as dictated by the model
+    env_model_data <- pull_model_envvars(env_data, quo_obsfield, env_var = report_settings$env_var)
+    #get earliest dates available
+    env_start_dts <- env_model_data %>% dplyr::group_by(!!quo_obsfield) %>% dplyr::summarize(start_dt = min(.data$obs_date))
+    #date needed by laglength and first epidemiological data date
+    need_dt <- min(epi_data$obs_date) - as.difftime(report_settings[["env_lag_length"]], units = "days")
+    #all env dates equal or before needed date?
+    if (!all(env_start_dts$start_dt <= need_dt)){
+      err_flag <- TRUE
+      err_msgs <- paste(err_msgs, "Not enough environmental data for a lag length of ", report_settings[["env_lag_length"]],
+                        "days.\n Epidemiological start is", min(epi_data$obs_date),
+                        "therefore environmental data is needed starting", need_dt, "for variables:\n",
+                        env_start_dts[which(!env_start_dts$start_dt <= need_dt),1])
+
+    }
+  } #end err_flag
+
 
   # ed_method & ed_control
 
-  if (ed_method == "farrington"){
+  if (report_settings[["ed_method"]] == "farrington"){
 
-    # if Farrington, then check for controls for Farrington
-    #w = 4, reweight = TRUE, weightsThreshold = 2.58, trend = TRUE, pThresholdTrend = 0, populationOffset = TRUE, noPeriods = 10, pastWeeksNotIncluded = 4, thresholdMethod = "nbPlugin"
-    #allow b
-
-    #actually, all have defaults in farringtonFlexible() and can be missing
-    if (is.null(ed_control)){
+    #controls for Farrington all have defaults in farringtonFlexible() and can be missing, just warn
+    if (is.null(report_settings[["ed_control"]])){
       #warning if missing though
       warn_flag <- TRUE
       warn_msgs <- paste(warn_msgs, "Warning: Early Detection controls not found, running with surveillance package defaults.\n")

@@ -50,7 +50,7 @@
 #'  \code{\link[mgcv]{family.mgcv}} can also be used. This sets the type of
 #'  generalized additive model (GAM) to run: it specifies the distribution and
 #'  link to use in model fitting. E.g. for a Poisson regression, the user would
-#'  input "poisson()".
+#'  input "poisson()". If a cached model is being used, set the parameter to `"cached"`.
 #'
 #'@param report_settings This is a named list of all the report, forecasting,
 #'  event detection and other settings. All of these have defaults, but they are
@@ -89,14 +89,14 @@
 #'  run of run_epidemia() that produces a model (regression object) and
 #'  metadata. The metadata will be used for input checking and validation. Using
 #'  a prebuilt model saves on processing time, but will need to be updated
-#'  periodically.
+#'  periodically. If using a cached model, also set `fc_model_family = "cached"`.
 #'
 #'  \item \code{env_var}: List environmental variables to actually use in the
 #'  modelling. (You can therefore have extra variables or data in the
 #'  environmental dataset.) Input should be a one column tibble, header row as
 #'  `obsfield` and each row with entries of the variables (must match what is in
 #'  env_data, env_ref-data, and env_info). Default is to use all environmental
-#'  data present in all three: env_data, env_ref_data, and env_info.
+#'  variables that are present in all three of env_data, env_ref_data, and env_info.
 #'
 #'  \item \code{env_lag_length} = 180: The number of days of past environmental
 #'  data to include for the lagged effects. The distributed lags are summarized
@@ -246,9 +246,9 @@ run_epidemia <- function(epi_data = NULL,
     #Note: if field name does not exist in any dataset, enquo() will throw an error.
   }
 
-  # Preparing: Input checking -----------------------------------------------
+  # Preparing: Basic Input checking -----------------------------------------------
 
-  #1. Test for critical inputs This will not check if they've assigned the right
+  #First: Test for critical inputs. This will not check if they've assigned the right
   #thing to the argument, or got the argument order correct if not explicit
   #argument declarations. But, no other checks can really proceed if things are
   #missing.
@@ -263,7 +263,7 @@ run_epidemia <- function(epi_data = NULL,
                   groupfield = quo_groupfield,
                   obsfield = quo_obsfield,
                   valuefield = quo_valuefield)
-  necessary <- create_named_list(epi_data, env_data, env_ref_data, env_info)
+  necessary <- create_named_list(epi_data, env_data, env_ref_data, env_info, fc_model_family)
 
   #initialize missing info msgs & flag
   missing_msgs <- ""
@@ -290,207 +290,24 @@ run_epidemia <- function(epi_data = NULL,
   }
 
 
-  # # 2. match.arg for arguments with options
-  # #Note: using message() instead of warning() to get message to appear right away
-  #
-  # #model_choice = c("poisson-bam", "negbin")
-  # #tolower to capture upper and lower case user-input variations since match.arg is case sensitive
-  # #but must only try function if ed_method is not null (i.e. was given)
-  # if (!is.null(model_choice)){
-  #   model_choice <- tolower(model_choice)
-  # }
-  # model_choice <- tryCatch({
-  #   #including hidden naïve models for skill test in validation
-  #   match.arg(model_choice, c("poisson-bam", "negbin", "naive-persistence", "naive-averageweek"))
-  # }, error = function(e){
-  #   message("Warning: Given 'model_choice' does not match 'poisson-bam' or 'negbin', running as 'poisson-bam'.")
-  #   "poisson-bam"
-  # }, finally = {
-  #   if (length(model_choice) > 1){
-  #     #if model_choice was missing at run_epidemia() call, got assigned c("poisson-bam", "negbin")
-  #     message("Note: 'model_choice' was missing, running as 'poisson-bam'.")
-  #     #no return, because in match.arg() it will take the first item, which is "poisson-bam".
-  #   }
-  # })
-  #
-  # #ed_method = c("none", "farrington")
-  # #tolower to capture upper and lower case user-input variations since match.arg is case sensitive
-  # #but must only try function if ed_method is not null (i.e. was given)
-  # if (!is.null(ed_method)){
-  #   ed_method <- tolower(ed_method)
-  # }
-  # ed_method <- tryCatch({
-  #   match.arg(ed_method, c("none", "farrington"))
-  # }, error = function(e){
-  #   message("Warning: Given 'ed_method' does not match 'none' or 'farrington', running as 'none'.")
-  #   "none"
-  # }, finally = {
-  #   if (length(ed_method) > 1){
-  #     #if ed_method was missing at run_epidemia() call, got assigned c("none", "farrington")
-  #     message("Note: 'ed_method' was missing, running as 'none'.")
-  #     #no return, because in match.arg() it will take the first item, which is "none".
-  #   }
-  # })
-  #
-  # #week_type = c("ISO", "CDC")
-  # week_type <- tryCatch({
-  #   match.arg(week_type, c("ISO", "CDC"))
-  # }, error = function(e){
-  #   message("Warning: Given 'week_type' does not match 'ISO' or 'CDC', running as 'ISO'.")
-  #   "ISO"
-  # }, finally = {
-  #   if (length(week_type) > 1){
-  #     #if week_type was missing at run_epidemia() call, got assigned c("ISO", "CDC")
-  #     message("Note: 'week_type' was missing, running as 'ISO'.")
-  #     #no return, because in match.arg() it will take the first item, which is "ISO".
-  #   }
-  # })
-
-
-  ##### <<>> fix later
-  # # 3. More input checking
-  # check_results <- input_check(epi_data,
-  #                              quo_casefield,
-  #                              quo_popfield,
-  #                              inc_per,
-  #                              quo_groupfield,
-  #                              week_type,
-  #                              report_period,
-  #                              ed_summary_period,
-  #                              ed_method,
-  #                              ed_control,
-  #                              env_data,
-  #                              quo_obsfield,
-  #                              quo_valuefield,
-  #                              forecast_future,
-  #                              fc_control,
-  #                              env_ref_data,
-  #                              env_info,
-  #                              model_obj,
-  #                              model_cached,
-  #                              model_choice)
-  # #if warnings, just give message and continue
-  # if (check_results$warn_flag){
-  #   message(check_results$warn_msgs)
-  # }
-  # #if then if errors, stop and return error messages
-  # if (check_results$err_flag){
-  #   #prevent possible truncation of all error messages
-  #   options(warning.length = 4000L)
-  #   stop(check_results$err_msgs)
-  # }
-
-
-
-  # Preparing: generating listings, defaults and date sets ----------------------------
+  # Preparing: generating listings, defaults ----------------------------
 
   #create alphabetical list of unique groups
   #must remain in alpha order for early detection using surveillance package to capture results properly
   groupings <- dplyr::pull(epi_data, !!quo_groupfield) %>% unique() %>% sort()
-  #create alphabetical list of all unique environmental variables
+  #create alphabetical list of all unique environmental variables in env_data
   env_variables <- dplyr::pull(env_data, !!quo_obsfield) %>% unique() %>% sort()
 
 
-  # <<>> eventually separate out into own function, here for building
-  #processing or defaults
+  #set defaults in report_settings if not supplied
+  report_settings <- set_report_defaults(raw_settings = report_settings,
+                                         env_info,
+                                         env_ref_data,
+                                         env_variables,
+                                         quo_obsfield,
+                                         groupings,
+                                         quo_groupfield)
 
-  if (is.null(report_settings[["report_period"]])){
-    report_settings[["report_period"]] <- 26
-  }
-
-  if (is.null(report_settings[["report_inc_per"]])){
-    report_settings[["report_inc_per"]] <- 1000
-    #okay if not used, if report_value_type is cases instead of incidence
-  }
-
-  if (is.null(report_settings[["epi_interpolate"]])){
-    report_settings[["epi_interpolate"]] <- FALSE
-  }
-
-  if (is.null(report_settings[["ed_summary_period"]])){
-    report_settings[["ed_summary_period"]] <- 4
-  }
-
-  if (is.null(report_settings[["model_run"]])){
-    report_settings[["model_run"]] <- FALSE
-  }
-
-  if (is.null(report_settings[["model_cached"]])){
-    report_settings[["model_cached"]] <- NULL
-  }
-
-  if (is.null(report_settings[["env_lag_length"]])){
-    #maybe make default based on data length, but for now
-    report_settings[["env_lag_length"]] <- 180
-  }
-
-  if (is.null(report_settings[["fc_cyclicals"]])){
-    report_settings[["fc_cyclicals"]] <- FALSE
-  }
-
-  if (is.null(report_settings[["fc_future_period"]])){
-    report_settings[["fc_future_period"]] <- 8
-  }
-
-  #default false, with explicit false for naive models (probably ok w/out, just being careful)
-  if (is.null(report_settings[["env_anomalies"]])){
-    report_settings[["env_anomalies"]] <- dplyr::case_when(
-      fc_model_family == "naive-persistence" ~ FALSE,
-      fc_model_family == "naive-weekaverage" ~ FALSE,
-      #default to FALSE
-      TRUE ~ FALSE)
-  }
-
-
-  # For things that are being string matched:
-    # tolower to capture upper and lower case user-input variations since match.arg is case sensitive
-    # but must only try function if ed_method is not null (i.e. was given)
-
-  #report_value_type
-  # if provided, prepare for matching
-  if (!is.null(report_settings[["report_value_type"]])){
-    report_settings[["report_value_type"]] <- tolower(report_settings[["report_value_type"]])
-  } else {
-    #if not provided/missing/null
-    message("Note: 'report_value_type' was not provided, returning results in case counts ('cases').")
-    report_settings[["report_value_type"]] <- "cases"
-  }
-  #try match
-  report_settings[["report_value_type"]] <- tryCatch({
-    match.arg(report_settings[["report_value_type"]], c("cases", "incidence"))
-  }, error = function(e){
-    message("Warning: Given 'report_value_type' does not match 'cases' or 'incidence', running as 'cases'.")
-    "cases"
-  }, finally = {
-    #failsafe default
-    "cases"
-  })
-
-  # epi_date_type
-  # if provided, prepare for matching
-  if (!is.null(report_settings[["epi_date_type"]])){
-    #want to keep ISO and CDC capitalized, but drop 'Week' to 'week' if had been entered that way
-    first_char <- substr(report_settings[["epi_date_type"]], 1, 1) %>%
-                  tolower()
-    #remainder of user entry
-    rest_char <- substr(report_settings[["epi_date_type"]], 2, nchar(report_settings[["epi_date_type"]]))
-    #paste back together
-    report_settings[["epi_date_type"]] <- paste0(first_char, rest_char)
-  } else {
-    #if not provided/missing/null
-    message("Note: 'epi_date_type' was not provided, running as weekly, ISO/WHO standard ('weekISO').")
-    report_settings[["epi_date_type"]] <- "weekISO"
-  }
-  #try match
-  report_settings[["epi_date_type"]] <- tryCatch({
-    match.arg(report_settings[["epi_date_type"]], c("weekISO", "weekCDC")) #"monthly" reserved for future
-  }, error = function(e){
-    message("Warning: Given 'epi_date_type' does not match 'weekISO' or 'weekCDC', running as 'weekISO' (weekly, ISO/WHO standard).")
-    "weekISO"
-  }, finally = {
-    #failsafe default
-    "weekISO"
-  })
   # switch epi_date_type to week_type needed for add_datefields()
   week_type <- dplyr::case_when(
     report_settings[["epi_date_type"]] == "weekISO" ~ "ISO",
@@ -499,76 +316,34 @@ run_epidemia <- function(epi_data = NULL,
     TRUE             ~ NA_character_)
 
 
-  # ed_method
-  # if provided, prepare for matching
-  if (!is.null(report_settings[["ed_method"]])){
-    report_settings[["ed_method"]] <- tolower(report_settings[["ed_method"]])
-  } else {
-    #if not provided/missing/null
-    message("Note: 'ed_method' was not provided, running as 'none'.")
-    report_settings[["ed_method"]] <- "none"
+  # Preparing: Detailed Input checking -----------------------------------------------
+
+  # More detailed input checking
+  check_results <- input_check(epi_data,
+                               env_data,
+                               env_ref_data,
+                               env_info,
+                               quo_casefield,
+                               quo_popfield,
+                               quo_groupfield,
+                               quo_obsfield,
+                               quo_valuefield,
+                               fc_model_family,
+                               report_settings)
+  #if warnings, just give message and continue
+  if (check_results$warn_flag){
+    message(check_results$warn_msgs)
   }
-  #try match
-  report_settings[["ed_method"]] <- tryCatch({
-    match.arg(report_settings[["ed_method"]], c("none", "farrington"))
-  }, error = function(e){
-    message("Warning: Given 'ed_method' does not match 'none' or 'farrington', running as 'none'.")
-    "none"
-  }, finally = {
-    #failsafe default to no event detection
-    "none"
-  })
-
-
-  # For more complicated defaults
-
-  #env_var -- what is listed in env_info & also in env_data
-  if (is.null(report_settings[["env_var"]])){
-    #create list of all environmental variables in env_info
-    env_info_variables <- dplyr::pull(env_info, !!quo_obsfield)
-    #env_variables already gen list of env_data
-    report_settings[["env_var"]] <- intersect(env_variables, env_info_variables)
-    #maybe add intersection with env_ref also? <<>>
-  }
-
-  #nthreads
-  #default value is 1 for 1 core machines, 2 for multi-core (testing shows no additional value past 2)
-  #if user-supplied, use that cap at 2, otherwise create a default number
-  #used to decide if run anomalize_env() prior to forecasting
-  if (!is.null(report_settings[["fc_nthreads"]])) {
-    # nthreads above 2 is not actually helpful
-    report_settings[["fc_nthreads"]] <- ifelse(report_settings[["fc_nthreads"]] > 1, 2, 1)
-  } else {
-    #no value fed in, so test and determine
-    report_settings[["fc_nthreads"]] <- ifelse(parallel::detectCores(logical=FALSE) > 1, 2, 1)
-  } #end else for ncores not given
-
-
-  #fc_clusters
-  #default is one cluster, probably not what you actually want for any type of large system
-  if (is.null(report_settings[["fc_clusters"]])){
-    #create tbl of only one cluster
-    #groupings already exist as list of geographic groups
-    cluster_tbl <- tibble::tibble(group_temp = groupings, cluster_id = 1) %>%
-      #and fix names with NSE
-      dplyr::rename(!!rlang::quo_name(quo_groupfield) := .data$group_temp)
-    #assign
-    report_settings[["fc_clusters"]] <- cluster_tbl
+  #if then if errors, stop and return error messages
+  if (check_results$err_flag){
+    #prevent possible truncation of all error messages
+    options(warning.length = 4000L)
+    stop(check_results$err_msgs)
   }
 
 
-  # Developer options
-  if (is.null(report_settings[["dev_fc_fit_freq"]])){
-    report_settings[["dev_fc_fit_freq"]] <- "once"
-  }
-  if (is.null(report_settings[["dev_fc_modbsplines"]])){
-    report_settings[["dev_fc_modbsplines"]] <- FALSE
-  }
-  if (is.null(report_settings[["dev_fc_formula"]])){
-    report_settings[["dev_fc_formula"]] <- NULL
-  }
 
-
+  # Preparing: date sets ----------------------------
 
   # Create report date information: for passing to interval functions, and report output
   # report_period is full # of weeks of report.

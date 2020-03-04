@@ -160,6 +160,7 @@ run_forecast <- function(epi_data,
     reg_obj <- forereg_return$regress
 
   } else if (report_settings[["dev_fc_fit_freq"]] == "week") {
+    message("DEVELOPER: Fitting model per week...")
     # for each week of report, run forecast
     # initialize: prediction returns 4 columns
     preds_catch <- data.frame()
@@ -500,8 +501,12 @@ build_model <- function(fc_model_family,
     if (report_settings[["fc_cyclicals"]]) {
       #TRUE, include cyclicals
 
+      message("Including seasonal cyclicals into model...")
+
       #Formula override: report_settings[["dev_fc_formula"]]
       if (!is.null(report_settings[["dev_fc_formula"]])){
+
+        message("DEVELOPER: Using user-supplied formula: ", report_settings[["dev_fc_formula"]])
 
         reg_eq <- report_settings[["dev_fc_formula"]]
 
@@ -543,6 +548,8 @@ build_model <- function(fc_model_family,
 
       #Formula override: report_settings[["dev_fc_formula"]]
       if (!is.null(report_settings[["dev_fc_formula"]])){
+
+        message("DEVELOPER: Using user-supplied formula: ", report_settings[["dev_fc_formula"]])
 
         reg_eq <- report_settings[["dev_fc_formula"]]
 
@@ -660,6 +667,8 @@ create_predictions <- function(fc_model_family,
 
   } else {
     #user supplied family, use predict.bam on regression object (regress)
+
+    message("Creating predictions...")
 
     #output prediction (through req_date)
     preds <- mgcv::predict.bam(regress,

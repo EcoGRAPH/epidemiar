@@ -29,7 +29,7 @@ set_report_defaults <- function(raw_settings,
   if (is.null(raw_settings)){
     new_settings <- list()
   } else {
-    #copy over to begin before editing below
+    #copy over to begin before editing/updating below
     new_settings <- raw_settings
   }
 
@@ -214,6 +214,7 @@ set_report_defaults <- function(raw_settings,
   if (is.null(raw_settings[["dev_fc_formula"]])){
     new_settings[["dev_fc_formula"]] <- NULL
   }
+
 
   new_settings
 

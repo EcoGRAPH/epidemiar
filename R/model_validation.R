@@ -207,7 +207,7 @@ run_validation <- function(date_start = NULL,
                                  populationfield = quo_popfield,
                                  obsfield = quo_obsfield,
                                  valuefield = quo_valuefield,
-                                 fc_model_family = fc_model_family,
+                                 fc_model_family = this_model, #this
                                  report_settings = this_report_settings) #this
 
 

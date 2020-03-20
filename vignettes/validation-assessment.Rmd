@@ -1,17 +1,17 @@
 ---
 title: "Model Validation and Assessment"
 author: |
-  | Dawn Nekorchuk, Michael Wimberly, and EPIDEMIA Team Members
+  | Dawn M. Nekorchuk, Michael C. Wimberly, and EPIDEMIA Team Members
   | Department of Geography and Environmental Sustainability, University of Oklahoma
   | dawn.nekorchuk@ou.edu; mcwimberly@ou.edu
 date: "Updated `r format(Sys.time(), '%B %d, %Y')`"
 output:
-  rmarkdown::html_vignette:
-    fig_caption: yes
   html_document:
     df_print: paged
     toc: yes
     toc_depth: '2'
+  rmarkdown::html_vignette:
+    fig_caption: yes
   pdf_document:
     number_sections: yes
     toc: yes
@@ -44,7 +44,7 @@ With on-demand implementation and time-range flexibility, one can also investiga
 
 The `run_validation()` function takes 4 arguments, plus all the `run_epidemia()` arguments. 
 
-* `date_start`: The week to begin validation, can be built with `epidemiar::make_date_yw()` and isoyear and isoweek numbers (or epiweeks, with appropriate modifications).
+* `date_start`: The week to begin validation, can be built with `epidemiar::make_date_yw()` and isoyear and isoweek numbers (or epiweeks, with appropriate settings).
 * `total_timesteps`: The number of weeks from `week_start` to run the validation.
 * `timesteps_ahead`: To validate 1 through _n_-week ahead predictions (the number of weeks into the future the predictions are made).
 * `reporting_lag`: Default of 0 weeks, but can be adjusted for different assumptions about the length of the lag in data reporting. Enter the number of timesteps to simulate reporting lag. For instance, if you have weekly data, and a `reporting_lag` of 1 week, and are working with a timesteps_ahead of 1 week, then that is the functional equivalent to reporting lag of 0, and timesteps_ahead of 2 weeks. I.e. You are forecasting next week, but you don’t know this week’s data yet, you only know last week’s numbers.
@@ -53,7 +53,7 @@ The `run_validation()` function takes 4 arguments, plus all the `run_epidemia()`
 
 ## Other Arguments & Adjustments
 
-The `run_validation()` function will call `run_epidemia()`, so it will also take all the arguments for that function. The user does not need to modify any of these arguments (e.g. event detection settings, `forecast_future`), as `run_validation()` will automatically handle all of thse adjustments. 
+The `run_validation()` function will call `run_epidemia()`, so it will also take all the arguments for that function. The user does not need to modify any of these arguments (e.g. event detection settings, `fc_future_period`), as `run_validation()` will automatically handle all of thse adjustments. 
 
 It is envisioned that users can take their usual script for running EPIDEMIA forecasts, and simply sub in the validation function with those five validation settings for doing model assessments. 
 

@@ -50,7 +50,8 @@
 #'  \code{\link[mgcv]{family.mgcv}} can also be used. This sets the type of
 #'  generalized additive model (GAM) to run: it specifies the distribution and
 #'  link to use in model fitting. E.g. for a Poisson regression, the user would
-#'  input "poisson()". If a cached model is being used, set the parameter to `"cached"`.
+#'  input "poisson()". If a cached model is being used, set the parameter to
+#'  `"cached"`.
 #'
 #'@param report_settings This is a named list of all the report, forecasting,
 #'  event detection and other settings. All of these have defaults, but they are
@@ -89,14 +90,16 @@
 #'  run of run_epidemia() that produces a model (regression object) and
 #'  metadata. The metadata will be used for input checking and validation. Using
 #'  a prebuilt model saves on processing time, but will need to be updated
-#'  periodically. If using a cached model, also set `fc_model_family = "cached"`.
+#'  periodically. If using a cached model, also set `fc_model_family =
+#'  "cached"`.
 #'
 #'  \item \code{env_var}: List environmental variables to actually use in the
 #'  modelling. (You can therefore have extra variables or data in the
 #'  environmental dataset.) Input should be a one column tibble, header row as
 #'  `obsfield` and each row with entries of the variables (must match what is in
 #'  env_data, env_ref-data, and env_info). Default is to use all environmental
-#'  variables that are present in all three of env_data, env_ref_data, and env_info.
+#'  variables that are present in all three of env_data, env_ref_data, and
+#'  env_info.
 #'
 #'  \item \code{env_lag_length} = 180: The number of days of past environmental
 #'  data to include for the lagged effects. The distributed lags are summarized
@@ -110,6 +113,13 @@
 #'
 #'  \item \code{fc_future_period} = 8: Number of future weeks from the end of
 #'  the \code{epi_data} to produce forecasts. Default is 8 weeks.
+#'
+#'  \item \code{fc_clusters}: Dataframe/tible of geographic units and a cluster
+#'  id. This clusters, or groups, certain geographic locations together, to
+#'  better model when spatial non-stationarity in the relationship between
+#'  environmental variables and cases. See the overview and data & mdoeling
+#'  vignettes for more discussion. Default is a global model, all geographic
+#'  units in one cluster.
 #'
 #'  \item \code{fc_cyclicals} = FALSE: TRUE/FALSE flag on whether to include a
 #'  smooth term based on day of year in the modelling (as one way of accounting
@@ -128,7 +138,7 @@
 #'  \item \code{ed_control} = Controls passed along to the event detection
 #'  method.  E.g. for `ed_method = 'farrington'`, these are passed to
 #'  \code{\link[surveillance:farringtonFlexible]{surveillance::farringtonFlexible()}}.
-#'  Currently, these parameters are supported for Farrington: `b`, `w`,
+#'   Currently, these parameters are supported for Farrington: `b`, `w`,
 #'  `reweight`, `weightsThreshold`, `trend`, `pThresholdTrend`,
 #'  `populationOffset`, `noPeriods`, `pastWeeksNotIncluded`, `thresholdMethod`.
 #'  Any control not included will use surveillance package defaults, with the

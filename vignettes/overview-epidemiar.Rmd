@@ -1,7 +1,7 @@
 ---
 title: "Overview of epidemiar Package"
 author: |
-  | Dawn Nekorchuk, Michael Wimberly, and EPIDEMIA Team Members
+  | Dawn M. Nekorchuk, Michael C. Wimberly, and EPIDEMIA Team Members
   | Department of Geography and Environmental Sustainability, University of Oklahoma
   | dawn.nekorchuk@ou.edu; mcwimberly@ou.edu
 date: "Updated `r format(Sys.time(), '%B %d, %Y')`"
@@ -69,7 +69,7 @@ The main requirements for using this package are:
 
 The epidemiar package is flexible on many aspects of modeling. It is all based on general additive model (GAM) regression of multiple factors, including lagged environmental drivers, long term trends, and potentially several other factors such as geographic group,  seasonality,and clustering of geographic groups. 
 
-The modeling utilizes `mgcv::bam()`, so the model form can be any accepted by it - any quadractically penalized GLM with the extended families in family.mgcv also being available. This is user set with the `fc_family` parameter. For example, you can run regression with a Poisson distribution (`fc_family = "poisson()"`). 
+The modeling utilizes `mgcv::bam()`, so the model form can be any accepted by it - any quadractically penalized GLM with the extended families in family.mgcv also being available. This is user set with the `fc_model_family` parameter. For example, you can run regression with a Poisson distribution (`fc_model_family = "poisson()"`). 
 
 
 ## Geographic group, long term trends, and seasonality

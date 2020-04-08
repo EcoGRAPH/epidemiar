@@ -200,6 +200,7 @@
 #'@importFrom rlang !!
 #'@importFrom rlang :=
 #'@importFrom rlang .data
+#'@importFrom lubridate %within%
 
 
 ## Main Modeling (Early Detection, Forecasting) Function
@@ -310,7 +311,9 @@ run_epidemia <- function(epi_data = NULL,
 
 
   #set defaults in report_settings if not supplied
+  # some specific data checks that need overrides
   report_settings <- set_report_defaults(raw_settings = report_settings,
+                                         epi_data,
                                          env_info,
                                          env_ref_data,
                                          env_variables,
@@ -355,33 +358,100 @@ run_epidemia <- function(epi_data = NULL,
 
   # Preparing: date sets ----------------------------
 
+  # Some additional checks and overrides now that the others have been done
+  #is the user given date the end date of a epidemiolgical week?
+  # calculate expected date and compare
+  #switch on ISO/CDC weeks
+  if(report_settings[["epi_date_type"]] == "weekISO"){
+    user_st_year <- lubridate::isoyear(report_settings[["fc_start_date"]])
+    user_st_week <- lubridate::isoweek(report_settings[["fc_start_date"]])
+    expected_date <- make_date_yw(year = user_st_year,
+                                  week = user_st_week,
+                                  weekday = 7,
+                                  system = "ISO")
+  } else {
+    #can add more if blocks later for other date types
+    #"weekCDC"
+    user_st_year <- lubridate::epiyear(report_settings[["fc_start_date"]])
+    user_st_week <- lubridate::epiweek(report_settings[["fc_start_date"]])
+    expected_date <- make_date_yw(year = user_st_year,
+                                  week = user_st_week,
+                                  weekday = 7,
+                                  system = "CDC")
+  }
+  #if not, override and provide message
+  if(!report_settings[["fc_start_date"]] == expected_date){
+    message("Note: 'report_settings$fc_start_date was not the end date of an epidemiological week\n
+            Using ", expected_date, " instead.")
+    report_settings[["fc_start_date"]] <- expected_date
+  }
+
+
   # Create report date information: for passing to interval functions, and report output
   # report_period is full # of weeks of report.
   # fc_future_period is how many of those weeks should be in the future.
+  # *Nearly all dates are calculated from fc_start_date*
+  #     Forecast begins on fc_start_date, runs for fc_future_period
+  #     Report_period minus fc_future_period is the number of 'past' weeks to include
+  #     Known data is independent of fc_start_date but important for early detection
+
   #full report
-  report_dates <- list(full = list(min = max(epi_data$obs_date, na.rm = TRUE) -
+  report_dates <- list(full = list(min = report_settings[["fc_start_date"]] -
                                      lubridate::as.difftime((report_settings[["report_period"]] -
-                                                               report_settings[["fc_future_period"]] - 1),
+                                                               report_settings[["fc_future_period"]]),
                                                             unit = "weeks"),
-                                   max = max(epi_data$obs_date, na.rm = TRUE) +
-                                     lubridate::as.difftime(report_settings[["fc_future_period"]],
+                                   max = report_settings[["fc_start_date"]] +
+                                     lubridate::as.difftime((report_settings[["fc_future_period"]] - 1),
                                                             units = "weeks")))
   report_dates$full$seq <- report_dates$full %>% {seq.Date(.$min, .$max, "week")}
-  #dates with known epidemological data
-  report_dates$known <- list(min = report_dates$full$min,
+
+  #dates with known epidemological data (note: may NOT be in report period)
+  report_dates$known <- list(min = min(epi_data$obs_date, na.rm = TRUE),
                              max = max(epi_data$obs_date, na.rm = TRUE))
-  report_dates$known$seq <- report_dates$known %>% {seq.Date(.$min, .$max, "week")}
+    #can't assume known is complete sequence now
+    #report_dates$known$seq <- report_dates$known %>% {seq.Date(.$min, .$max, "week")}
+    #any known data in range (across any geographical groupings)
+  report_dates$known$seq <- epi_data %>% dplyr::pull(.data$obs_date) %>% unique() %>% sort()
+
   #forecast period
-  report_dates$forecast <- list(min = report_dates$known$max +
-                                  lubridate::as.difftime(1, units = "weeks"),
+  report_dates$forecast <- list(min = report_settings[["fc_start_date"]],
                                 #could calculate from forecast_future, but already done so in $full
                                 max = report_dates$full$max)
   report_dates$forecast$seq <- report_dates$forecast %>% {seq.Date(.$min, .$max, "week")}
+
   #early detection summary period (ED runs over full report, this is for summary in defined ED period)
-  report_dates$ed_sum <- list(min = report_dates$known$max -
-                                lubridate::as.difftime(report_settings[["ed_summary_period"]] - 1, units = "weeks"),
-                              max = report_dates$known$max)
+  report_dates$ed_sum <- list(min = report_settings[["fc_start_date"]] -
+                                lubridate::as.difftime(report_settings[["ed_summary_period"]],
+                                                       units = "weeks"),
+                              max = report_settings[["fc_start_date"]] -
+                                lubridate::as.difftime(1, units = "weeks"))
   report_dates$ed_sum$seq <- report_dates$ed_sum %>% {seq.Date(.$min, .$max, "week")}
+
+
+  # #full report
+  # report_dates <- list(full = list(min = max(epi_data$obs_date, na.rm = TRUE) -
+  #                                    lubridate::as.difftime((report_settings[["report_period"]] -
+  #                                                              report_settings[["fc_future_period"]] - 1),
+  #                                                           unit = "weeks"),
+  #                                  max = max(epi_data$obs_date, na.rm = TRUE) +
+  #                                    lubridate::as.difftime(report_settings[["fc_future_period"]],
+  #                                                           units = "weeks")))
+  # report_dates$full$seq <- report_dates$full %>% {seq.Date(.$min, .$max, "week")}
+  # #dates with known epidemological data
+  # report_dates$known <- list(min = report_dates$full$min,
+  #                            max = max(epi_data$obs_date, na.rm = TRUE))
+  # report_dates$known$seq <- report_dates$known %>% {seq.Date(.$min, .$max, "week")}
+  # #forecast period
+  # report_dates$forecast <- list(min = report_dates$known$max +
+  #                                 lubridate::as.difftime(1, units = "weeks"),
+  #                               #could calculate from forecast_future, but already done so in $full
+  #                               max = report_dates$full$max)
+  # report_dates$forecast$seq <- report_dates$forecast %>% {seq.Date(.$min, .$max, "week")}
+  # #early detection summary period (ED runs over full report, this is for summary in defined ED period)
+  # report_dates$ed_sum <- list(min = report_dates$known$max -
+  #                               lubridate::as.difftime(report_settings[["ed_summary_period"]] - 1, units = "weeks"),
+  #                             max = report_dates$known$max)
+  # report_dates$ed_sum$seq <- report_dates$ed_sum %>% {seq.Date(.$min, .$max, "week")}
 
 
 

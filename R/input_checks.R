@@ -18,6 +18,7 @@
 #'
 
 set_report_defaults <- function(raw_settings,
+                                epi_data,
                                 env_info,
                                 env_ref_data,
                                 env_variables,
@@ -71,7 +72,7 @@ set_report_defaults <- function(raw_settings,
     new_settings[["fc_future_period"]] <- 8
   }
 
-  #default false, with explicit false for naive models (probably ok w/out, just being careful)
+  #default false, with explicit false for naive models
   if (is.null(raw_settings[["env_anomalies"]])){
     new_settings[["env_anomalies"]] <- dplyr::case_when(
       fc_model_family == "naive-persistence" ~ FALSE,
@@ -155,14 +156,24 @@ set_report_defaults <- function(raw_settings,
 
   # For more complicated defaults
 
+  #fc_start_date: date when to start forecasting
+  if (is.null(raw_settings[["fc_start_date"]])){
+    # defaults to last known epidemiological data date + one week
+    last_known <- max(epi_data[["obs_date"]], na.rm = TRUE)
+    new_settings[["fc_start_date"]] <- last_known + lubridate::as.difftime(1, units = "weeks")
+  } else {
+    #other checks will come later, for now, copy user entry as is over
+    new_settings[["fc_start_date"]] <- raw_settings[["fc_start_date"]]
+  }
+
   #env_var -- what is listed in env_data, env_ref_data, & env_info
   if (is.null(raw_settings[["env_var"]])){
 
     #create list of all environmental variables in env_info
-    env_info_variables <- dplyr::pull(env_info, !!quo_obsfield)
+    env_info_variables <- dplyr::pull(env_info, !!quo_obsfield) %>% unique()
 
     #create list of all environmental variables in env_ref_data
-    env_ref_variables <- dplyr::pull(env_ref_data, !!quo_obsfield)
+    env_ref_variables <- dplyr::pull(env_ref_data, !!quo_obsfield) %>% unique()
 
     #env_variables already gen list of env_data
 
@@ -275,9 +286,15 @@ input_check <- function(epi_data,
   # Existing & Types --------------------------------------------------------
 
   # Quick test for some simple settings
+
+  #report_settings tests
   if (!is.numeric(report_settings[["report_inc_per"]]) || report_settings[["report_inc_per"]] <= 0){
     err_flag <- TRUE
-    err_msgs <- paste(err_msgs, "'inc_per' must be numeric and a positive number.\n")
+    err_msgs <- paste(err_msgs, "'report_settings$report_inc_per' must be numeric and a positive number.\n")
+  }
+  if (!class(report_settings[["fc_start_date"]]) == "Date"){
+    err_flag <- TRUE
+    err_msgs <- paste(err_msgs, "'report_settings$fc_start_date' must be type Date.\n")
   }
 
 
@@ -391,11 +408,14 @@ input_check <- function(epi_data,
     err_flag <- TRUE
     err_msgs <- paste(err_msgs, "'report_settings$forecast_future' must be numeric or integer type - integer number of weeks only.\n")
     rpt_len_flag <- TRUE
-  } else if (report_settings[["fc_future_period"]] > 13){
-    # warn on long forecasts
-    warn_flag <- TRUE
-    warn_msgs <- paste(warn_msgs, "Warning: It is not recommended to forecast more than 12 weeks into the future. You are forecasting for ", report_settings[["fc_future_period"]], " weeks.\n")
   }
+  #removed with new report_settings$fc_start_date, potentially add back in
+  # else if (report_settings[["fc_future_period"]] > 13){
+  #   # warn on long forecasts
+  #   warn_flag <- TRUE
+  #   warn_msgs <- paste(warn_msgs, "Warning: It is not recommended to forecast more than 12 weeks into the future. You are forecasting for ", report_settings[["fc_future_period"]], " weeks.\n")
+  # }
+
   if (!(is.numeric(report_settings[["ed_summary_period"]]) | is.integer(report_settings[["ed_summary_period"]]))){
     err_flag <- TRUE
     err_msgs <- paste(err_msgs, "'report_settings$ed_summary_period' must be numeric or integer type - integer number of weeks only.\n")

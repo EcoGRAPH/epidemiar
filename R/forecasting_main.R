@@ -77,6 +77,7 @@ run_forecast <- function(epi_data,
                                      env_variables_used,
                                      report_dates)
 
+  #extend into future and/or gaps in requested report dates & known data
   epi_data_extd <- extend_epi_future(epi_data,
                                      quo_popfield,
                                      quo_groupfield,

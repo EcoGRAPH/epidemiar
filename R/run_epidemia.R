@@ -426,6 +426,11 @@ run_epidemia <- function(epi_data = NULL,
                               max = report_settings[["fc_start_date"]] -
                                 lubridate::as.difftime(1, units = "weeks"))
   report_dates$ed_sum$seq <- report_dates$ed_sum %>% {seq.Date(.$min, .$max, "week")}
+  #period of report NOT in forecast ("previous" to forecast)
+  report_dates$prev <- list(min = report_dates$full$min,
+                            max = report_settings[["fc_start_date"]] -
+                              lubridate::as.difftime(1, units = "weeks"))
+  report_dates$prev$seq <- report_dates$prev %>% {seq.Date(.$min, .$max, "week")}
 
 
   # #full report
@@ -455,25 +460,59 @@ run_epidemia <- function(epi_data = NULL,
 
 
 
-  # Preparing: data checks for NA and interpolation -------------------------
+  # Preparing: data checks for implicit missing, NA and interpolation ---------------------
 
-  #check for NAs and interpolate as necessary and user set
+  #Implicit missing, or gaps introduced by user start parameter, may exist
+  #all weeks in report period NOT in forecast period ("previous" to forecast)
+  epi_full <- tidyr::crossing(obs_date = report_dates$prev$seq,
+                              group_temp = groupings)
+  #and fix names with NSE
+  epi_full <- epi_full %>%
+    dplyr::rename(!!rlang::quo_name(quo_groupfield) := .data$group_temp)
+
+  #antijoin with existing data to find rows are implicitly missing
+  epi_implicit <- epi_full %>%
+    dplyr::anti_join(epi_data, by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                                                       "obs_date"),
+                                                     c(rlang::quo_name(quo_groupfield),
+                                                       "obs_date")))
+  #bind missing
+  epi_data <- epi_data %>%
+    dplyr::bind_rows(epi_implicit) %>%
+    #and sort by alphabetical groupfield and date
+    dplyr::arrange(!!quo_groupfield, .data$obs_date)
+
+  #fill down for population that we would need values, if pop field present
+  #rest will remain NA for implicit missing data: casefield, and any extra/extraneous columns in original data
+  if(!rlang::quo_is_null(quo_popfield)){
+    epi_data <- epi_data %>%
+      #per geographic group
+      dplyr::group_by(!!quo_groupfield) %>%
+      #fill population down ('persistence' fill, last known value carried forward)
+      tidyr::fill(!!quo_popfield, .direction = "down") %>%
+      #ungroup to finish
+      dplyr::ungroup()
+  }
+
+
+  #Interpolate NAs if user selected
   if (report_settings[["epi_interpolate"]] == TRUE){
     #Note: cases_epidemiar is field name returned (epi)
     epi_data <- epi_NA_interpolate(epi_data, quo_casefield, quo_groupfield) %>%
       #force into integer after interpolating (would cause problems with modeling otherwise)
       dplyr::mutate(cases_epidemiar = floor(.data$cases_epidemiar)) %>%
-      #and sort by alphabetical groupfield
+      #and sort by alphabetical groupfield (dates should already be sorted from interpolate function)
       dplyr::arrange(!!quo_groupfield, .data$obs_date)
   } else {
     epi_data <- epi_data %>%
       #copy over value
       dplyr::mutate(cases_epidemiar = !!quo_casefield) %>%
-      #force into integer, just in case
+      #force into integer, just in case/keeping consistency
       dplyr::mutate(cases_epidemiar = floor(.data$cases_epidemiar)) %>%
-      #and sort by alphabetical groupfield
+      #and sort by alphabetical groupfield, dates
       dplyr::arrange(!!quo_groupfield, .data$obs_date)
   }
+
 
   #Note: val_epidemiar is field name returned (env)
     #interpolation is no longer necessary with new extend_env_future()
@@ -503,18 +542,12 @@ run_epidemia <- function(epi_data = NULL,
                           } else if (report_settings[["report_value_type"]] == "incidence"){
                             !!quo_casefield / !!quo_popfield * report_settings[["report_inc_per"]]
                           } else {NA_real_},
-                  # value = dplyr::case_when(
-                  #   #if reporting in case counts
-                  #   report_settings[["report_value_type"]] == "cases" ~ !!quo_casefield,
-                  #   #if incidence
-                  #   report_settings[["report_value_type"]] == "incidence" ~ !!quo_casefield / !!quo_popfield * report_settings[["report_inc_per"]],
-                  #   #otherwise
-                  #   TRUE ~ NA_real_),
                   #note use of original not interpolated cases
                   lab = "Observed",
                   upper = NA,
                   lower = NA) %>%
-    dplyr::select(!!quo_groupfield, .data$obs_date, .data$series, .data$value, .data$lab, .data$upper, .data$lower)
+    dplyr::select(!!quo_groupfield, .data$obs_date, .data$series, .data$value,
+                  .data$lab, .data$upper, .data$lower)
 
 
 
@@ -571,6 +604,9 @@ run_epidemia <- function(epi_data = NULL,
 
 
   # Event detection ---------------------------------------------------------
+
+  #<> Need to combine datasets appropriately now with fc_start_date
+  #<> Will need to rework following steps:
 
   #need to calculate event detection on existing epi data & FUTURE FORECASTED results
   future_fc <- fc_res_all$fc_epi %>%

@@ -4,11 +4,14 @@
 \alias{set_report_defaults}
 \title{Set defaults of any missing report_settings parameters}
 \usage{
-set_report_defaults(raw_settings, env_info, env_ref_data, env_variables,
-  quo_obsfield, groupings, quo_groupfield)
+set_report_defaults(raw_settings, epi_data, env_info, env_ref_data,
+  env_variables, quo_obsfield, groupings, quo_groupfield)
 }
 \arguments{
 \item{raw_settings}{The report_settings object as given by the user.}
+
+\item{epi_data}{Epidemiological data with case numbers per week, with date
+field "obs_date".}
 
 \item{env_info}{Lookup table for environmental data - reference creation
 method (e.g. sum or mean), report labels, etc.}

@@ -287,6 +287,7 @@ extend_epi_future <- function(epi_data,
                               #calculated/internal
                               groupings,
                               report_dates){
+
   #extended epi data into future dates
   #for use in modeling later (results will be put elsewhere), this is for env and lags and modeling dataset
   epi_future <- tidyr::crossing(obs_date = report_dates$forecast$seq,
@@ -299,8 +300,16 @@ extend_epi_future <- function(epi_data,
   extended_epi <- dplyr::bind_rows(epi_data, epi_future) %>%
     dplyr::arrange(!!quo_groupfield, .data$obs_date)
 
-  #fill population down
-  extended_epi <- tidyr::fill(extended_epi, !!quo_popfield, .direction = "down")
+  #fill population down (if pop field given)
+  if (!is.null(quo_popfield)) {
+    extended_epi <- extended_epi %>%
+      #per geographic group
+      dplyr::group_by(!!quo_groupfield) %>%
+      #fill population down ('persistence' fill, last known value carried forward)
+      tidyr::fill(!!quo_popfield, .direction = "down") %>%
+      #ungroup to finish
+      dplyr::ungroup()
+  }
 
   extended_epi
 }

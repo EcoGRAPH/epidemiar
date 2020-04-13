@@ -114,7 +114,8 @@ run_farrington <- function(epi_fc_data,
   far_control <- list()
 
   #get evaluation period (range of row numbers)
-  far_control[["range"]] <- seq(nrow(epi_stss[[1]]) - length(report_dates$full$seq) + 1, nrow(epi_stss[[1]]))
+  far_control[["range"]] <- seq(nrow(epi_stss[[1]]) - length(report_dates$full$seq) + 1,
+                                nrow(epi_stss[[1]]))
 
   #test for all other parameters that can be passed onto Farrington flexible method
   # if not null, use user parameter, otherwise leave as null to use its defaults

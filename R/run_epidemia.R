@@ -33,8 +33,9 @@
 #'
 #'@param casefield The column name of the field that contains disease case
 #'  counts (unquoted field name).
-#'@param populationfield Column name of the population field to give population
-#'  numbers over time (unquoted field name). Used to calculated incidence. Also
+#'@param populationfield Column name of the optional population field to give
+#'  population numbers over time (unquoted field name). Used to calculated
+#'  incidence if \code{report_settings$report_value_type} = "incidence". Also
 #'  optionally used in Farrington method for populationOffset.
 #'@param groupfield The column name of the field for district or geographic area
 #'  unit division names of epidemiological AND environmental data (unquoted

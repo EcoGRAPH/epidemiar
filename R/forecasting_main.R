@@ -303,9 +303,9 @@ forecast_regression <- function(epi_lag,
 
   ## Set up data
 
-  #mark known or not
+  #mark within prior known range or not, to be used as input to create model
   epi_lag <- epi_lag %>%
-    dplyr::mutate(known = ifelse(.data$obs_date <= last_known_date, 1, 0))
+    dplyr::mutate(input = ifelse(.data$obs_date <= last_known_date, 1, 0))
 
   # ensure that quo_name(quo_groupfield) is a factor - gam/bam will fail if given a character,
   # which is unusual among regression functions, which typically just coerce into factors.
@@ -322,7 +322,7 @@ forecast_regression <- function(epi_lag,
   # create modified bspline basis in epi_lag file to model longterm trends
   epi_lag <- cbind(epi_lag, truncpoly(x=epi_lag$obs_date,
                                       degree=6,
-                                      maxobs=max(epi_lag$obs_date[epi_lag$known==1], na.rm=TRUE)))
+                                      maxobs=max(epi_lag$obs_date[epi_lag$input==1], na.rm=TRUE)))
 
 
 
@@ -350,15 +350,15 @@ forecast_regression <- function(epi_lag,
       modb_eq <- glue::glue_collapse(modb_list, sep = " + ")
     }
 
-    #filter to known
-    epi_known <- epi_lag %>% dplyr::filter(.data$known == 1)
+    #filter to input data
+    epi_input <- epi_lag %>% dplyr::filter(.data$input == 1)
 
 
     # Model building switching point
 
     regress <- build_model(fc_model_family,
                            quo_groupfield,
-                           epi_known,
+                           epi_input,
                            report_settings,
                            #calc/internal
                            n_groupings,
@@ -425,7 +425,7 @@ forecast_regression <- function(epi_lag,
 
 #'Build the appropriate model
 #'
-#'@param epi_known Epidemiological dataset with basis spline summaries of the
+#'@param epi_input Epidemiological dataset with basis spline summaries of the
 #'  lagged environmental data (or anomalies), with column marking if "known"
 #'  data and groupings converted to factors.
 #'@param n_groupings Count of the number of geographic groupings in the model.
@@ -443,7 +443,7 @@ forecast_regression <- function(epi_lag,
 #'
 build_model <- function(fc_model_family,
                         quo_groupfield,
-                        epi_known,
+                        epi_input,
                         report_settings,
                         #calc/internal
                         n_groupings,
@@ -468,7 +468,7 @@ build_model <- function(fc_model_family,
 
     #create "model" using known data.
     #Will fill down in create_predictions
-    regress <- epi_known %>%
+    regress <- epi_input %>%
       #grouping by geographical unit
       dplyr::group_by(!!quo_groupfield) %>%
       #prediction is 1 lag (previous week)
@@ -486,7 +486,7 @@ build_model <- function(fc_model_family,
     #not a regression object
 
     #create "model" (averages) using known data.
-    regress <- epi_known %>%
+    regress <- epi_input %>%
       #calculate averages per geographic group per week of year
       dplyr::group_by(!!quo_groupfield, .data$week_epidemiar) %>%
       dplyr::summarize(fit = mean(.data$cases_epidemiar, na.rm = TRUE))
@@ -535,7 +535,7 @@ build_model <- function(fc_model_family,
 
       # run bam
       regress <- mgcv::bam(reg_eq,
-                           data = epi_known,
+                           data = epi_input,
                            family = fc_model_family,
                            control = mgcv::gam.control(trace=FALSE),
                            discrete = TRUE,
@@ -573,7 +573,7 @@ build_model <- function(fc_model_family,
 
       # run bam
       regress <- mgcv::bam(reg_eq,
-                           data = epi_known,
+                           data = epi_input,
                            family = fc_model_family,
                            control = mgcv::gam.control(trace=FALSE))
 

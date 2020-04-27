@@ -326,7 +326,7 @@ run_epidemia <- function(epi_data = NULL,
   week_type <- dplyr::case_when(
     report_settings[["epi_date_type"]] == "weekISO" ~ "ISO",
     report_settings[["epi_date_type"]] == "weekCDC"  ~ "CDC",
-    #default as if mean
+    #default NA
     TRUE             ~ NA_character_)
 
 
@@ -396,6 +396,9 @@ run_epidemia <- function(epi_data = NULL,
   #     Report_period minus fc_future_period is the number of 'past' weeks to include
   #     Known data is independent of fc_start_date but important for early detection
 
+  #time units #report_settings[["epi_date_type"]]
+  #as.difftime cannot do monthly, so will have to build switch for different function calculations
+
   #full report
   report_dates <- list(full = list(min = report_settings[["fc_start_date"]] -
                                      lubridate::as.difftime((report_settings[["report_period"]] -
@@ -420,7 +423,7 @@ run_epidemia <- function(epi_data = NULL,
                                 max = report_dates$full$max)
   report_dates$forecast$seq <- report_dates$forecast %>% {seq.Date(.$min, .$max, "week")}
 
-  #early detection summary period (ED runs over full report, this is for summary in defined ED period)
+  #early detection summary period (ED runs over full report, this is for defined early DETECTION period)
   report_dates$ed_sum <- list(min = report_settings[["fc_start_date"]] -
                                 lubridate::as.difftime(report_settings[["ed_summary_period"]],
                                                        units = "weeks"),
@@ -532,8 +535,8 @@ run_epidemia <- function(epi_data = NULL,
 
   #create observed data series
   obs_res <- epi_data %>%
-    #include only observed data from requested start of report
-    dplyr::filter(.data$obs_date >= report_dates$full$min) %>%
+    #include only observed data from during report period
+    dplyr::filter(.data$obs_date %in% report_dates$full$seq) %>%
     dplyr::mutate(series = "obs",
                   #value calculations change depending on report_value_type
                   #case_when is not viable because it evaluates ALL RHS
@@ -606,18 +609,24 @@ run_epidemia <- function(epi_data = NULL,
 
   # Event detection ---------------------------------------------------------
 
-  #<> Need to combine datasets appropriately now with fc_start_date
-  #<> Will need to rework following steps:
+  #need to calculate event detection on observed data; & in forecast period, the FORECASTED results
+  #existing data before forecast start
+  epi_to_fc <- epi_data %>%
+    dplyr::filter(.data$obs_date < report_dates$forecast$min)
 
-  #need to calculate event detection on existing epi data & FUTURE FORECASTED results
-  future_fc <- fc_res_all$fc_epi %>%
+  #modeled values in forecast period = forecast values
+  forecast_values <- fc_res_all$fc_epi %>%
     #get future forecasted results ONLY
-    dplyr::filter(.data$obs_date %in% report_dates$forecast$seq)
+    dplyr::filter(.data$obs_date %in% report_dates$forecast$seq) %>%
+    #assign forecasted values into cases_epidemiar column (so event detection will run on these values)
+    dplyr::mutate(cases_epidemiar = .data$fc_cases)
+    # dplyr::mutate(cases_epidemiar = ifelse(!rlang::are_na(.data$cases_epidemiar),
+    #                                        .data$cases_epidemiar,
+    #                                        .data$fc_cases))
+
+
   #combine existing and future
-  obs_fc_epi <- dplyr::bind_rows(epi_data, future_fc) %>%
-    dplyr::mutate(cases_epidemiar = ifelse(!rlang::are_na(.data$cases_epidemiar),
-                                           .data$cases_epidemiar,
-                                           .data$fc_cases)) %>%
+  obs_fc_epi <- dplyr::bind_rows(epi_to_fc, forecast_values) %>%
     #will be lost by end, but need for event detection methods using surveillance::sts objects
     epidemiar::add_datefields() %>%
     #arrange (for viewing/checking)

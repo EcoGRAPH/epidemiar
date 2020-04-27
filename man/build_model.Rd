@@ -4,7 +4,7 @@
 \alias{build_model}
 \title{Build the appropriate model}
 \usage{
-build_model(fc_model_family, quo_groupfield, epi_known, report_settings,
+build_model(fc_model_family, quo_groupfield, epi_input, report_settings,
   n_groupings, modb_eq, bandsums_eq)
 }
 \arguments{
@@ -19,7 +19,7 @@ input "poisson()". If a cached model is being used, set the parameter to
 \item{quo_groupfield}{Quosure of the user given geographic grouping field to
 run_epidemia().}
 
-\item{epi_known}{Epidemiological dataset with basis spline summaries of the
+\item{epi_input}{Epidemiological dataset with basis spline summaries of the
 lagged environmental data (or anomalies), with column marking if "known"
 data and groupings converted to factors.}
 

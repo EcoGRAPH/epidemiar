@@ -36,8 +36,9 @@ unit division names of epidemiological AND environmental data (unquoted
 field name). If there are no groupings (all one area), user should give a
 field that contains the same value throughout.}
 
-\item{populationfield}{Column name of the population field to give population
-numbers over time (unquoted field name). Used to calculated incidence. Also
+\item{populationfield}{Column name of the optional population field to give
+population numbers over time (unquoted field name). Used to calculated
+incidence if \code{report_settings$report_value_type} = "incidence". Also
 optionally used in Farrington method for populationOffset.}
 
 \item{obsfield}{Field name of the environmental data variables (unquoted field

@@ -324,9 +324,11 @@ stss_res_to_output_data <- function(stss_res_list,
                                            c(rlang::quo_name(quo_groupfield),
                                              "epoch")))
 
-  #gather early detection (KNOWN - pre-forecast) event detection alert series
+  #gather early detection (pre-forecast) event detection alert series
+  #early detection alerts show for all time previous and including early detection period
+  #"historical" alerts were wanted
   ed_alert_res <- stss_res_flat %>%
-    dplyr::filter(.data$epoch %in% report_dates$known$seq) %>%
+    dplyr::filter(.data$epoch %in% report_dates$prev$seq) %>%
     dplyr::mutate(series = "ed",
                   obs_date = .data$epoch,
                   value = .data$alarm,
@@ -348,6 +350,7 @@ stss_res_to_output_data <- function(stss_res_list,
 
   #gather event detection threshold series
   ed_thresh_res <- stss_res_flat %>%
+    dplyr::filter(.data$epoch %in% report_dates$full$seq) %>%
     dplyr::mutate(series = "thresh",
                   obs_date = .data$epoch,
                   #value calculations change depending on report_value_type

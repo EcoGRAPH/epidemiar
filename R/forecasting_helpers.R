@@ -170,7 +170,7 @@ extend_env_future <- function(env_data,
         dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
         #create a 1 day lag variable since need previous 7 days not including current
         dplyr::mutate(val_lag1 = dplyr::lag(.data$val_epidemiar, n = 1),
-               #if_else to find the first NA
+               #ifelse to find the first NA
                val_epidemiar = ifelse(is.na(.data$val_epidemiar) & .data$id_in_run == 1,
                                       #zoo:rollapply to calculate mean of last 7 days (week) on lagged var
                                       zoo::rollapply(data = .data$val_lag1,

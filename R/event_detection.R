@@ -338,6 +338,10 @@ stss_res_to_output_data <- function(stss_res_list,
                   lab = "Early Detection Alert",
                   upper = NA,
                   lower = NA) %>%
+    #surveillance returns an alarm value (0) for when observed is NA, we want NA in this case
+    dplyr::mutate(value = ifelse(is.na(.data$observed),
+                                 NA_integer_,
+                                 .data$value)) %>%
     dplyr::select(!!quo_groupfield, .data$obs_date, .data$series, .data$value, .data$lab, .data$upper, .data$lower)
 
   #gather early WARNING event detection alert series

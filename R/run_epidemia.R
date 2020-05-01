@@ -424,12 +424,18 @@ run_epidemia <- function(epi_data = NULL,
   report_dates$forecast$seq <- report_dates$forecast %>% {seq.Date(.$min, .$max, "week")}
 
   #early detection summary period (ED runs over full report, this is for defined early DETECTION period)
-  report_dates$ed_sum <- list(min = report_settings[["fc_start_date"]] -
-                                lubridate::as.difftime(report_settings[["ed_summary_period"]],
-                                                       units = "weeks"),
-                              max = report_settings[["fc_start_date"]] -
-                                lubridate::as.difftime(1, units = "weeks"))
-  report_dates$ed_sum$seq <- report_dates$ed_sum %>% {seq.Date(.$min, .$max, "week")}
+  if (report_settings[["ed_summary_period"]] > 0) {
+    report_dates$ed_sum <- list(min = report_settings[["fc_start_date"]] -
+                                  lubridate::as.difftime(report_settings[["ed_summary_period"]],
+                                                         units = "weeks"),
+                                max = report_settings[["fc_start_date"]] -
+                                  lubridate::as.difftime(1, units = "weeks"))
+    report_dates$ed_sum$seq <- report_dates$ed_sum %>% {seq.Date(.$min, .$max, "week")}
+  } else {
+    #no early detection period (ed_summary_period = 0 or weird)
+    report_dates$ed_sum <- list(min = NA, max = NA, seq = NA)
+  }
+
   #period of report NOT in forecast ("previous" to forecast)
   report_dates$prev <- list(min = report_dates$full$min,
                             max = report_settings[["fc_start_date"]] -

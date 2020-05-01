@@ -293,7 +293,6 @@ run_epidemia <- function(epi_data = NULL,
       missing_flag <- TRUE
       missing_msgs <- paste0(missing_msgs, names(necessary[arg]), sep = "\n")
     }
-    #note: fix this later: Error in create_named_list() : object 'fc_control' not found
   }
 
   #if missing, stop and give error message
@@ -548,11 +547,11 @@ run_epidemia <- function(epi_data = NULL,
                   #case_when is not viable because it evaluates ALL RHS
                   #condition is scalar, so vectorized ifelse is not appropriate
                   value = if(report_settings[["report_value_type"]] == "cases"){
-                            !!quo_casefield
+                            .data$cases_epidemiar
                           } else if (report_settings[["report_value_type"]] == "incidence"){
-                            !!quo_casefield / !!quo_popfield * report_settings[["report_inc_per"]]
+                            .data$cases_epidemiar / !!quo_popfield * report_settings[["report_inc_per"]]
                           } else {NA_real_},
-                  #note use of original not interpolated cases
+                  #note: uses cases_epidemiar, so will return interpolated values if user selected interpolation
                   lab = "Observed",
                   upper = NA,
                   lower = NA) %>%

@@ -251,6 +251,14 @@ calc_env_anomalies <- function(env_ts,
 format_report_settings <- function(rpt_settings){
   #order alphabetically
   clean_settings <- rpt_settings[order(names(rpt_settings))]
-  #remove dev
-  clean_settings <- clean_settings[!grepl("[$dev]", names(clean_settings))]
+
+  #remove dev IF no dev settings were changed from default
+  #so if dev settings all default, then remove
+  if (rpt_settings[["dev_fc_fit_freq"]] == "once" &
+      rpt_settings[["dev_fc_modbsplines"]] == FALSE &
+      is.null(rpt_settings[["dev_fc_formula"]])){
+    clean_settings <- clean_settings[!grepl("^dev", names(clean_settings))]
+  }
+
+  clean_settings
 }

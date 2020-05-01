@@ -128,25 +128,44 @@ create_summary_data <- function(ed_res,
   #levels
   alert_level <- c("Low", "Medium", "High")
 
-  #Early Detection
-  ed_summary <- ed_res %>%
-    #get the alert series
-    dplyr::filter(.data$series == "ed") %>%
-    #filter to early detection period
-    dplyr::filter(.data$obs_date %in% report_dates$ed_sum$seq) %>%
-    #group (because need to look at period per group level)
-    dplyr::group_by(!!quo_groupfield) %>%
-    #summarize to 1 obs per grouping
-    dplyr::summarize(ed_alert_count = dplyr::if_else(all(is.na(.data$value)), NA_real_, sum(.data$value, na.rm = TRUE))) %>%
-    # create 3 levels (0, 1, 2 = >1)
-    dplyr::mutate(warning_level = dplyr::if_else(.data$ed_alert_count > 1, 2, .data$ed_alert_count),
-                  #factor to label
-                  ed_sum_level = factor(.data$warning_level, levels = 0:2,
-                                        labels = alert_level, ordered = TRUE)) %>%
-    #ungroup
-    dplyr::ungroup() %>%
-    #select minimal cols
-    dplyr::select(!!quo_groupfield, .data$ed_alert_count, .data$ed_sum_level)
+  #if early detection period was defined (ed_summary_period > 0)
+  if (!is.na(report_dates$ed_sum$seq)) {
+    #Early Detection
+    ed_summary <- ed_res %>%
+      #get the alert series for all early detection
+      dplyr::filter(.data$series == "ed") %>%
+      #filter to defined early detection period
+      dplyr::filter(.data$obs_date %in% report_dates$ed_sum$seq) %>%
+      #group (because need to look at period per group level)
+      dplyr::group_by(!!quo_groupfield) %>%
+      #summarize to 1 obs per grouping
+      dplyr::summarize(ed_alert_count = dplyr::if_else(all(is.na(.data$value)), NA_real_, sum(.data$value, na.rm = TRUE))) %>%
+      # create 3 levels (0, 1, 2 = >1)
+      dplyr::mutate(warning_level = dplyr::if_else(.data$ed_alert_count > 1, 2, .data$ed_alert_count),
+                    #factor to label
+                    ed_sum_level = factor(.data$warning_level, levels = 0:2,
+                                          labels = alert_level, ordered = TRUE)) %>%
+      #ungroup
+      dplyr::ungroup() %>%
+      #select minimal cols
+      dplyr::select(!!quo_groupfield, .data$ed_alert_count, .data$ed_sum_level)
+
+  } else {
+    #create NA ED results for when ed_summary_period = 0
+    ed_summary <- ed_res %>%
+      #create an entry for each geogroup, for creating NA results)
+      dplyr::select(!!quo_groupfield) %>%
+      dplyr::group_by(!!quo_groupfield) %>%
+      unique() %>%
+      #add in NA results
+      dplyr::mutate(ed_alert_count = NA,
+                    ed_sum_level = NA) %>%
+      #confirm same output structure
+      #ungroup
+      dplyr::ungroup() %>%
+      #select minimal cols
+      dplyr::select(!!quo_groupfield, .data$ed_alert_count, .data$ed_sum_level)
+  }
 
 
   #Early Warning: ED results on forecast
@@ -192,17 +211,28 @@ create_summary_data <- function(ed_res,
 create_epi_summary <- function(obs_res,
                                quo_groupfield,
                                report_dates){
-  #using obs_res - if cases/incidence becomes a user set choice, this might make it easier (value is already what it needs to be)
-  #but note that (as of writing this) that obs_res using the original, UNinterpolated values (so that end users are disturbed to see case data where there should not be)
-  #<<>>
 
-  epi <- obs_res %>%
-    #epi data is weekly, get the data for the early detection summary period
-    dplyr::filter(.data$obs_date %in% report_dates$ed_sum$seq) %>%
-    #group by groupings
-    dplyr::group_by(!!quo_groupfield) %>%
-    #get mean incidence
-    dplyr::summarize(mean_inc = mean(.data$value, na.rm = TRUE))
+  #if early detection period was defined (ed_summary_period > 0)
+  if (!is.na(report_dates$ed_sum$seq)) {
+    epi <- obs_res %>%
+      #epi data is weekly, get the data for the early detection summary period
+      dplyr::filter(.data$obs_date %in% report_dates$ed_sum$seq) %>%
+      #group by groupings
+      dplyr::group_by(!!quo_groupfield) %>%
+      #get mean incidence/cases (which ever user had selected will be in value field)
+      dplyr::summarize(mean_epi = mean(.data$value, na.rm = TRUE))
+  } else {
+    #create NA epi results for when ed_summary_period = 0
+    epi <- obs_res %>%
+      #create an entry for each geogroup, for creating NA results)
+      dplyr::select(!!quo_groupfield) %>%
+      dplyr::group_by(!!quo_groupfield) %>%
+      unique() %>%
+      #add NA result
+      dplyr::mutate(mean_epi = NA)
+  }
+
+  epi
 
 }
 
@@ -229,16 +259,40 @@ calc_env_anomalies <- function(env_ts,
                                quo_groupfield,
                                quo_obsfield,
                                report_dates){
-  # anomalies
-  anom_env <- env_ts %>%
-    # only mapping those in the early detection period
-    dplyr::filter(.data$obs_date %in% report_dates$ed_sum$seq) %>%
-    dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
-    # anomaly value is observed value minus the ref value from env_ref
-    dplyr::mutate(anom = .data$val_epidemiar - .data$ref_value) %>%
-    # summarized over ED period
-    dplyr::summarize(anom_ed_mean = mean(.data$anom, na.rm = TRUE)) %>%
-    dplyr::ungroup()
+
+  #if early detection period was defined (ed_summary_period > 0)
+  if (!is.na(report_dates$ed_sum$seq)) {
+    #environmental observed data in early detection period
+    env_ed <- env_ts %>%
+      # only mapping those in the early detection period
+      dplyr::filter(.data$obs_date %in% report_dates$ed_sum$seq) %>%
+      # do not use "Extended" or "Interpolated" data, only "Observed"
+      dplyr::mutate(val_epidemiar = dplyr::if_else(.data$data_source == "Observed", .data$val_epidemiar, NA_real_))
+
+    # anomalies
+    anom_env <- env_ed %>%
+      #group
+      dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
+      # anomaly value is observed value minus the ref value from env_ref
+      dplyr::mutate(anom = .data$val_epidemiar - .data$ref_value) %>%
+      # summarized over ED period
+      dplyr::summarize(anom_ed_mean = mean(.data$anom, na.rm = TRUE)) %>%
+      dplyr::ungroup()
+
+  } else {
+    #create NA results for when there is no early detection period
+    anom_env <- env_ts %>%
+      #create an entry for each geogroup, for creating NA results)
+      dplyr::select(!!quo_groupfield, !!quo_obsfield) %>%
+      dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
+      unique() %>%
+      #add NA result
+      dplyr::mutate(anom_ed_mean = NA) %>%
+      dplyr::ungroup()
+
+  }
+
+  anom_env
 }
 
 

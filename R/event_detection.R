@@ -315,14 +315,17 @@ stss_res_to_output_data <- function(stss_res_list,
     #and convert to character for joining
     dplyr::mutate(!!rlang::quo_name(quo_groupfield) := as.character(!!quo_groupfield))
 
-  #recover population (for incidence calculations), not present if popoffset was FALSE #<<pop>>
-  stss_res_flat <- stss_res_flat %>%
-    dplyr::left_join(epi_fc_data %>%
-                       dplyr::select(!!quo_groupfield, !!quo_popfield, .data$obs_date),
-                     by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
-                                             "obs_date"),
-                                           c(rlang::quo_name(quo_groupfield),
-                                             "epoch")))
+  #recover population (for incidence calculations), not present if popoffset was FALSE
+  #only if optional population field was given
+  if (!rlang::quo_is_null(quo_popfield)) {
+    stss_res_flat <- stss_res_flat %>%
+      dplyr::left_join(epi_fc_data %>%
+                         dplyr::select(!!quo_groupfield, !!quo_popfield, .data$obs_date),
+                       by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                                               "obs_date"),
+                                             c(rlang::quo_name(quo_groupfield),
+                                               "epoch")))
+  }
 
   #gather early detection (pre-forecast) event detection alert series
   #early detection alerts show for all time previous and including early detection period

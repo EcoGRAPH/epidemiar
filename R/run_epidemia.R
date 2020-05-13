@@ -301,7 +301,7 @@ run_epidemia <- function(epi_data = NULL,
   }
 
 
-  # Preparing: generating listings, defaults ----------------------------
+  # Preparing: generating listings, detailed input checks, defaults ----------------------------
 
   #create alphabetical list of unique groups
   #must remain in alpha order for early detection using surveillance package to capture results properly
@@ -310,28 +310,7 @@ run_epidemia <- function(epi_data = NULL,
   env_variables <- dplyr::pull(env_data, !!quo_obsfield) %>% unique() %>% sort()
 
 
-  #set defaults in report_settings if not supplied
-  # some specific data checks that need overrides
-  report_settings <- set_report_defaults(raw_settings = report_settings,
-                                         epi_data,
-                                         env_info,
-                                         env_ref_data,
-                                         env_variables,
-                                         quo_obsfield,
-                                         groupings,
-                                         quo_groupfield)
-
-  # switch epi_date_type to week_type needed for add_datefields()
-  week_type <- dplyr::case_when(
-    report_settings[["epi_date_type"]] == "weekISO" ~ "ISO",
-    report_settings[["epi_date_type"]] == "weekCDC"  ~ "CDC",
-    #default NA
-    TRUE             ~ NA_character_)
-
-
-  # Preparing: Detailed Input checking -----------------------------------------------
-
-  # More detailed input checking
+  # Detailed input checking and sets defaults in report_settings if not supplied
   check_results <- input_check(epi_data,
                                env_data,
                                env_ref_data,
@@ -342,7 +321,9 @@ run_epidemia <- function(epi_data = NULL,
                                quo_obsfield,
                                quo_valuefield,
                                fc_model_family,
-                               report_settings)
+                               raw_settings = report_settings,
+                               groupings,
+                               env_variables)
   #if warnings, just give message and continue
   if (check_results$warn_flag){
     message(check_results$warn_msgs)
@@ -353,6 +334,25 @@ run_epidemia <- function(epi_data = NULL,
     options(warning.length = 4000L)
     stop(check_results$err_msgs)
   }
+
+  #update report_settings with checked, cleaned, or newly added default values
+  report_settings <- check_results$clean_settings
+
+  # report_settings <- set_report_defaults(raw_settings = report_settings,
+  #                                        epi_data,
+  #                                        env_info,
+  #                                        env_ref_data,
+  #                                        env_variables,
+  #                                        quo_obsfield,
+  #                                        groupings,
+  #                                        quo_groupfield)
+
+  # switch epi_date_type to week_type needed for add_datefields()
+  week_type <- dplyr::case_when(
+    report_settings[["epi_date_type"]] == "weekISO" ~ "ISO",
+    report_settings[["epi_date_type"]] == "weekCDC"  ~ "CDC",
+    #default NA
+    TRUE             ~ NA_character_)
 
 
 

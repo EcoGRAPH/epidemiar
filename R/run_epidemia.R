@@ -615,27 +615,67 @@ run_epidemia <- function(epi_data = NULL,
   # Event detection ---------------------------------------------------------
 
   #need to calculate event detection on observed data; & in forecast period, the FORECASTED results
-  #existing data before forecast start
-  epi_to_fc <- epi_data %>%
-    dplyr::filter(.data$obs_date < report_dates$forecast$min)
 
-  #modeled values in forecast period = forecast values
-  forecast_values <- fc_res_all$fc_epi %>%
-    #get future forecasted results ONLY
-    dplyr::filter(.data$obs_date %in% report_dates$forecast$seq) %>%
-    #assign forecasted values into cases_epidemiar column (so event detection will run on these values)
-    dplyr::mutate(cases_epidemiar = .data$fc_cases)
-    # dplyr::mutate(cases_epidemiar = ifelse(!rlang::are_na(.data$cases_epidemiar),
-    #                                        .data$cases_epidemiar,
-    #                                        .data$fc_cases))
+  #however, to force surveillance into giving a threshold even when input is NA, use forecast values if NA
+  # but will need to censor those dates from alerts later
+
+  if (report_settings[["ed_method"]] == "farrington") {
+
+    #existing data before report start (i.e. before we have any modelled values from forecasting)
+    epi_to_fc <- epi_data %>%
+      dplyr::filter(.data$obs_date < report_dates$prev$min)
 
 
-  #combine existing and future
-  obs_fc_epi <- dplyr::bind_rows(epi_to_fc, forecast_values) %>%
-    #will be lost by end, but need for event detection methods using surveillance::sts objects
-    epidemiar::add_datefields() %>%
-    #arrange (for viewing/checking)
-    dplyr::arrange(!!quo_groupfield, .data$obs_date)
+    #observed OR modeled values in report period before forecasting ('previous')
+    report_prev_values <- fc_res_all$fc_epi %>%
+      #get results ONLY from prev period
+      dplyr::filter(.data$obs_date %in% report_dates$prev$seq) %>%
+      #flag dates that will need to be censored later
+      dplyr::mutate(censor_flag = rlang::are_na(.data$cases_epidemiar),
+                    #and fill in NA values for modelled values for continuous non-NA values
+                    cases_epidemiar = ifelse(!rlang::are_na(.data$cases_epidemiar),
+                                            .data$cases_epidemiar,
+                                            .data$fc_cases))
+
+    #modeled values in forecast period = forecast values
+    forecast_values <- fc_res_all$fc_epi %>%
+      #get future forecasted results ONLY
+      dplyr::filter(.data$obs_date %in% report_dates$forecast$seq) %>%
+      #assign forecasted values into cases_epidemiar column (so event detection will run on these values)
+      dplyr::mutate(cases_epidemiar = .data$fc_cases)
+
+
+    #combine all
+    obs_fc_epi <- dplyr::bind_rows(epi_to_fc, report_prev_values, forecast_values) %>%
+      #will be lost by end, but need for event detection methods using surveillance::sts objects
+      epidemiar::add_datefields() %>%
+      #arrange (for viewing/checking)
+      dplyr::arrange(!!quo_groupfield, .data$obs_date)
+
+
+
+  } else {
+    #normal combination of past and forecasted values
+    #existing data before forecast start
+    epi_to_fc <- epi_data %>%
+      dplyr::filter(.data$obs_date < report_dates$forecast$min)
+
+    #modeled values in forecast period = forecast values
+    forecast_values <- fc_res_all$fc_epi %>%
+      #get future forecasted results ONLY
+      dplyr::filter(.data$obs_date %in% report_dates$forecast$seq) %>%
+      #assign forecasted values into cases_epidemiar column (so event detection will run on these values)
+      dplyr::mutate(cases_epidemiar = .data$fc_cases)
+
+    #combine existing and future
+    obs_fc_epi <- dplyr::bind_rows(epi_to_fc, forecast_values) %>%
+      #will be lost by end, but need for event detection methods using surveillance::sts objects
+      epidemiar::add_datefields() %>%
+      #arrange (for viewing/checking)
+      dplyr::arrange(!!quo_groupfield, .data$obs_date)
+
+  }
+
 
   #run event detection on combined dataset
   ed_res <- run_event_detection(epi_fc_data = obs_fc_epi,

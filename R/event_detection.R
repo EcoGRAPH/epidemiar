@@ -217,6 +217,7 @@ run_farrington <- function(epi_fc_data,
       far_res_list[[i]] <- surveillance::farringtonFlexible(epi_stss[[i]], control = far_control)
     }
 
+
     #results into output report data form
     far_res <- stss_res_to_output_data(stss_res_list = far_res_list,
                                        epi_fc_data,
@@ -285,7 +286,6 @@ make_stss <- function(epi_fc_data,
 #' Formats output data from sts result objects
 #'
 #'@param stss_res_list List of sts output object from Farrington algorithm.
-#'
 #'@inheritParams run_event_detection
 #'
 #'@return Returns a list of three series from the Farrington sts result output:
@@ -327,6 +327,17 @@ stss_res_to_output_data <- function(stss_res_list,
                                                "epoch")))
   }
 
+
+  #recover alert censor flag (when observed was NA in 'prev' report period)
+  stss_res_flat <- stss_res_flat %>%
+    dplyr::left_join(epi_fc_data %>%
+                       dplyr::select(!!quo_groupfield, .data$obs_date, .data$censor_flag),
+                     by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                                             "obs_date"),
+                                           c(rlang::quo_name(quo_groupfield),
+                                             "epoch")))
+
+
   #gather early detection (pre-forecast) event detection alert series
   #early detection alerts show for all time previous and including early detection period
   #"historical" alerts were wanted
@@ -338,10 +349,15 @@ stss_res_to_output_data <- function(stss_res_list,
                   lab = "Early Detection Alert",
                   upper = NA,
                   lower = NA) %>%
-    #surveillance returns an alarm value (0) for when observed is NA, we want NA in this case
-    dplyr::mutate(value = ifelse(is.na(.data$observed),
+    #censor alarms to NA for when observed value was actually NA in 'prev' period
+    dplyr::mutate(value = ifelse(.data$censor_flag == TRUE,
                                  NA_integer_,
                                  .data$value)) %>%
+    # #surveillance returns an alarm value (0) for when observed is NA, we want NA in this case
+    #   #this should no longer happen with blending of modelled values to force threshold generation
+    # dplyr::mutate(value = ifelse(is.na(.data$observed),
+    #                              NA_integer_,
+    #                              .data$value)) %>%
     dplyr::select(!!quo_groupfield, .data$obs_date, .data$series, .data$value, .data$lab, .data$upper, .data$lower)
 
   #gather early WARNING event detection alert series

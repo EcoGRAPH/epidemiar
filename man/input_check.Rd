@@ -2,11 +2,11 @@
 % Please edit documentation in R/input_checks.R
 \name{input_check}
 \alias{input_check}
-\title{Functions to check input to epidemiar}
+\title{Functions to check input to epidemiar and set report settings defaults.}
 \usage{
 input_check(epi_data, env_data, env_ref_data, env_info, quo_casefield,
   quo_popfield, quo_groupfield, quo_obsfield, quo_valuefield,
-  fc_model_family, report_settings)
+  fc_model_family, raw_settings, groupings, env_variables)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date
@@ -49,106 +49,17 @@ link to use in model fitting. E.g. for a Poisson regression, the user would
 input "poisson()". If a cached model is being used, set the parameter to
 `"cached"`.}
 
-\item{report_settings}{This is a named list of all the report, forecasting,
- event detection and other settings. All of these have defaults, but they are
- not likely the defaults needed for your system, so each of these should be
- reviewed:
+\item{raw_settings}{The report_settings object as given by the user.}
 
- \itemize{
+\item{groupings}{List of all unique geographical groupings in epi_data.}
 
- \item \code{report_period} = 26: The number of weeks that the entire report
- will cover. The \code{report_period} minus \code{fc_future_period} is the
- number of weeks of past (known) data that will be included. Default is 26
- weeks.
-
- \item \code{report_value_type} = "cases": How to report the results, either
- in terms of "cases" (default) or "incidence".
-
- \item \code{report_inc_per} = 1000: If reporting incidence, what should be
- denominator be?  Default is per 1000 persons.
-
- \item \code{epi_date_type} = "weekISO": String indicating the standard (WHO
- ISO-8601 or CDC epi weeks) that the weeks of the year in epidemiological and
- environmental reference data use ("weekISO" or "weekCDC"). Required:
- epidemiological observation dates listed are LAST day of week.
-
- \item \code{epi_interpolate} = FALSE: TRUE/FALSE flag for if the given
- epidemiological data be linearly interpolated for any explicitly missing
- values before modeling? Note: epidemiological data cannot have implicit
- missing data (missing row as opposed to a row with NA).
-
- \item \code{model_run} = FALSE: TRUE/FALSE flag for whether to only generate
- the model regression object plus metadata. This model can be cached and used
- later on its own, skipping a large portion of the slow calculations for
- future runs.
-
- \item \code{model_cached} = NULL: The output of a previous model_run = TRUE
- run of run_epidemia() that produces a model (regression object) and
- metadata. The metadata will be used for input checking and validation. Using
- a prebuilt model saves on processing time, but will need to be updated
- periodically. If using a cached model, also set `fc_model_family =
- "cached"`.
-
- \item \code{env_var}: List environmental variables to actually use in the
- modelling. (You can therefore have extra variables or data in the
- environmental dataset.) Input should be a one column tibble, header row as
- `obsfield` and each row with entries of the variables (must match what is in
- env_data, env_ref-data, and env_info). Default is to use all environmental
- variables that are present in all three of env_data, env_ref_data, and
- env_info.
-
- \item \code{env_lag_length} = 180: The number of days of past environmental
- data to include for the lagged effects. The distributed lags are summarized
- using a thin plate basis function. Default is 180 days.
-
- \item \code{env_anomalies} = FALSE: TRUE/FALSE indicating if the
- environmental variables should be replaced with their anomalies. The
- variables were transformed by taking the residuals from a GAM with
- geographic unit and cyclical cubic regression spline on day of year per
- geographic group.
-
- \item \code{fc_future_period} = 8: Number of future weeks from the end of
- the \code{epi_data} to produce forecasts. Default is 8 weeks.
-
- \item \code{fc_clusters}: Dataframe/tible of geographic units and a cluster
- id. This clusters, or groups, certain geographic locations together, to
- better model when spatial non-stationarity in the relationship between
- environmental variables and cases. See the overview and data & mdoeling
- vignettes for more discussion. Default is a global model, all geographic
- units in one cluster.
-
- \item \code{fc_cyclicals} = FALSE: TRUE/FALSE flag on whether to include a
- smooth term based on day of year in the modelling (as one way of accounting
- for seasonality).
-
- \item \code{fc_nthreads}: The number of parallel threads that can be used by
- `mgcv::bam()`. Default is 1 for computers with 1 physical core, else 2.
-
- \item \code{ed_summary_period} = 4: The number of weeks that will be
- considered the "early detection period". It will count back from the week of
- last known epidemiological data. Default is 4 weeks.
-
- \item \code{ed_method} = 'none': Which method for early detection should be
- used ("farrington" is only current option, or "none").
-
- \item \code{ed_control} = Controls passed along to the event detection
- method.  E.g. for `ed_method = 'farrington'`, these are passed to
- \code{\link[surveillance:farringtonFlexible]{surveillance::farringtonFlexible()}}.
-  Currently, these parameters are supported for Farrington: `b`, `w`,
- `reweight`, `weightsThreshold`, `trend`, `pThresholdTrend`,
- `populationOffset`, `noPeriods`, `pastWeeksNotIncluded`, `thresholdMethod`.
- Any control not included will use surveillance package defaults, with the
- exception of `b`, the number of past years to include: epidemiar default is
- to use as many years are available in the data.
-
-
- }}
+\item{env_variables}{List of all unique environmental variables in env_data.}
 }
 \value{
-Returns a flag if there were any errors, plus accompanying error
- messages. Also returns a flag and messages for warnings, as well.
+Returns a list of items: a flag if there were any errors, plus accompanying error
+ messages; a flag and messages for warnings; updated report_settings
 }
 \description{
 Function does basic existance checks and variety of logic checks on input data
-to run_epidemia().
+to run_epidemia(), and sets defaults to report_settings parameters.
 }

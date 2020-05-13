@@ -113,6 +113,12 @@ input "poisson()". If a cached model is being used, set the parameter to
  geographic unit and cyclical cubic regression spline on day of year per
  geographic group.
 
+ \item \code{fc_start_date}: The date to start the forecasting, also the
+ start of the early warning period. Epidemiological data does not have to
+ exist just before the start date, though higher accuracy will be obtained
+ with more recent data. The default is the week following the last known
+ observation in /code{epi_data}.
+
  \item \code{fc_future_period} = 8: Number of future weeks from the end of
  the \code{epi_data} to produce forecasts. Default is 8 weeks.
 

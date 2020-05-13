@@ -185,8 +185,10 @@ run_validation <- function(date_start = NULL,
     #loop
     for (i in seq_along(date_list)){
       this_dt <- date_list[i]
+      this_fc_start <- this_dt + lubridate::weeks(1)
+      this_report_settings$fc_start_date <- this_fc_start
 
-      message("Validation run - date: ", this_dt) # for testing for now
+      message("Validation run - date: ", this_dt)
 
       #set up data
       #censoring as appropriate

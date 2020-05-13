@@ -8,14 +8,14 @@ date: "Updated `r format(Sys.time(), '%B %d, %Y')`"
 output:
   rmarkdown::html_vignette:
     fig_caption: yes
-  pdf_document:
-    number_sections: yes
-    toc: yes
-    toc_depth: 2
   html_document:
     df_print: paged
     toc: yes
     toc_depth: '2'
+  pdf_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
 vignette: |
   %\VignetteIndexEntry{Overview} 
   %\VignetteEncoding{UTF-8} 
@@ -49,12 +49,12 @@ In addition, we designed workflows and wrote customized code for our Ethiopian c
 The full system can be thought of have 3 (three) main parts:
 
 ```{r echo = FALSE, out.width = "75%", `fig.cap = "System diagram of the EPIDEMIA Forecasting System."`}
-knitr::include_graphics("EPIDEMIA_overview.png")
+knitr::include_graphics("EPIDEMIA_system_v2.png")
 ```
 
-1.	R package `epidemiar`: This package - a library of flexible functions for modeling and forecasting
-2.	Google Earth Engine script: Script to gather the environmental data summaries
-3.	Custom R Project: Contains the surveillance and environmental data, user parameters on the model and outbreak detection algorithm, and script to produce a finalized report. 
+1.	R package `epidemiar`: This package - a library of flexible functions for modeling, forecasting, and model validation
+2.	Google Earth Engine script: A GEE script to gather the environmental data summaries
+3.	Custom R Project: Contains the surveillance and environmental data, user parameters on the model and outbreak detection algorithm, and script to produce a finalized report (or validation report if validation functions were run). 
 
 This package can be used for modelling and forecasting for a variety of environmentally-mediated disease. 
 For example GEE scripts and R project, see the `epidemiar-demo` repository at https://github.com/EcoGRAPH/epidemiar-demo.
@@ -70,6 +70,12 @@ The main requirements for using this package are:
 The epidemiar package is flexible on many aspects of modeling. It is all based on general additive model (GAM) regression of multiple factors, including lagged environmental drivers, long term trends, and potentially several other factors such as geographic group,  seasonality,and clustering of geographic groups. 
 
 The modeling utilizes `mgcv::bam()`, so the model form can be any accepted by it - any quadractically penalized GLM with the extended families in family.mgcv also being available. This is user set with the `fc_model_family` parameter. For example, you can run regression with a Poisson distribution (`fc_model_family = "poisson()"`). 
+
+## Timeframes
+
+The timeframes of the modeling results/report are by default based around the date of last known/observed epidemiological data. This last known date drives when the forecast (future) period begins. The function will forecast `report_settings$fc_future_period` weeks beyond the last known date. The entire report will be a length of `report_settings$report_period` weeks, with the last `report_settings$fc_future_period` weeks as the forecast, and therefore showing the last `(report_settings$report_period - report_settings$fc_future_period)` weeks of known data before the start of the forecast. 
+
+However, it is also possible to specify a custom forecast start date (the equivalent date of one week past the last known epidemiological data) using the parameter `report_settings$fc_start_date`, irrespective of when epidemiological data exists. All other time periods will adjust as above around this forecasting start date instead. Note that model accuracy decreases without recent epidemiological data, and that there may be no known data (and therefore results) for 'early detection' in the event detection section. 
 
 
 ## Geographic group, long term trends, and seasonality

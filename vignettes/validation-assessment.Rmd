@@ -42,7 +42,7 @@ With on-demand implementation and time-range flexibility, one can also investiga
 
 ## Specific Arguments
 
-The `run_validation()` function takes 4 arguments, plus all the `run_epidemia()` arguments. 
+The `run_validation()` function takes 5 arguments, plus all the `run_epidemia()` arguments. 
 
 * `date_start`: The week to begin validation, can be built with `epidemiar::make_date_yw()` and isoyear and isoweek numbers (or epiweeks, with appropriate settings).
 * `total_timesteps`: The number of weeks from `week_start` to run the validation.
@@ -55,7 +55,7 @@ The `run_validation()` function takes 4 arguments, plus all the `run_epidemia()`
 
 The `run_validation()` function will call `run_epidemia()`, so it will also take all the arguments for that function. The user does not need to modify any of these arguments (e.g. event detection settings, `fc_future_period`), as `run_validation()` will automatically handle all of thse adjustments. 
 
-It is envisioned that users can take their usual script for running EPIDEMIA forecasts, and simply sub in the validation function with those five validation settings for doing model assessments. 
+It is envisioned that users can take their usual script for running EPIDEMIA forecasts, and simply sub in the validation function with those validation settings for doing model assessments. 
 
 
 # Validation Output

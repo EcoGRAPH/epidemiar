@@ -55,21 +55,21 @@ Early detection and early warning alerts levels for each geographic group. Early
 Mean disease incidence per geographic group during the early detection period.
 
 * `{groupfield}`: The user-given geographic grouping field
-* `mean_inc`: The mean disease incidence per geographic group summarized over the early detection period
+* `mean_epi`: The mean disease incidence (or cases, depending on the setting in `report_settings$report_value_type`) per geographic group summarized over the early detection period
 
 
 ## `modeling_results_data`
 These are multiple timeseries values for observed, forecast, and alert thresholds of disease incidence, over the report period, for each geographic unit. These data can be used in creating the individual geographic unit control charts.
 
 * `{groupfield}`: The user-given geographic grouping field
-* `obs_date`: The last day of the epidemiological week (ISO/CDC, by `week_type`), Date object
+* `obs_date`: The last day of the epidemiological week, Date object
 * `series`: "obs" = observed disease incidence, "fc" = modeled/forecast incidence values, "thresh" = event detection threshold values, "ed" = early detection alert (binary), "ew" = early warning alert (binary)
 * `value`: Value of the `series` for that geographic group for that week
 * `lab`: Labels for the series ("Observed", "Forecast Trend", "Alert Threshold", "Early Detection Alert", "Early Warning Alert")
 * `upper`: Unused
 * `lower`: Unused
-* `week_epidemiar`: ISO/CDC week number, based on user given `week_type` argument
-* `year_epidemiar`: ISO/CDC year, based on user given `week_type` argument
+* `week_epidemiar`: ISO/CDC week number, based on user given `report_settings$epi_date_type` argument
+* `year_epidemiar`: ISO/CDC year, based on user given `report_settings$epi_date_type` argument
 
 
 ## `environ_timeseries`
@@ -77,9 +77,9 @@ These are multiple timeseries for the used environmental variables during the re
 
 * `{groupfield}`: The user-given geographic grouping field
 * `{obsfield}`: The user-given field for the environmental variable name/ID
-* `year_epidemiar`: ISO/CDC year, based on user given `week_type` argument
-* `week_epidemiar`: ISO/CDC week number, based on user given `week_type` argument
-* `obs_date`: The last day of the epidemiological week (ISO/CDC, by `week_type`), Date object
+* `year_epidemiar`: ISO/CDC year, based on user given `report_settings$epi_date_type` argument
+* `week_epidemiar`: ISO/CDC week number, based on user given `report_settings$epi_date_type` argument
+* `obs_date`: The last day of the epidemiological week (ISO/CDC, by `report_settings$epi_date_type`), Date object
 * `val_epidemiar`: Value of the environmental variable for that geographic group for that week. Values are a combination of observed, or interpolated (for missing) or extended (future estimated) values.   
 * `reference_method`: Method for creating a weekly summary from daily data (e.g. "sum" for rainfall, or "mean" for NDWI)
 * `data_source`: "Observed", "Interpolated", or "Extended". Missing environmental data is handled in three different ways, depending on time period. For missing values in the middle of series, the value is a linear approximation of surrounding values ("Interpolated"). For missing values at the end of the series, up to the future forecast portion, values are carried forward in a persistence approach (also marked "Interpolated" at the moment). For the forecast future portion, values are a blending of the last known values and the climatic historical mean, with a gradual weighting scheme shifting from more weight from last known to historical mean ("Extended").      
@@ -92,25 +92,25 @@ These data are the recent (during the early detection period) differences (anoma
 
 * `{groupfield}`: The user-given geographic grouping field
 * `{obsfield}`: The user-given field for the environmental variable name/ID
-* `anom_ed_mean`: The mean of the anomalies per environmental variable per geographic group summarized during the early detection period. The anomalies are calculated as the difference from the observed value to the historical mean for that week of the year.
+* `anom_ed_mean`: The mean of the anomalies per environmental variable per geographic group summarized during the early detection period. The anomalies here are calculated as the difference from the observed value to the historical mean for that week of the year. (Not to be confused with environmental anomalies option in modeling.)
 
 ## `params_meta`
-This lists dates, settings, and parameters that `run_epidemiar()` was called with.
+This lists dates, settings, and parameters that `run_epidemiar()` was called with and defaults that were used if the user did not set values for those parameters.
 
 ## `regression_object`
-This is the regression object from the general additive model (bam()) regression. This is generally only for additional statistical investigation of the model, and is usually not saved (large object).
+This is the regression object from the general additive model (`mgvc::bam()`) regression. This is generally only for additional statistical investigation of the model, and is usually not saved (large object).
 
 
 # Epidemiar Output Dataset - Model Only Run
 
-The results of `run_epidemiar(..., model_run = TRUE)` is a cached model: the regression object plus some metadata information about what was used to generate the model. 
-Once a model has been generated, it can be fed back into `run_epidemiar(..., model_cached = {cached model object})` for faster predictions rather than regenerating the model on each run. Determining the balance on how old of a model is still useful is heavily dependent on the specific dataset. 
+The results of `run_epidemiar(..., report_settings$model_run = TRUE)` is a cached model: the regression object plus some metadata information about what was used to generate the model. 
+Once a model has been generated, it can be fed back into `run_epidemiar(..., report_settings$model_cached = {cached model object})` for faster predictions rather than regenerating the model on each run. Determining the balance on how old of a model is still useful is heavily dependent on the specific dataset. 
 
 1. `model_obj`
 2. `model_info`
 
 ## `model_obj`
-The output regression object from the `bam()` general additive model regression call. 
+The output regression object from the `mgcv::bam()` general additive model regression call. 
 
 ## `model_info`
 A list of dates, settings, and relevant parameters that `run_epidemiar()` was called with. Very similar to `params_meta` of a full run. 

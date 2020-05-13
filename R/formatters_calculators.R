@@ -129,7 +129,7 @@ create_summary_data <- function(ed_res,
   alert_level <- c("Low", "Medium", "High")
 
   #if early detection period was defined (ed_summary_period > 0)
-  if (!is.na(report_dates$ed_sum$seq)) {
+  if (!is.na(report_dates$ed_sum$min)) {
     #Early Detection
     ed_summary <- ed_res %>%
       #get the alert series for all early detection
@@ -213,7 +213,7 @@ create_epi_summary <- function(obs_res,
                                report_dates){
 
   #if early detection period was defined (ed_summary_period > 0)
-  if (!is.na(report_dates$ed_sum$seq)) {
+  if (!is.na(report_dates$ed_sum$min)) {
     epi <- obs_res %>%
       #epi data is weekly, get the data for the early detection summary period
       dplyr::filter(.data$obs_date %in% report_dates$ed_sum$seq) %>%
@@ -261,7 +261,7 @@ calc_env_anomalies <- function(env_ts,
                                report_dates){
 
   #if early detection period was defined (ed_summary_period > 0)
-  if (!is.na(report_dates$ed_sum$seq)) {
+  if (!is.na(report_dates$ed_sum$min)) {
     #environmental observed data in early detection period
     env_ed <- env_ts %>%
       # only mapping those in the early detection period

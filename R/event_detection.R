@@ -416,9 +416,9 @@ run_no_detection <- function(epi_fc_data,
                              report_dates){
 
 
-  #early detection (KNOWN - pre-forecast) event detection alert series
+  #early detection (pre-forecast, obstensibly though not nec. known) event detection alert series
   ed_alert_res <- epi_fc_data %>%
-    dplyr::filter(.data$obs_date %in% report_dates$known$seq) %>%
+    dplyr::filter(.data$obs_date %in% report_dates$prev$seq) %>%
     dplyr::mutate(series = "ed",
                   value = NA_integer_,
                   lab = "Early Detection Alert",

@@ -123,7 +123,7 @@ extend_env_future <- function(env_data,
     #bind with existing data (NAs for everything else)
     env_future <- dplyr::bind_rows(env_trim, env_future_missing) %>%
       #mark which are about to be filled in
-      dplyr::mutate(data_source = ifelse(is.na(.data$val_epidemiar), "Extended", .data$data_source))
+      dplyr::mutate(data_source = ifelse(is.na(.data$val_epidemiar), "Imputed", "Observed"))
 
     #Optimizing for speed for validation runs with naive models, skip unneeded
 

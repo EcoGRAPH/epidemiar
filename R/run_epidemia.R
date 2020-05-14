@@ -529,12 +529,14 @@ run_epidemia <- function(epi_data = NULL,
   }
 
 
-  #Note: val_epidemiar is field name returned (env)
-    #interpolation is no longer necessary with new extend_env_future()
+    #Note: val_epidemiar is field name returned (env)
+    ##interpolation is no longer necessary with new extend_env_future()
     #env_data <- env_NA_interpolate(env_data, quo_obsfield, quo_valuefield, quo_groupfield) %>%
+    ##first, mark which ones during known time range were observed versus (will be) interpolated
+    #dplyr::mutate(data_source = ifelse(!is.na(!!quo_valuefield), "Observed", "Interpolated")) %>%
+
+  #prep environmental data, filling in of missing data will happen in extend_env_future()
   env_data <- env_data %>%
-    #first, mark which ones during known time range were observed versus (will be) interpolated
-    dplyr::mutate(data_source = ifelse(!is.na(!!quo_valuefield), "Observed", "Interpolated")) %>%
     #copy over value
     dplyr::mutate(val_epidemiar = !!quo_valuefield) %>%
     #and sort by alphabetical groupfield

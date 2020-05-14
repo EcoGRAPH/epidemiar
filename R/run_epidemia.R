@@ -344,15 +344,6 @@ run_epidemia <- function(epi_data = NULL,
   #update report_settings with checked, cleaned, or newly added default values
   report_settings <- check_results$clean_settings
 
-  # report_settings <- set_report_defaults(raw_settings = report_settings,
-  #                                        epi_data,
-  #                                        env_info,
-  #                                        env_ref_data,
-  #                                        env_variables,
-  #                                        quo_obsfield,
-  #                                        groupings,
-  #                                        quo_groupfield)
-
   # switch epi_date_type to week_type needed for add_datefields()
   week_type <- dplyr::case_when(
     report_settings[["epi_date_type"]] == "weekISO" ~ "ISO",
@@ -446,32 +437,6 @@ run_epidemia <- function(epi_data = NULL,
                             max = report_settings[["fc_start_date"]] -
                               lubridate::as.difftime(1, units = "weeks"))
   report_dates$prev$seq <- report_dates$prev %>% {seq.Date(.$min, .$max, "week")}
-
-
-  # #full report
-  # report_dates <- list(full = list(min = max(epi_data$obs_date, na.rm = TRUE) -
-  #                                    lubridate::as.difftime((report_settings[["report_period"]] -
-  #                                                              report_settings[["fc_future_period"]] - 1),
-  #                                                           unit = "weeks"),
-  #                                  max = max(epi_data$obs_date, na.rm = TRUE) +
-  #                                    lubridate::as.difftime(report_settings[["fc_future_period"]],
-  #                                                           units = "weeks")))
-  # report_dates$full$seq <- report_dates$full %>% {seq.Date(.$min, .$max, "week")}
-  # #dates with known epidemological data
-  # report_dates$known <- list(min = report_dates$full$min,
-  #                            max = max(epi_data$obs_date, na.rm = TRUE))
-  # report_dates$known$seq <- report_dates$known %>% {seq.Date(.$min, .$max, "week")}
-  # #forecast period
-  # report_dates$forecast <- list(min = report_dates$known$max +
-  #                                 lubridate::as.difftime(1, units = "weeks"),
-  #                               #could calculate from forecast_future, but already done so in $full
-  #                               max = report_dates$full$max)
-  # report_dates$forecast$seq <- report_dates$forecast %>% {seq.Date(.$min, .$max, "week")}
-  # #early detection summary period (ED runs over full report, this is for summary in defined ED period)
-  # report_dates$ed_sum <- list(min = report_dates$known$max -
-  #                               lubridate::as.difftime(report_settings[["ed_summary_period"]] - 1, units = "weeks"),
-  #                             max = report_dates$known$max)
-  # report_dates$ed_sum$seq <- report_dates$ed_sum %>% {seq.Date(.$min, .$max, "week")}
 
 
 

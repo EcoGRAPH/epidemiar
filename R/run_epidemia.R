@@ -273,34 +273,55 @@ run_epidemia <- function(epi_data = NULL,
 
   #NSE is a little tricky: can't test directly on fields-to-be-enquo'd because
   #it'll try to evaluate them, and complain that the object (actually field
-  #name) doesn't exist. Renaming the quosures AS the input fields to create more
-  #meaningful error messages if the items are missing.
+  #name) doesn't exist.
 
-  #note: population can be missing (case based reports, not incidence)
-  nec_nse <- list(casefield = quo_casefield,
-                  groupfield = quo_groupfield,
-                  obsfield = quo_obsfield,
-                  valuefield = quo_valuefield)
-  necessary <- create_named_list(epi_data, env_data, env_ref_data, env_info, fc_model_family)
+  #looping along lists gets difficult/impossible when things might be missing,
+  # so testing each individually.
 
   #initialize missing info msgs & flag
   missing_msgs <- ""
   missing_flag <- FALSE
-  #loop through all necessary fields, checking if argument exists, collecting list of missing
-  for (nse in seq_along(nec_nse)){
-    #testing if quosure was created on NULL object.
-    if(rlang::quo_is_null(nec_nse[[nse]])){
-      missing_flag <- TRUE
-      missing_msgs <- paste0(missing_msgs, names(nec_nse[nse]), sep = "\n")
-    }
-  }
-  for (arg in seq_along(necessary)){
-    if (is.null(necessary[[arg]])){
-      missing_flag <- TRUE
-      missing_msgs <- paste0(missing_msgs, names(necessary[arg]), sep = "\n")
-    }
-  }
 
+  #NSE fields
+  if (rlang::quo_is_null(quo_casefield)){
+    missing_flag <- TRUE
+    missing_msgs <- paste0(missing_msgs, "casefield", sep = "\n")
+  }
+  if (rlang::quo_is_null(quo_groupfield)){
+    missing_flag <- TRUE
+    missing_msgs <- paste0(missing_msgs, "groupfield", sep = "\n")
+  }
+  if (rlang::quo_is_null(quo_obsfield)){
+    missing_flag <- TRUE
+    missing_msgs <- paste0(missing_msgs, "obsfield", sep = "\n")
+  }
+  if (rlang::quo_is_null(quo_valuefield)){
+    missing_flag <- TRUE
+    missing_msgs <- paste0(missing_msgs, "valuefield", sep = "\n")
+  }
+  #note: population can be missing (case based reports, not incidence)
+
+  #data & model form
+  if (is.null(epi_data)){
+        missing_flag <- TRUE
+        missing_msgs <- paste0(missing_msgs, "epi_data", sep = "\n")
+  }
+  if (is.null(env_data)){
+    missing_flag <- TRUE
+    missing_msgs <- paste0(missing_msgs, "env_data", sep = "\n")
+  }
+  if (is.null(env_ref_data)){
+    missing_flag <- TRUE
+    missing_msgs <- paste0(missing_msgs, "env_ref_data", sep = "\n")
+  }
+  if (is.null(env_info)){
+    missing_flag <- TRUE
+    missing_msgs <- paste0(missing_msgs, "env_info", sep = "\n")
+  }
+  if (is.null(fc_model_family)){
+    missing_flag <- TRUE
+    missing_msgs <- paste0(missing_msgs, "fc_model_family", sep = "\n")
+  }
   #if missing, stop and give error message
   if (missing_flag){
     stop("Missing critical argument(s). Please make sure the following is/are included:\n", missing_msgs)

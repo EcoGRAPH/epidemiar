@@ -77,53 +77,43 @@ extend_env_future <- function(env_data,
   env_trim <- env_data %>%
     dplyr::filter(.data$obs_date <= report_dates$forecast$max)
 
-  #Calculate the earliest of the latest known data dates
-  # per env var, per geographic grouping
-  earliest_end_known <- env_trim %>%
-    #per geographic grouping, per environmental variable
-    dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
-    #the last known date for each
-    dplyr::summarize(max_dates = max(.data$obs_date, na.rm = TRUE)) %>%
-    #the earliest of the last known
-    dplyr::pull(.data$max_dates) %>% min()
+
+  #Possible situations:
+  #Missing data in 'past/known' period, or future unknown data,
+  # or both, or neither
+  # NOT handling implicit missing in pre-report period
+
+  #Calculate full/complete data table
+  #combination of all groups, env vars, and dates (DAILY)
+  #from beginning of report through the end of the forecast period
+  env_complete <- tidyr::crossing(obs_date = seq.Date(report_dates$forecast$min,
+                                                      report_dates$forecast$max, 1),
+                                  group_temp = groupings,
+                                  obs_temp = env_variables_used)
+  #and fix names with NSE
+  env_complete <- env_complete %>%
+    dplyr::rename(!!rlang::quo_name(quo_groupfield) := .data$group_temp,
+                  !!rlang::quo_name(quo_obsfield) := .data$obs_temp)
+
+  #could have ragged env data per variable per grouping
+  #so, antijoin with env_known_fill first to get the actually missing rows
+  env_missing <- env_complete %>%
+    dplyr::anti_join(env_trim, by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                                                       rlang::quo_name(quo_obsfield),
+                                                       "obs_date"),
+                                                     c(rlang::quo_name(quo_groupfield),
+                                                       rlang::quo_name(quo_obsfield),
+                                                       "obs_date")))
 
 
-  #If earliest_end_known is end of forecast period, then no missing data
-  if (earliest_end_known >= report_dates$forecast$max){
-
-    env_extended_final <- env_trim
-
-  } else {
-    #Some amount of missing data exists
-
-    #Calculate full/complete data table
-    #combination of all groups, env vars, and dates (DAILY)
-    #from earliest_end_known through the end of the forecast period
-    env_future_complete <- tidyr::crossing(obs_date = seq.Date(earliest_end_known + 1,
-                                                               report_dates$forecast$max, 1),
-                                           group_temp = groupings,
-                                           obs_temp = env_variables_used)
-    #and fix names with NSE
-    env_future_complete <- env_future_complete %>%
-      dplyr::rename(!!rlang::quo_name(quo_groupfield) := .data$group_temp,
-                    !!rlang::quo_name(quo_obsfield) := .data$obs_temp)
-
-    #could have ragged env data per variable per grouping
-    #so, antijoin with env_known_fill first to get the actually missing rows
-    env_future_missing <- env_future_complete %>%
-      dplyr::anti_join(env_trim, by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
-                                                         rlang::quo_name(quo_obsfield),
-                                                         "obs_date"),
-                                                       c(rlang::quo_name(quo_groupfield),
-                                                         rlang::quo_name(quo_obsfield),
-                                                         "obs_date")))
-
-
+  if (nrow(env_missing > 1)){
+    #some amount of missing data
 
     #bind with existing data (NAs for everything else)
-    env_future <- dplyr::bind_rows(env_trim, env_future_missing) %>%
+    # (env_future name ~ env plus future period, hold over from when this only did future portion)
+    env_future <- dplyr::bind_rows(env_trim, env_missing) %>%
       #mark which are about to be filled in
-      dplyr::mutate(data_source = ifelse(is.na(.data$val_epidemiar), "Imputed", "Observed"))
+      dplyr::mutate(data_source = ifelse(is.na(.data$val_epidemiar), "Imputed", .data$data_source))
 
     #Optimizing for speed for validation runs with naive models, skip unneeded
 
@@ -143,7 +133,7 @@ extend_env_future <- function(env_data,
       # returns the number of rows in the run
       get_rle_na_info <- function(x){
         x_na_rle <- rle(is.na(x))
-        run_id = rep(seq_along(x_na_rle$lengths), times = x_na_rle$lengths)
+        run_id <- rep(seq_along(x_na_rle$lengths), times = x_na_rle$lengths)
         run_tot <- rep(x_na_rle$lengths, times = x_na_rle$lengths)
         dplyr::as_tibble(create_named_list(run_id, run_tot))
       }
@@ -170,16 +160,16 @@ extend_env_future <- function(env_data,
         dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
         #create a 1 day lag variable since need previous 7 days not including current
         dplyr::mutate(val_lag1 = dplyr::lag(.data$val_epidemiar, n = 1),
-               #ifelse to find the first NA
-               val_epidemiar = ifelse(is.na(.data$val_epidemiar) & .data$id_in_run == 1,
-                                      #zoo:rollapply to calculate mean of last 7 days (week) on lagged var
-                                      zoo::rollapply(data = .data$val_lag1,
-                                                     width = 7,
-                                                     FUN = mean,
-                                                     align = "right",
-                                                     na.rm = TRUE),
-                                      #if not first NA, then contine with original val_epidemiar value
-                                      .data$val_epidemiar)) %>%
+                      #ifelse to find the first NA
+                      val_epidemiar = ifelse(is.na(.data$val_epidemiar) & .data$id_in_run == 1,
+                                             #zoo:rollapply to calculate mean of last 7 days (week) on lagged var
+                                             zoo::rollapply(data = .data$val_lag1,
+                                                            width = 7,
+                                                            FUN = mean,
+                                                            align = "right",
+                                                            na.rm = TRUE),
+                                             #if not first NA, then contine with original val_epidemiar value
+                                             .data$val_epidemiar)) %>%
         #drop unneeded lag column
         dplyr::select(-.data$val_lag1)
 
@@ -222,45 +212,49 @@ extend_env_future <- function(env_data,
         #calculate parts (for all, will only use when needed)
         # with progressive blending based on id_in_run and run_tot
         dplyr::mutate(recent_modifier = (.data$run_tot - .data$id_in_run - 1) / .data$run_tot,
-                       recent_part = .data$recent_modifier * .data$last_known,
-                       historical_modifier = (.data$id_in_run - 1) / .data$run_tot,
-                       #historical is by week, so get pseudo-daily value depending on reference method,
-                       # i.e. how to summarize a week of data
-                       historical_value = dplyr::case_when(
-                         .data$reference_method == "mean" ~ .data$ref_value,
-                         .data$reference_method == "sum"  ~ .data$ref_value / 7,
-                         #default as if mean
-                         TRUE             ~ .data$ref_value),
-                       historical_part = .data$historical_modifier * .data$historical_value,
-                       #testing
-                       val_orig = .data$val_epidemiar,
-                       #only fill NA values
-                       val_epidemiar = ifelse(is.na(.data$val_epidemiar),
-                                              #persist if <15 days, blend if greater
-                                              ifelse(.data$run_tot < 15,
-                                                     .data$last_known,
-                                                     .data$recent_part + .data$historical_part),
-                                              #if notNA, then use existing val_epidemiar value
-                                              .data$val_epidemiar))
+                      recent_part = .data$recent_modifier * .data$last_known,
+                      historical_modifier = (.data$id_in_run - 1) / .data$run_tot,
+                      #historical is by week, so get pseudo-daily value depending on reference method,
+                      # i.e. how to summarize a week of data
+                      historical_value = dplyr::case_when(
+                        .data$reference_method == "mean" ~ .data$ref_value,
+                        .data$reference_method == "sum"  ~ .data$ref_value / 7,
+                        #default as if mean
+                        TRUE             ~ .data$ref_value),
+                      historical_part = .data$historical_modifier * .data$historical_value,
+                      #testing
+                      val_orig = .data$val_epidemiar,
+                      #only fill NA values
+                      val_epidemiar = ifelse(is.na(.data$val_epidemiar),
+                                             #persist if <15 days, blend if greater
+                                             ifelse(.data$run_tot < 15,
+                                                    .data$last_known,
+                                                    .data$recent_part + .data$historical_part),
+                                             #if notNA, then use existing val_epidemiar value
+                                             .data$val_epidemiar))
 
       #clean up
       env_extended_final <- env_filled %>%
         #remove all added columns to match original format
         dplyr::select(-c(.data$run_id, .data$run_tot, .data$id_in_run,
-                  .data$week_epidemiar, .data$year_epidemiar,
-                  .data$last_known,
-                  .data$reference_method, .data$ref_value,
-                  .data$recent_modifier, .data$recent_part,
-                  .data$historical_modifier, .data$historical_value, .data$historical_part,
-                  .data$val_orig)) %>%
+                         .data$week_epidemiar, .data$year_epidemiar,
+                         .data$last_known,
+                         .data$reference_method, .data$ref_value,
+                         .data$recent_modifier, .data$recent_part,
+                         .data$historical_modifier, .data$historical_value, .data$historical_part,
+                         .data$val_orig)) %>%
         #fill everything except original value field
         #for any other column that got vanished during crossing, etc.
-        tidyr::fill(dplyr::everything(), -!!quo_valuefield, -!!quo_groupfield, -!!quo_obsfield, .direction = "down") %>%
+        tidyr::fill(dplyr::everything(),
+                    -!!quo_valuefield, -!!quo_groupfield, -!!quo_obsfield,
+                    .direction = "down") %>%
         #ungroup to end
         dplyr::ungroup()
 
-    } #end else, meaning some missing data
-
+    } else { #else on if missing rows
+      #no missing data, just use trimmed environmental data set as given
+      env_extended_final <- env_trim
+    }
 
   } #end else on valid run & naive models
 
@@ -517,8 +511,8 @@ lag_environ_to_epi <- function(epi_fc,
   alpha <- 1/4
   distlagfunc <- splines::bs(x=seq(from=1, to=lag_len, by=1), intercept=TRUE,
                              knots=stats::quantile(seq(from=1, to=lag_len, by=1),
-                                            probs=seq(from=alpha, to=1-alpha, by=alpha),
-                                            na.rm=TRUE))
+                                                   probs=seq(from=alpha, to=1-alpha, by=alpha),
+                                                   na.rm=TRUE))
   dlagdeg <- ncol(distlagfunc)
 
 

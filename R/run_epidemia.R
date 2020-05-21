@@ -526,9 +526,6 @@ run_epidemia <- function(epi_data = NULL,
 
   #prep environmental data, filling in of missing data will happen in extend_env_future()
   env_data <- env_data %>%
-    #first, mark which ones during known time range were observed versus (will be) interpolated
-    #need to keep here, in case all data was observed in report period, so that field will exist
-    dplyr::mutate(data_source = ifelse(!is.na(!!quo_valuefield), "Observed", "Interpolated")) %>%
     #copy over value
     dplyr::mutate(val_epidemiar = !!quo_valuefield) %>%
     #and sort by alphabetical groupfield

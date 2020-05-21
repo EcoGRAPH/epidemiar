@@ -81,13 +81,12 @@ extend_env_future <- function(env_data,
   #Possible situations:
   #Missing data in 'past/known' period, or future unknown data,
   # or both, or neither
-  # NOT handling implicit missing in pre-report period
 
   #Calculate full/complete data table
   #combination of all groups, env vars, and dates (DAILY)
-  #from beginning of report through the end of the forecast period
-  env_complete <- tidyr::crossing(obs_date = seq.Date(report_dates$forecast$min,
-                                                      report_dates$forecast$max, 1),
+  env_complete <- tidyr::crossing(obs_date = seq.Date(from = min(env_trim$obs_date),
+                                                      to = report_dates$forecast$max,
+                                                      by = "day"),
                                   group_temp = groupings,
                                   obs_temp = env_variables_used)
   #and fix names with NSE
@@ -106,14 +105,15 @@ extend_env_future <- function(env_data,
                                                        "obs_date")))
 
 
-  if (nrow(env_missing > 1)){
+  if (nrow(env_missing) > 1 | any(is.na(env_trim$val_epidemiar))){
     #some amount of missing data
+    #first test is implicit (missing row), second is explicit (row exists, but value NA)
 
     #bind with existing data (NAs for everything else)
     # (env_future name ~ env plus future period, hold over from when this only did future portion)
     env_future <- dplyr::bind_rows(env_trim, env_missing) %>%
       #mark which are about to be filled in
-      dplyr::mutate(data_source = ifelse(is.na(.data$val_epidemiar), "Imputed", .data$data_source))
+      dplyr::mutate(data_source = ifelse(is.na(.data$val_epidemiar), "Imputed", "Observed"))
 
     #Optimizing for speed for validation runs with naive models, skip unneeded
 
@@ -251,12 +251,13 @@ extend_env_future <- function(env_data,
         #ungroup to end
         dplyr::ungroup()
 
+    } #end else on valid run & naive models
+
     } else { #else on if missing rows
       #no missing data, just use trimmed environmental data set as given
-      env_extended_final <- env_trim
+      env_extended_final <- env_trim %>%
+        dplyr::mutate(data_source = "Observed")
     }
-
-  } #end else on valid run & naive models
 
   #several paths to get to an env_extended_final
   return(env_extended_final)

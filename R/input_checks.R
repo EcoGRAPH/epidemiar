@@ -441,6 +441,36 @@ input_check <- function(epi_data,
     }
   } #end err_flag
 
+  #env_data: test for missing rows pre-report period
+  # in report period (incl. 'future'), missing implicit/explicit will be handled by env filler/extender
+  if (!err_flag){
+    report_start_date <- new_settings[["fc_start_date"]] -
+      lubridate::as.difftime((new_settings[["report_period"]] -
+                                new_settings[["fc_future_period"]]),
+                             unit = "weeks")
+    pre_env_check <- env_data %>%
+      #only pre-report data check
+      dplyr::filter(.data$obs_date < report_start_date) %>%
+      #field for error message
+      dplyr::mutate(group_obs = paste0(!!quo_groupfield, "-", !!quo_obsfield)) %>%
+      #calc number of rows, should be the same for all if no missing rows
+      dplyr::group_by(.data$group_obs) %>%
+      dplyr::summarize(rowcount = dplyr::n())
+    not_max_env_rows <- pre_env_check %>%
+      dplyr::filter(.data$rowcount < max(pre_env_check$rowcount))
+    if (nrow(not_max_env_rows) > 1) {
+      #some implicit missing rows
+      err_flag <- TRUE
+      err_msgs <- paste0(err_msgs, "Missing rows detected in environmental data prior to report start date. ",
+                         "Implicit missing data is not allowed, please add rows with NA values. ",
+                         "Please check the following: ",
+                         paste(unlist(dplyr::pull(not_max_env_rows, .data$group_obs)), collapse = " "),
+                         ".\n")
+    } #end if nrow > 1
+  } #end if err_flag
+
+
+
 
   #nthreads
   #default value is 1 for 1 core machines, 2 for multi-core (testing shows no additional value past 2)

@@ -618,15 +618,35 @@ run_epidemia <- function(epi_data = NULL,
 
   if (report_settings[["ed_method"]] == "farrington") {
 
-    #existing data before report start (i.e. before we have any modelled values from forecasting)
-    epi_to_fc <- epi_data %>%
-      dplyr::filter(.data$obs_date < report_dates$prev$min)
+    #need to include farrington spin up period (from limit54 parameter, default 4 time units),
+    # add buffer before prev period starts
+    # Get user values from limit54 control
+    if (is.null(report_settings[["ed_control"]][["limit54"]])){
+      #default is limit54 = c(5,4): 4 time units
+      far_buffer <- 4 + 1
+    } else {
+      #get user value
+      far_buffer <- report_settings[["ed_control"]][["limit54"]][[2]] + 1
+    }
 
+    #note dev_fc_fit_freq 'week' fits are report period only, and will not have this buffer period (NA)
+    far_buffer_start_date <- report_dates$prev$min - lubridate::as.difftime(far_buffer,
+                                                                            units = "weeks")
+
+    #existing data before report start + buffer
+    # (i.e. before we have any modelled values from forecasting)
+    epi_to_fc <- epi_data %>%
+      dplyr::filter(.data$obs_date < far_buffer_start_date)
+
+    #dates that we need to blend obs/fc
+    far_blend_dates <- seq.Date(from = far_buffer_start_date,
+                          to = report_dates$prev$max,
+                          by = "week")
 
     #observed OR modeled values in report period before forecasting ('previous')
     report_prev_values <- fc_res_all$fc_epi %>%
-      #get results ONLY from prev period
-      dplyr::filter(.data$obs_date %in% report_dates$prev$seq) %>%
+      #get results ONLY from prev period + buffer
+      dplyr::filter(.data$obs_date %in% far_blend_dates) %>%
       #flag dates that will need to be censored later
       dplyr::mutate(censor_flag = rlang::are_na(.data$cases_epidemiar),
                     #and fill in NA values for modelled values for continuous non-NA values

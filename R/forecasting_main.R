@@ -195,18 +195,22 @@ run_forecast <- function(epi_data,
                   fc_cases_upr = .data$fit+1.96*sqrt(.data$fit),
                   fc_cases_lwr = .data$fit-1.96*sqrt(.data$fit))
 
+  #Trim fc report results ONLY (not full epi dataset) to report period
+  preds_catch_trim <- preds_catch %>%
+    dplyr::filter(.data$obs_date >= report_dates$full$min)
+
   # extract fc series into report format
   # if else off of report_value_type of reporting in terms of cases or incidence
   # using full if else blocks to do all 3 at once, rather than if_elses in each variable
   if (report_settings[["report_value_type"]] == "cases"){
-    fc_res <- preds_catch %>%
+    fc_res <- preds_catch_trim %>%
       dplyr::mutate(series = "fc",
                     lab = "Forecast Trend",
                     value = .data$fc_cases,
                     upper = .data$fc_cases_upr,
                     lower = .data$fc_cases_lwr)
   } else if (report_settings[["report_value_type"]] == "incidence"){
-    fc_res <- preds_catch %>%
+    fc_res <- preds_catch_trim %>%
       dplyr::mutate(series = "fc",
                     lab = "Forecast Trend",
                     value = .data$fc_cases / !!quo_popfield * report_settings[["report_inc_per"]],
@@ -214,7 +218,7 @@ run_forecast <- function(epi_data,
                     lower = .data$fc_cases_lwr / !!quo_popfield * report_settings[["report_inc_per"]])
 
   } else { #shouldn't happen
-    fc_res <- preds_catch %>%
+    fc_res <- preds_catch_trim %>%
       dplyr::mutate(series = "fc",
                     lab = "Forecast Trend",
                     value = NA_real_,
@@ -408,14 +412,16 @@ forecast_regression <- function(epi_lag,
     dplyr::mutate(!!rlang::quo_name(quo_groupfield) := as.character(!!quo_groupfield))
 
   if (report_settings[["dev_fc_fit_freq"]] == "once"){
-    #for single model fit, this has all the data we need, just trim to report dates
-    date_preds <- epi_preds %>%
-      dplyr::filter(.data$obs_date >= report_dates$full$min)
+    #for single model fit, this has all the data we need,
+    # trimming to report dates will happen later AFTER event detection
+    date_preds <- epi_preds
+      #%>% dplyr::filter(.data$obs_date >= report_dates$full$min)
   } else if (report_settings[["dev_fc_fit_freq"]] == "week"){
     #prediction of interest are last ones (equiv to req_date) per groupfield
     date_preds <- epi_preds %>%
       dplyr::group_by(!!quo_groupfield) %>%
       dplyr::filter(.data$obs_date == req_date)
+    #note 'week' fits are limit to report period only, and workaround for farrington spin up will not work
   }
 
   forecast_reg_results <- create_named_list(date_preds,

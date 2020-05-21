@@ -463,9 +463,12 @@ run_epidemia <- function(epi_data = NULL,
 
   # Preparing: data checks for implicit missing, NA and interpolation ---------------------
 
-  #Implicit missing, or gaps introduced by user start parameter, may exist
-  #all weeks in report period NOT in forecast period ("previous" to forecast)
-  epi_full <- tidyr::crossing(obs_date = report_dates$prev$seq,
+  # Implicit missing, or gaps introduced by user start parameter, may exist
+  # implicit missing may also exist in historical/known time ranges
+  # NOT in forecast period, as that will be handled by 'future' extension
+  epi_all_dates <- seq.Date(from = report_dates$known$min, to = report_dates$prev$max, by = "week")
+
+  epi_full <- tidyr::crossing(obs_date = epi_all_dates, #report_dates$prev$seq,
                               group_temp = groupings)
   #and fix names with NSE
   epi_full <- epi_full %>%

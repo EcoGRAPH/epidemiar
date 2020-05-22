@@ -94,16 +94,19 @@ run_forecast <- function(epi_data,
                           fc_clusters = report_settings[["fc_clusters"]])
 
   # anomalizing the environ data, if requested.
+  # AND not a naive model run
 
+  if (!fc_model_family == "naive-persistence" & !fc_model_family == "naive-averageweek"){
+    if (report_settings[["env_anomalies"]]){
+      message("Anomalizing the environmental variables...")
+      env_fc <- anomalize_env(env_fc,
+                              quo_groupfield,
+                              nthreads = report_settings[["fc_nthreads"]],
+                              #calculated/internal
+                              env_variables_used)
+    }
+  } #end not if naive model run
 
-  if (report_settings[["env_anomalies"]]){
-    message("Anomalizing the environmental variables...")
-    env_fc <- anomalize_env(env_fc,
-                            quo_groupfield,
-                            nthreads = report_settings[["fc_nthreads"]],
-                            #calculated/internal
-                            env_variables_used)
-  }
 
   # create the lags
   epi_lag <- lag_environ_to_epi(epi_fc,

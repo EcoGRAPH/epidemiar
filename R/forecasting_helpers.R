@@ -150,7 +150,7 @@ extend_env_future <- function(env_data,
         #creates an index of where that row is in the run
         dplyr::mutate(id_in_run = seq_along(.data$val_epidemiar)) %>%
         #ungroup to end set
-        ungroup()
+        dplyr::ungroup()
 
       ##Get env info and ref data
       #Prep ref data - get only used vars
@@ -190,7 +190,7 @@ extend_env_future <- function(env_data,
         #confirm proper grouping
         dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
         # confirm proper sorting
-        dplyr::arrange(!!quo_groupfield, !!quo_obsfield, obs_date) %>%
+        dplyr::arrange(!!quo_groupfield, !!quo_obsfield, .data$obs_date) %>%
         #create a 1 day lag variable since need previous days not including current
         dplyr::mutate(val_lag1 = dplyr::lag(.data$val_epidemiar, n = 1),
                       #zoo:rollapply to calculate mean of last 7 days (week) on lagged var

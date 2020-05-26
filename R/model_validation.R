@@ -12,8 +12,8 @@
 #'geographic grouping (if present).
 #'
 #'@param date_start Date to start testing for model validation.
-#'@param total_timesteps Number of weeks from `week_start` to run validation
-#'  tests.
+#'@param total_timesteps Number of weeks from (but including) `week_start` to
+#'  run validation tests.
 #'@param timesteps_ahead Number of weeks for testing the n-week ahead forecasts.
 #'  Results will be generated from 1-week ahead through `weeks_ahead` number of
 #'  weeks.
@@ -92,6 +92,11 @@ run_validation <- function(date_start = NULL,
 
 
   # Adjust parameters for validation runs -----------------------------------
+
+  #for a user intuitive timestep count, subtract starting time point from 'count'
+  total_timesteps <- total_timesteps - 1
+    #e.g. total_timesteps = 52 for weekly data will be weeks 1 through 52.
+    #(and not week 1 of the following year)
 
   #Assumed that run_epidemia() parameters just copied and pasted, so adjust for validation
   #new lengths

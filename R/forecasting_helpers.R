@@ -148,40 +148,17 @@ extend_env_future <- function(env_data,
         #add a groupby with the new run ID
         dplyr::group_by(!!quo_groupfield, !!quo_obsfield, .data$run_id) %>%
         #creates an index of where that row is in the run
-        dplyr::mutate(id_in_run = seq_along(.data$val_epidemiar))
+        dplyr::mutate(id_in_run = seq_along(.data$val_epidemiar)) %>%
+        #ungroup to end set
+        ungroup()
 
-      #find 1st NA, then take mean of previous week, input for that day
-      #first NA now can be found with is.na(val_epidemiar) & id_in_run == 1
-      #use zoo::rollapply for mean
-
-      #Fill in first NA of a run with the mean of previous week
-      env_na1fill <- env_na_rle %>%
-        #confirm proper grouping
-        dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
-        #create a 1 day lag variable since need previous 7 days not including current
-        dplyr::mutate(val_lag1 = dplyr::lag(.data$val_epidemiar, n = 1),
-                      #ifelse to find the first NA
-                      val_epidemiar = ifelse(is.na(.data$val_epidemiar) & .data$id_in_run == 1,
-                                             #zoo:rollapply to calculate mean of last 7 days (week) on lagged var
-                                             zoo::rollapply(data = .data$val_lag1,
-                                                            width = 7,
-                                                            FUN = mean,
-                                                            align = "right",
-                                                            na.rm = TRUE),
-                                             #if not first NA, then contine with original val_epidemiar value
-                                             .data$val_epidemiar)) %>%
-        #drop unneeded lag column
-        dplyr::select(-.data$val_lag1)
-
-      ##Prep for blending previous week mean & historical averages for other missing
-
+      ##Get env info and ref data
       #Prep ref data - get only used vars
       env_ref_varused <- env_ref_data %>%
         dplyr::filter(!!quo_obsfield %in% env_variables_used)
 
-
       #joins for ref summary type, and summary for week
-      env_join_ref <- env_na1fill %>%
+      env_join_ref <- env_na_rle %>%
         #add week, year fields
         epidemiar::add_datefields(week_type) %>%
         #get reference/summarizing method from user supplied env_info
@@ -191,7 +168,8 @@ extend_env_future <- function(env_data,
                                                rlang::quo_name(quo_obsfield))) %>%
         #get weekly ref value
         dplyr::left_join(env_ref_varused %>%
-                           dplyr::select(!!quo_obsfield, !!quo_groupfield, .data$week_epidemiar, .data$ref_value),
+                           dplyr::select(!!quo_obsfield, !!quo_groupfield,
+                                         .data$week_epidemiar, .data$ref_value),
                          #NSE fun
                          by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
                                                  rlang::quo_name(quo_obsfield),
@@ -200,8 +178,52 @@ extend_env_future <- function(env_data,
                                                  rlang::quo_name(quo_obsfield),
                                                  "week_epidemiar")))
 
+
+      #find 1st NA, then take mean of previous week, input for that day
+      #first NA now can be found with is.na(val_epidemiar) & id_in_run == 1
+      #use zoo::rollapply for mean
+      # for 'mean' type, last 7 days
+      # for 'sum' type (e.g. highly variable precip), last 14 days
+
+      #Fill in first NA of a run with the mean of previous
+      env_na1fill <- env_join_ref %>%
+        #confirm proper grouping
+        dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
+        # confirm proper sorting
+        dplyr::arrange(!!quo_groupfield, !!quo_obsfield, obs_date) %>%
+        #create a 1 day lag variable since need previous days not including current
+        dplyr::mutate(val_lag1 = dplyr::lag(.data$val_epidemiar, n = 1),
+                      #zoo:rollapply to calculate mean of last 7 days (week) on lagged var
+                      mean_for_mean_type_lag1 = zoo::rollapply(data = .data$val_lag1,
+                                                  width = 7,
+                                                  FUN = mean,
+                                                  align = "right",
+                                                  na.rm = TRUE,
+                                                  #fill important to align properly with mutate
+                                                  fill = NA),
+                      mean_for_sum_type_lag1 = zoo::rollapply(data = .data$val_lag1,
+                                                  width = 14,
+                                                  FUN = mean,
+                                                  align = "right",
+                                                  na.rm = TRUE,
+                                                  #fill important to align properly with mutate
+                                                  fill = NA),
+                      #ifelse to find the first NA
+                      val_epidemiar = ifelse(is.na(.data$val_epidemiar) & .data$id_in_run == 1,
+                                             dplyr::case_when(
+                                               #for mean type, for sum type
+                                               .data$reference_method == "mean" ~ .data$mean_for_mean_type_lag1,
+                                               .data$reference_method == "sum" ~ .data$mean_for_sum_type_lag1,
+                                              #default (nothing currently using)
+                                                TRUE ~ .data$mean_for_mean_type_lag1),
+                                             #if not first NA, then use original val_epidemiar value
+                                             .data$val_epidemiar)) %>%
+        #drop unneeded lag column
+        dplyr::select(-c(.data$val_lag1, .data$mean_for_mean_type_lag1, .data$mean_for_sum_type_lag1))
+
+
       #calculate NA missing values using carry|blend
-      env_filled <- env_join_ref %>%
+      env_filled <- env_na1fill %>%
         #order very important for filling next step
         dplyr::arrange(!!quo_groupfield, !!quo_obsfield, .data$obs_date) %>%
         dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%

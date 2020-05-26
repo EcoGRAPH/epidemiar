@@ -15,8 +15,8 @@ run_validation(date_start = NULL, total_timesteps = 26,
 \arguments{
 \item{date_start}{Date to start testing for model validation.}
 
-\item{total_timesteps}{Number of weeks from `week_start` to run validation
-tests.}
+\item{total_timesteps}{Number of weeks from (but including) `week_start` to
+run validation tests.}
 
 \item{timesteps_ahead}{Number of weeks for testing the n-week ahead forecasts.
 Results will be generated from 1-week ahead through `weeks_ahead` number of

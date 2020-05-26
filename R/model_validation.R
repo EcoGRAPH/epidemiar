@@ -125,7 +125,9 @@ run_validation <- function(date_start = NULL,
                                 reporting_lag,
                                 per_timesteps,
                                 skill_test,
-                                casefield = rlang::quo_name(quo_casefield))
+                                casefield = rlang::quo_name(quo_casefield),
+                                fc_model_family,
+                                report_settings)
 
 
   # All loop prep ------------------------------------------------------

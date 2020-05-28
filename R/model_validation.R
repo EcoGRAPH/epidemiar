@@ -93,11 +93,6 @@ run_validation <- function(date_start = NULL,
 
   # Adjust parameters for validation runs -----------------------------------
 
-  #for a user intuitive timestep count, subtract starting time point from 'count'
-  total_timesteps <- total_timesteps - 1
-    #e.g. total_timesteps = 52 for weekly data will be weeks 1 through 52.
-    #(and not week 1 of the following year)
-
   #Assumed that run_epidemia() parameters just copied and pasted, so adjust for validation
   #new lengths
   report_settings[["fc_future_period"]] <- timesteps_ahead + reporting_lag
@@ -185,6 +180,8 @@ run_validation <- function(date_start = NULL,
 
     #Create list of dates
     #the start of calculations will be date_start minus timesteps_ahead  # of weeks
+    # to total_timesteps - 1 to not count current week
+    # (e.g. so total_timesteps = 52 covers 52 weeks / 1 year).
     date_list <- date_start + lubridate::weeks(-this_timesteps_ahead:(total_timesteps-1))
 
     #output will be list of dataframes (forecasts) until we collapse later

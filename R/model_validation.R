@@ -360,7 +360,7 @@ calc_val_stats <- function(fc_trim, quo_groupfield, per_timesteps, dots){
   validation_overall <- fc_stats %>%
     dplyr::group_by(.data$timestep_ahead) %>%
     #Now calc TSS part of R2
-    dplyr::mutate(meanobs = mean(.data$obs),
+    dplyr::mutate(meanobs = mean(.data$obs, na.rm = TRUE),
                   total_squares = (.data$obs - .data$meanobs)^2) %>%
     #stat calc
     dplyr::summarize(MAE = mean(.data$absdiff, na.rm = TRUE),
@@ -380,7 +380,7 @@ calc_val_stats <- function(fc_trim, quo_groupfield, per_timesteps, dots){
   validation_grouping <- fc_stats %>%
     dplyr::group_by(!!quo_groupfield, .data$timestep_ahead) %>%
     #Now calc TSS part of R2
-    dplyr::mutate(meanobs = mean(.data$obs),
+    dplyr::mutate(meanobs = mean(.data$obs, na.rm = TRUE),
                   total_squares = (.data$obs - .data$meanobs)^2) %>%
     #stat calc
     dplyr::summarize(MAE = mean(.data$absdiff, na.rm = TRUE),

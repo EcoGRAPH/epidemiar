@@ -139,6 +139,7 @@ run_validation <- function(date_start = NULL,
 
   #Pull obs from original
   # Will have extra dates, but will be trimmed back to user requested dates later
+  # May have implicit missing data, but left_joining below, so that'll create the NAs
   obs_only <- epi_data_orig %>%
     dplyr::select(!!quo_groupfield, .data$obs_date, !!quo_casefield) %>%
     #rename observation

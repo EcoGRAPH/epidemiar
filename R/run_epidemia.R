@@ -503,8 +503,6 @@ run_epidemia <- function(epi_data = NULL,
   if (report_settings[["epi_interpolate"]] == TRUE){
     #Note: cases_epidemiar is field name returned (epi)
     epi_data <- epi_NA_interpolate(epi_data, quo_casefield, quo_groupfield) %>%
-      #force into integer after interpolating (would cause problems with modeling otherwise)
-      dplyr::mutate(cases_epidemiar = floor(.data$cases_epidemiar)) %>%
       #and sort by alphabetical groupfield (dates should already be sorted from interpolate function)
       dplyr::arrange(!!quo_groupfield, .data$obs_date)
   } else {

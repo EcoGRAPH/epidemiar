@@ -307,14 +307,24 @@ extend_epi_future <- function(epi_data,
 
   #extended epi data into future dates
   #for use in modeling later (results will be put elsewhere), this is for env and lags and modeling dataset
+
+  #get future/forecast dates
   epi_future <- tidyr::crossing(obs_date = report_dates$forecast$seq,
                                 group_temp = groupings)
   #and fix names with NSE
   epi_future <- epi_future %>%
     dplyr::rename(!!rlang::quo_name(quo_groupfield) := .data$group_temp)
 
+  #with fc_start_date, there MAY be observed data in future/forecast period
+  #so antijoin and bind actual needed rows to avoid duplication
+  epi_future_missing <- epi_future %>%
+    dplyr::anti_join(epi_data, by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                                                       "obs_date"),
+                                                     c(rlang::quo_name(quo_groupfield),
+                                                       "obs_date")))
+
   #bind with exisiting data (NAs for everything else in epi_future)
-  extended_epi <- dplyr::bind_rows(epi_data, epi_future) %>%
+  extended_epi <- dplyr::bind_rows(epi_data, epi_future_missing) %>%
     dplyr::arrange(!!quo_groupfield, .data$obs_date)
 
   #fill population down (if pop field given)

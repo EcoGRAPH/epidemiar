@@ -119,7 +119,9 @@
 #'  observation in /code{epi_data}.
 #'
 #'  \item \code{fc_future_period} = 8: Number of future weeks from the end of
-#'  the \code{epi_data} to produce forecasts. Default is 8 weeks.
+#'  the \code{epi_data} to produce forecasts, or if fc_start_date is set, the
+#'  number of weeks from and including the start date to create forecasts.
+#'  Synonymous with early warning period. Default is 8 weeks.
 #'
 #'  \item \code{fc_clusters}: Dataframe/tible of geographic units and a cluster
 #'  id. This clusters, or groups, certain geographic locations together, to

@@ -111,7 +111,9 @@ input "poisson()". If a cached model is being used, set the parameter to
  observation in /code{epi_data}.
 
  \item \code{fc_future_period} = 8: Number of future weeks from the end of
- the \code{epi_data} to produce forecasts. Default is 8 weeks.
+ the \code{epi_data} to produce forecasts, or if fc_start_date is set, the
+ number of weeks from and including the start date to create forecasts.
+ Synonymous with early warning period. Default is 8 weeks.
 
  \item \code{fc_clusters}: Dataframe/tible of geographic units and a cluster
  id. This clusters, or groups, certain geographic locations together, to
@@ -124,8 +126,14 @@ input "poisson()". If a cached model is being used, set the parameter to
  smooth term based on day of year in the modelling (as one way of accounting
  for seasonality).
 
- \item \code{fc_nthreads}: The number of parallel threads that can be used by
- `mgcv::bam()`. Default is 1 for computers with 1 physical core, else 2.
+ \item \code{fc_splines}: The type of splines that will be used to handle
+ long-term trends and lagged environmental variables. If supplemental package
+ `batchapply` is not installed, the default (and only choice) uses modified
+ b-splines ('modbs'). If the package is installed, then 'tp' becomes an
+ option and the default which uses thin plate splines instead.
+
+ \item \code{fc_ncores}: The number of physical CPU cores to use for parallel
+ processing for modelling. Only relevant when `fc_splines == 'tp'`.
 
  \item \code{ed_summary_period} = 4: The number of weeks that will be
  considered the "early detection period". It will count back from the week of
@@ -164,8 +172,8 @@ fc_res: The forecasted series in report format.
 env_data_extd: Data set of the environmental data variables extended into the
  unknown/future.
 env_variables_used: list of environmental variables that were used in the
- modeling (had to be both listed in model variables input file and present the
- env_data dataset)
+ modeling (had to be listed in model variables input file and present the
+ env_data and env_info datasets)
 env_dt_ranges: Date ranges of the input environmental data.
 reg_obj: The regression object from modeling.
 Unless model_run is TRUE, in which case only the regression object is returned.

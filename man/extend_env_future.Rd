@@ -48,7 +48,7 @@ input "poisson()". If a cached model is being used, set the parameter to
 \item{groupings}{A unique list of the geographic groupings (from groupfield).}
 
 \item{env_variables_used}{List of environmental variables that were used in
-the modeling (in `report_settings$env_var` & found in env_data)}
+the modeling (in `report_settings$env_var` & found in env_data and env_info)}
 
 \item{report_dates}{Internally generated set of report date information: min,
 max, list of dates for full report, known epidemiological data period,

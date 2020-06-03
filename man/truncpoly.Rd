@@ -2,7 +2,7 @@
 % Please edit documentation in R/forecasting_helpers.R
 \name{truncpoly}
 \alias{truncpoly}
-\title{Truncates poly. Creates a modified b-spline basis.}
+\title{Creates a modified b-spline basis (piecewise polynomial).}
 \usage{
 truncpoly(x = NULL, degree = 6, maxobs = NULL, minobs = NULL)
 }

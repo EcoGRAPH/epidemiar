@@ -134,8 +134,14 @@
 #'  smooth term based on day of year in the modelling (as one way of accounting
 #'  for seasonality).
 #'
-#'  \item \code{fc_nthreads}: The number of parallel threads that can be used by
-#'  `mgcv::bam()`. Default is 1 for computers with 1 physical core, else 2.
+#'  \item \code{fc_splines}: The type of splines that will be used to handle
+#'  long-term trends and lagged environmental variables. If supplemental package
+#'  `batchapply` is not installed, the default (and only choice) uses modified
+#'  b-splines ('modbs'). If the package is installed, then 'tp' becomes an
+#'  option and the default which uses thin plate splines instead.
+#'
+#'  \item \code{fc_ncores}: The number of physical CPU cores to use for parallel
+#'  processing for modelling. Only relevant when `fc_splines == 'tp'`.
 #'
 #'  \item \code{ed_summary_period} = 4: The number of weeks that will be
 #'  considered the "early detection period". It will count back from the week of

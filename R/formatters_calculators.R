@@ -309,7 +309,6 @@ format_report_settings <- function(rpt_settings){
   #remove dev IF no dev settings were changed from default
   #so if dev settings all default, then remove
   if (rpt_settings[["dev_fc_fit_freq"]] == "once" &
-      rpt_settings[["dev_fc_modbsplines"]] == FALSE &
       is.null(rpt_settings[["dev_fc_formula"]])){
     clean_settings <- clean_settings[!grepl("^dev", names(clean_settings))]
   }

@@ -27,7 +27,7 @@ pull_model_envvars <- function(env_data,
 #'
 #'@param epi_date_type Extract from `report_settings$epi_date_type`
 #'@param env_variables_used List of environmental variables that were used in
-#'  the modeling (in `report_settings$env_var` & found in env_data)
+#'  the modeling (in `report_settings$env_var` & found in env_data and env_info)
 #'
 #'@inheritParams run_epidemia
 #'@inheritParams run_forecast
@@ -475,9 +475,6 @@ anomalize_env <- function(env_fc,
 #'@param env_variables_used List of environmental variables that were used in
 #'  the modeling, created by `pull_model_envvars()`, from list in
 #'  `report_settings$env_var` & found in `env_data`
-#'@param lag_len Extract from `report_settings$env_lag_length`. The maximum
-#'  number of days in the past to consider interactions between the
-#'  environmental variable anomalies and the disease case counts.
 #'
 #'@inheritParams run_forecast
 #'
@@ -488,17 +485,17 @@ anomalize_env <- function(env_fc,
 lag_environ_to_epi <- function(epi_fc,
                                env_fc,
                                quo_groupfield,
-                               lag_len,
+                               report_settings,
                                #calculated/internal
                                groupings,
                                env_variables_used){
+
+  lag_len <- report_settings[["env_lag_length"]]
 
   #create lag frame
   datalagger <- tidyr::crossing(group_temp = groupings,
                                 obs_date = unique(epi_fc$obs_date),
                                 lag = seq(from = 0, to = lag_len - 1, by = 1)) %>%
-    # #same order from originally written expand.grid
-    # arrange(lag, Date, group_temp) %>%
     #add lagging date
     dplyr::mutate(laggeddate = .data$obs_date - as.difftime(.data$lag, units = "days"))
 
@@ -530,62 +527,53 @@ lag_environ_to_epi <- function(epi_fc,
                                                          c(rlang::quo_name(quo_groupfield), "obs_date")))
   } #end pivot loop
 
-  # # set up distributed lag basis functions (creates 5 basis functions)
-  # lagframe <- data.frame(x = seq(from = 1, to = laglen, by = 1))
-  # alpha <- 1/4
-  # distlagfunc <- splines::ns(lagframe$x, intercept = TRUE,
-  #                            knots = quantile(lagframe$x,
-  #                                             probs=seq(from = alpha, to = 1 - alpha,
-  #                                                       by = alpha),
-  #                                             na.rm = TRUE))
-  # dlagdeg <- pracma::size(distlagfunc)[2]
-
-  # set up distributed lag basis functions (creates 7 basis functions)
-  alpha <- 1/4
-  distlagfunc <- splines::bs(x=seq(from=1, to=lag_len, by=1), intercept=TRUE,
-                             knots=stats::quantile(seq(from=1, to=lag_len, by=1),
-                                                   probs=seq(from=alpha, to=1-alpha, by=alpha),
-                                                   na.rm=TRUE))
-  dlagdeg <- ncol(distlagfunc)
+  #if using modified b-splines, do the basis functions and calcs here
+  if (report_settings[["fc_splines"]] == "modbs"){
+    # set up distributed lag basis functions (creates 7 basis functions)
+    alpha <- 1/4
+    distlagfunc <- splines::bs(x=seq(from=1, to=lag_len, by=1), intercept=TRUE,
+                               knots=stats::quantile(seq(from=1, to=lag_len, by=1),
+                                                     probs=seq(from=alpha, to=1-alpha, by=alpha),
+                                                     na.rm=TRUE))
+    dlagdeg <- ncol(distlagfunc)
 
 
-  # create actual distributed lag summaries
-  for (curvar in env_variables_used){
-    bandsum <- matrix(data = rep(0, nrow(epi_lagged) * dlagdeg),
-                      nrow = nrow(epi_lagged), ncol = dlagdeg)
-    #first column of that variable (0 lag)
-    mindex <- which(colnames(epi_lagged) == paste0(curvar, "_0"))
-    #temp working matrix
-    bandtemp <- as.matrix(epi_lagged[, (mindex:(mindex+lag_len-1))])
-    #distributed lag summaries
-    for (j in 1:dlagdeg){
-      bandsum[, j] <- bandtemp %*% distlagfunc[,j]
+    # create actual distributed lag summaries
+    for (curvar in env_variables_used){
+      bandsum <- matrix(data = rep(0, nrow(epi_lagged) * dlagdeg),
+                        nrow = nrow(epi_lagged), ncol = dlagdeg)
+      #first column of that variable (0 lag)
+      mindex <- which(colnames(epi_lagged) == paste0(curvar, "_0"))
+      #temp working matrix
+      bandtemp <- as.matrix(epi_lagged[, (mindex:(mindex+lag_len-1))])
+      #distributed lag summaries
+      for (j in 1:dlagdeg){
+        bandsum[, j] <- bandtemp %*% distlagfunc[,j]
+      }
+      bandsum <- data.frame(bandsum)
+      names(bandsum) <- paste0("bandsum_", curvar, "_", 1:dlagdeg)
+
+      # we used to do a submatrix here so that the regression formulae would
+      # be more easily written, but this was incompatible with dplyr
+      epi_lagged <- dplyr::bind_cols(epi_lagged, bandsum)
+
+      #created summary value for each basis function (5) per env variable per group per week (based on epidemiological data time unit)
+
+    } #end distr lag summary loop
+
+    #only keep bandsummaries (daily lags can be removed to free up a lot of space)
+    #  note: ^ matches beginning of string, otherwise we'd get the bandsummaries too, which we want to keep
+    for (cvar in env_variables_used){
+      epi_lagged[, which(grepl(paste0("^", cvar, "_"), colnames(epi_lagged)))] <- NULL
     }
-    bandsum <- data.frame(bandsum)
-    names(bandsum) <- paste0("bandsum_", curvar, "_", 1:dlagdeg)
-
-    # we used to do a submatrix here so that the regression formulae would
-    # be more easily written, but this was incompatible with dplyr
-    epi_lagged <- dplyr::bind_cols(epi_lagged, bandsum)
-
-    #created summary value for each basis function (5) per env variable per group per week (based on epidemiological data time unit)
-
-  } #end distr lag summary loop
-
-  #only keep bandsummaries (daily lags can be removed to free up a lot of space)
-  #  note: ^ matches beginning of string, otherwise we'd get the bandsummaries too, which we want to keep
-  for (cvar in env_variables_used){
-    epi_lagged[, which(grepl(paste0("^", cvar, "_"), colnames(epi_lagged)))] <- NULL
   }
 
+  #return
   epi_lagged
 }
 
 
-
-# this creates a modified b-spline basis (which is a piecewise polynomial)
-
-#' Truncates poly. Creates a modified b-spline basis.
+#' Creates a modified b-spline basis (piecewise polynomial).
 #'
 #' The modified basis splines are used to capture any long term trends per
 #' geographic group.
@@ -652,6 +640,54 @@ truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
 
 }
 
+
+#'Formats the environmental data lagged to epidemiology data the way that the
+#'clusterapply package wants.
+#'
+#'@param tbl The tibble with all the lagged variables wide and flat.
+#'@param env_variables_used Vector of the names of the environmental variables
+#'  that are being used in the model.
+#'
+#'@return A dataframe with sub-matrices for each of the lagged environmental
+#'  variable data.
+#'
+format_lag_ca <- function(tbl, env_variables_used){
+
+  #initialize
+  #vector to collect all lagged environmental column names
+  all_lag_cols <- vector()
+  #dataframe to collect the lagged environmental variables as sub matrices
+  collecting_df <- as.data.frame(matrix(nrow = nrow(tbl), ncol = length(env_variables_used)))
+
+  #loop for each environmental variable used in modeling
+  for (v in seq_along(env_variables_used)){
+    cur_var <- env_variables_used[[v]]
+    #column names are {env_var}_n, where n is the lag day
+    var_allcol <- grep(paste(cur_var,"*"), colnames(tbl), value = TRUE)
+    #append column names to master list
+    all_lag_cols <- c(all_lag_cols, var_allcol)
+
+    #create a matrix of just that environmental variable
+    var_mat <- tbl %>%
+      dplyr::select(var_allcol) %>%
+      as.matrix()
+    #put into collecting dataframe
+    collecting_df[,v] <- var_mat
+    #name column as the variable
+    names(collecting_df)[v] <- cur_var
+  }
+
+  #get columns that are NOT lagged environmental variables
+  front_df <- tbl %>%
+    dplyr::select(-all_lag_cols) %>%
+    as.data.frame()
+
+  #column bind the non-lagged with the submatrix-filled dataframe
+  dfm <- cbind(front_df, collecting_df)
+
+  #return
+  dfm
+}
 
 
 

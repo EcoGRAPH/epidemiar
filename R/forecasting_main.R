@@ -24,8 +24,8 @@
 #'env_data_extd: Data set of the environmental data variables extended into the
 #'  unknown/future.
 #'env_variables_used: list of environmental variables that were used in the
-#'  modeling (had to be both listed in model variables input file and present the
-#'  env_data dataset)
+#'  modeling (had to be listed in model variables input file and present the
+#'  env_data and env_info datasets)
 #'env_dt_ranges: Date ranges of the input environmental data.
 #'reg_obj: The regression object from modeling.
 #'Unless model_run is TRUE, in which case only the regression object is returned.
@@ -94,6 +94,7 @@ run_forecast <- function(epi_data,
                           fc_clusters = report_settings[["fc_clusters"]])
 
   # anomalizing the environ data, if requested.
+  # note: brittle on format from env_format_fc(), edit with caution
   # AND not a naive model run
 
   if (!fc_model_family == "naive-persistence" & !fc_model_family == "naive-averageweek"){
@@ -112,7 +113,7 @@ run_forecast <- function(epi_data,
   epi_lag <- lag_environ_to_epi(epi_fc,
                                 env_fc,
                                 quo_groupfield,
-                                lag_len = report_settings[["env_lag_length"]],
+                                report_settings,
                                 #calculated/internal
                                 groupings,
                                 env_variables_used)
@@ -310,67 +311,42 @@ forecast_regression <- function(epi_lag,
 
   ## Set up data
 
-  #mark within prior known range or not, to be used as input to create model
+  #mark within prior known range or not
   epi_lag <- epi_lag %>%
     dplyr::mutate(input = ifelse(.data$obs_date <= last_known_date, 1, 0))
 
   # ensure that quo_name(quo_groupfield) is a factor - gam/bam will fail if given a character,
   # which is unusual among regression functions, which typically just coerce into factors.
   epi_lag <- epi_lag %>% dplyr::mutate(!!rlang::quo_name(quo_groupfield) := factor(!!quo_groupfield))
-  #number of geographic area groupings
-  n_groupings <- epi_lag %>% dplyr::pull(!!quo_groupfield) %>% nlevels()
 
-  #number of clusters
-  n_clusters <- nlevels(epi_lag$cluster_id)
 
-  # create a doy field so that we can use a cyclical spline
-  epi_lag <- dplyr::mutate(epi_lag, doy = as.numeric(format(.data$obs_date, "%j")))
+  if (report_settings[["fc_cyclicals"]] == TRUE){
+    # create a doy field so that we can use a cyclical spline
+    epi_lag <- dplyr::mutate(epi_lag, doy = as.numeric(format(.data$obs_date, "%j")))
+  }
 
-  # create modified bspline basis in epi_lag file to model longterm trends
-  epi_lag <- cbind(epi_lag, truncpoly(x=epi_lag$obs_date,
-                                      degree=6,
-                                      maxobs=max(epi_lag$obs_date[epi_lag$input==1], na.rm=TRUE)))
+  if (report_settings[["fc_splines"]] == "modbs"){
+    # create modified bspline basis in epi_lag file to model longterm trends
+    epi_lag <- cbind(epi_lag, truncpoly(x=epi_lag$obs_date,
+                                        degree=6,
+                                        maxobs=max(epi_lag$obs_date[epi_lag$input==1], na.rm=TRUE)))
+  }
 
+  #filter to input data for model building
+  epi_input <- epi_lag %>% dplyr::filter(.data$input == 1)
 
 
   ## If model_cached is NOT given, then create model / run regression
   if (is.null(report_settings[["model_cached"]])){
 
-    #create variable bandsummaries equation piece
-    #  e.g. 'bandsummaries_{var1} * cluster_id' for however many env var bandsummaries there are
-    bandsums_list <- grep("bandsum_*", colnames(epi_lag), value = TRUE)
-    bandsums_cl_list <- paste(bandsums_list, ": cluster_id")
-    #need variant without known multiplication if <= 1 clusters
-    if (n_clusters > 1) {
-      bandsums_eq <- glue::glue_collapse(bandsums_cl_list, sep =" + ")
-    } else {
-      bandsums_eq <- glue::glue_collapse(bandsums_list, sep = " + ")
-    }
-
-    # get list of modbspline reserved variables and format for inclusion into model
-    modb_list <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)
-    # variant depending on >1 geographic area groupings
-    if (n_groupings > 1){
-      modb_list_grp <- paste(modb_list, ":", rlang::quo_name(quo_groupfield))
-      modb_eq <- glue::glue_collapse(modb_list_grp, sep = " + ")
-    } else {
-      modb_eq <- glue::glue_collapse(modb_list, sep = " + ")
-    }
-
-    #filter to input data
-    epi_input <- epi_lag %>% dplyr::filter(.data$input == 1)
-
-
     # Model building switching point
 
     regress <- build_model(fc_model_family,
                            quo_groupfield,
-                           epi_input,
+                           epi_lag,
                            report_settings,
                            #calc/internal
-                           n_groupings,
-                           modb_eq,
-                           bandsums_eq)
+                           env_variables_used)
 
   } else {
     #if model_cached given, then use that as regress instead of building a new one (above)
@@ -398,21 +374,13 @@ forecast_regression <- function(epi_lag,
                               req_date)
 
 
-  ## Clean up
-  #remove distributed lag summaries and bspline basis, which are no longer helpful
-  band_names <- grep("bandsum_*", colnames(epi_lag), value = TRUE)
-  bspl_names <- grep("modbs_reserved_*", colnames(epi_lag), value = TRUE)
-  #remove
-  epi_lag_trim <- dplyr::select(epi_lag, -dplyr::one_of(band_names))
-  epi_lag_trim <- dplyr::select(epi_lag_trim, -dplyr::one_of(bspl_names))
-
-
   #now cbind to get ready to return
-  epi_preds <- cbind(epi_lag_trim %>%
+  epi_preds <- cbind(epi_lag %>%
                        dplyr::filter(.data$obs_date <= req_date),
                      as.data.frame(preds)) %>%
     #and convert factor back to character for the groupings (originally converted b/c of bam/gam requirements)
     dplyr::mutate(!!rlang::quo_name(quo_groupfield) := as.character(!!quo_groupfield))
+
 
   if (report_settings[["dev_fc_fit_freq"]] == "once"){
     #for single model fit, this has all the data we need,
@@ -437,12 +405,9 @@ forecast_regression <- function(epi_lag,
 #'@param epi_input Epidemiological dataset with basis spline summaries of the
 #'  lagged environmental data (or anomalies), with column marking if "known"
 #'  data and groupings converted to factors.
-#'@param n_groupings Count of the number of geographic groupings in the model.
-#'@param modb_eq Pieces of the regression formula that include the modified
-#'  basis functions to account for long term trend (with or without groupings,
-#'  as appropriate).
-#'@param bandsums_eq Pieces of the regression formula that include the b-spline
-#'  bandsummaries of the environmental factors.
+#'@param env_variables_used a list of environmental variables that will be used in the
+#'  modeling (had to be listed in model variables input file and present the
+#'  env_data and env_info datasets)
 #'
 #'@inheritParams run_epidemia
 #'@inheritParams run_forecast
@@ -455,19 +420,18 @@ build_model <- function(fc_model_family,
                         epi_input,
                         report_settings,
                         #calc/internal
-                        n_groupings,
-                        modb_eq,
-                        bandsums_eq){
+                        env_variables_used){
 
   #1. check and handle naive models
   # else is the user supplied model family
-  #2. check on fc_cyclicals, b/c need different bam call if s() used or not
-  #3. within each cyclical if/else section, use formula override if given,
-  #4. else build model:
-  # still within each cyclical if/elese section,
-  # check for number of geo graphic groupings (one or more than one)
-  # and build appropriate regression equations,
-  # and run appropriate bam call
+  #2. call build_equation to handle all the different equation pieces
+  #3. call mgcv::bam or batchapply::bam_batch() as relevant
+
+  #number of geographic area groupings
+  n_groupings <- epi_input %>% dplyr::pull(!!quo_groupfield) %>% nlevels()
+  #number of clusters
+  n_clusters <- nlevels(epi_input$cluster_id)
+
 
   if (fc_model_family == "naive-persistence"){
 
@@ -482,11 +446,7 @@ build_model <- function(fc_model_family,
       dplyr::group_by(!!quo_groupfield) %>%
       #prediction is 1 lag (previous week)
       #fit is name of value from regression models
-      dplyr::mutate(fit = dplyr::lag(.data$cases_epidemiar, n = 1)) %>%
-      #cleaning up as not needed, and for bug hunting
-      dplyr::select(-dplyr::starts_with("band")) %>%
-      dplyr::select(-dplyr::starts_with("modbs"))
-
+      dplyr::mutate(fit = dplyr::lag(.data$cases_epidemiar, n = 1))
 
   } else if (fc_model_family == "naive-averageweek"){
 
@@ -504,8 +464,119 @@ build_model <- function(fc_model_family,
   } else {
     #user supplied model family
 
-    #note, if using formula override AND cyclicals,
-    # dev users should put fc_cyclicals = TRUE, else message about discrete ignored.
+    #Formula override: developer mode
+    if (!is.null(report_settings[["dev_fc_formula"]])){
+      message("DEVELOPER: Using user-supplied formula: ", report_settings[["dev_fc_formula"]])
+      reg_eq <- report_settings[["dev_fc_formula"]]
+      #note, if using formula override AND cyclicals,
+      # dev users should put fc_cyclicals = TRUE, else message about discrete ignored.
+      # dev users also need to set fc_splines appropriately
+
+    } else {
+      #build equation
+      reg_eq <- build_equation(quo_groupfield,
+                               epi_input,
+                               report_settings,
+                               n_groupings,
+                               n_clusters,
+                               env_variables_used)
+    }
+  } #end else user supplied family
+
+
+  #run the regression
+  if (report_settings[["fc_splines"]] == "modbs"){
+    if (report_settings[["fc_cyclicals"]]) {
+      #yes cyclicals
+      regress <- mgcv::bam(reg_eq,
+                           data = epi_input,
+                           family = fc_model_family,
+                           control = mgcv::gam.control(trace=FALSE),
+                           discrete = TRUE,
+                           nthreads = report_settings[["fc_nthreads"]])
+    } else {
+      #no cyclicals
+      regress <- mgcv::bam(reg_eq,
+                           data = epi_input,
+                           family = fc_model_family,
+                           control = mgcv::gam.control(trace=FALSE))
+    }
+    #end modbs
+  } else if (report_settings[["fc_splines"]] == "tp"){
+
+    #tibble to dataframe, and turn all env wide data into each own sub matrix
+    epi_input_tp <- format_lag_ca(epi_input,
+                                  env_variables_used)
+
+    # create a cluster for all the functions below to use
+    mycluster <- parallel::makeCluster(min(1, (report_settings[["ncores"]]-1), na.rm = TRUE))
+
+    regress <- clusterapply::batch_bam(data = epi_input_tp,
+                                       bamargs=list("formula" = reg_eq,
+                                                     "family" = fc_model_family,
+                                                     "discrete" = TRUE),
+                                       batchvar="cluster_id",
+                                       cluster=mycluster)
+
+  } #end thin plate
+
+
+} # end build_model()
+
+
+#'Create the appropriate regression equation.
+#'
+#'@param epi_input Epidemiological dataset with basis spline summaries of the
+#'  lagged environmental data (or anomalies), with groupings as a factor,
+#'  trimmed to data being used to create the model
+#'@param n_groupings Count of the number of geographic groups (groupfield) in
+#'  total.
+#'@param n_clusters Count of the number of clusters in total
+#'@param env_variables_used a list of environmental variables that will be used in the
+#'  modeling (had to be listed in model variables input file and present the
+#'  env_data and env_info datasets)
+#'
+#'@inheritParams run_epidemia
+#'@inheritParams run_forecast
+#'
+#'@return A formula to be used in the regression call, built based on settings
+#'  for cyclicals, spline type, and the number of geographic groupings present.
+#'
+#'
+build_equation <- function(quo_groupfield,
+                           epi_input,
+                           report_settings,
+                           n_groupings,
+                           n_clusters,
+                           env_variables_used){
+
+  #switch split between modbs and tp spline options
+  # equation depends on spline choice, cyclical choice, # (>1 or not) geogroups, # (>1 or not) clusters
+
+  if (report_settings[["fc_splines"]] == "modbs"){
+
+    #message("Creating equation for modified b-splines....")
+
+    #create variable bandsummaries equation piece
+    #  e.g. 'bandsummaries_{var1} * cluster_id' for however many env var bandsummaries there are
+    bandsums_list <- grep("bandsum_*", colnames(epi_input), value = TRUE)
+    bandsums_cl_list <- paste(bandsums_list, ": cluster_id")
+    #need variant without known multiplication if <= 1 clusters
+    if (n_clusters > 1) {
+      bandsums_eq <- glue::glue_collapse(bandsums_cl_list, sep =" + ")
+    } else {
+      bandsums_eq <- glue::glue_collapse(bandsums_list, sep = " + ")
+    }
+
+    # get list of modbspline reserved variables and format for inclusion into model
+    modb_list <- grep("modbs_reserved_*", colnames(epi_input), value = TRUE)
+    # variant depending on >1 geographic area groupings
+    if (n_groupings > 1){
+      modb_list_grp <- paste(modb_list, ":", rlang::quo_name(quo_groupfield))
+      modb_eq <- glue::glue_collapse(modb_list_grp, sep = " + ")
+    } else {
+      modb_eq <- glue::glue_collapse(modb_list, sep = " + ")
+    }
 
     #cyclical or not
     if (report_settings[["fc_cyclicals"]]) {
@@ -513,87 +584,105 @@ build_model <- function(fc_model_family,
 
       message("Including seasonal cyclicals into model...")
 
-      #Formula override: report_settings[["dev_fc_formula"]]
-      if (!is.null(report_settings[["dev_fc_formula"]])){
+      #build equation
 
-        message("DEVELOPER: Using user-supplied formula: ", report_settings[["dev_fc_formula"]])
-
-        reg_eq <- report_settings[["dev_fc_formula"]]
-
+      #need different formulas if 1+ or only 1 geographic grouping
+      if (n_groupings > 1){
+        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                          rlang::quo_name(quo_groupfield),
+                                          " + s(doy, bs=\"cc\", by=",
+                                          rlang::quo_name(quo_groupfield),
+                                          ") + ",
+                                          modb_eq, " + ",
+                                          bandsums_eq))
       } else {
-        #build equation
-
-        #need different formulas if 1+ or only 1 geographic grouping
-        if (n_groupings > 1){
-          reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                            rlang::quo_name(quo_groupfield),
-                                            " + s(doy, bs=\"cc\", by=",
-                                            rlang::quo_name(quo_groupfield),
-                                            ") + ",
-                                            modb_eq, " + ",
-                                            bandsums_eq))
-        } else {
-          reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                            "s(doy, bs=\"cc\") + ",
-                                            modb_eq, " + ",
-                                            bandsums_eq))
-        }
-
-      } #end else on dev_fc_formula override
-
-
-      # run bam
-      regress <- mgcv::bam(reg_eq,
-                           data = epi_input,
-                           family = fc_model_family,
-                           control = mgcv::gam.control(trace=FALSE),
-                           discrete = TRUE,
-                           nthreads = report_settings[["fc_nthreads"]])
-
-
-
+        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                          "s(doy, bs=\"cc\") + ",
+                                          modb_eq, " + ",
+                                          bandsums_eq))
+      }
     } else {
       # FALSE, no cyclicals
 
+      #build equation
 
-      #Formula override: report_settings[["dev_fc_formula"]]
-      if (!is.null(report_settings[["dev_fc_formula"]])){
-
-        message("DEVELOPER: Using user-supplied formula: ", report_settings[["dev_fc_formula"]])
-
-        reg_eq <- report_settings[["dev_fc_formula"]]
-
+      #need different formulas if 1+ or only 1 geographic grouping
+      if (n_groupings > 1){
+        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                          rlang::quo_name(quo_groupfield), " + ",
+                                          modb_eq, " + ",
+                                          bandsums_eq))
       } else {
-        #build equation
-
-        #need different formulas if 1+ or only 1 geographic grouping
-        if (n_groupings > 1){
-          reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                            rlang::quo_name(quo_groupfield), " + ",
-                                            modb_eq, " + ",
-                                            bandsums_eq))
-        } else {
-          reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                            modb_eq, " + ",
-                                            bandsums_eq))
-        }
-      } #end else for override
-
-
-      # run bam
-      regress <- mgcv::bam(reg_eq,
-                           data = epi_input,
-                           family = fc_model_family,
-                           control = mgcv::gam.control(trace=FALSE))
-
-
+        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                          modb_eq, " + ",
+                                          bandsums_eq))
+      }
     } #end cyclicals if else
 
-  } #end else, user supplied family
+    #end if modbs
+  } else if (report_settings[["fc_splines"]] == "tp"){
+
+    message("Creating equation using thin plate splines.")
+
+    #create s(lag, by = <>, bs = 'tp')
+
+    #for geogroup
+    tp_geo_eq <- paste0("s(lag, by = ", rlang::quo_name(quo_groupfield), ", bs = \'tp\')")
+
+    #for each env var
+    tp_env_eq_list <- paste0("s(lag, by = ", env_variables_used, ", bs = \'tp\')")
+    tp_env_eq <- glue::glue_collapse(tp_env_eq_list, sep = " + ")
 
 
-} # end build_model()
+    if (report_settings[["fc_cyclicals"]]) {
+      #TRUE, include cyclicals
 
+      message("Including seasonal cyclicals into model...")
+
+      #build equation
+
+      #need different formulas if 1+ or only 1 geographic grouping
+      if (n_groupings > 1){
+        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                          rlang::quo_name(quo_groupfield),
+                                          #cyclical
+                                          " + s(doy, bs=\"cc\", by=",
+                                          rlang::quo_name(quo_groupfield),
+                                          ") + ",
+                                          #tp
+                                          tp_geo_eq, " + ",
+                                          tp_env_eq))
+      } else {
+        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                          "s(doy, bs=\"cc\") + ",
+                                          tp_geo_eq, " + ",
+                                          tp_env_eq))
+      }
+    } else {
+      # FALSE, no cyclicals
+
+      #build equation
+
+      #need different formulas if 1+ or only 1 geographic grouping
+      if (n_groupings > 1){
+        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                          rlang::quo_name(quo_groupfield), " + ",
+                                          tp_geo_eq, " + ",
+                                          tp_env_eq))
+      } else {
+        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                          tp_geo_eq, " + ",
+                                          tp_env_eq))
+      }
+    } #end else cyclicals
+
+
+  } #end splines tp
+
+  #return
+  reg_eq
+
+} #end build_equation
 
 
 #'Create the appropriate predictions/forecasts.

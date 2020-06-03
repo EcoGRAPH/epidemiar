@@ -470,27 +470,65 @@ input_check <- function(epi_data,
   } #end if err_flag
 
 
+  #fc_splines
+  #is batchapply installed & available?
+  batchbam_ok <- if (requireNamespace("clusterapply", quietly = TRUE)) {TRUE} else {FALSE}
+  #if batchapply is installed then default is thin plate
+  default_splines <- if (batchbam_ok) {'tp'} else {'modbs'}
+
+  #check input
+  if (!is.null(raw_settings[["fc_splines"]])) {
+    #prep user input for matching
+    new_settings[["fc_splines"]] <- tolower(raw_settings[["fc_splines"]])
+  } else {
+    #no user input, use default
+    new_settings[["fc_splines"]] <- default_splines
+  }
+  #try match
+  new_settings[["fc_splines"]] <- tryCatch({
+    match.arg(new_settings[["fc_splines"]], c("modbs", "tp"))
+  }, error = function(e){
+    warn_flag <- TRUE
+    warn_msgs <- paste0(warn_msgs, "Given 'fc_splines'",
+                        raw_settings[["fc_splines"]],
+                        "does not match 'modbs' or 'tp', running as ",
+                        default_splines, ".\n")
+    default_splines
+  })
+  #override tp if batchapply is not installed/available
+  if (new_settings[["fc_splines"]] == "tp" & !batchbam_ok){
+    warn_flag <- TRUE
+    warn_msgs <- paste0(warn_msgs, "User requested thin plate splines (fc_splines = 'tp'),",
+                        "but package clusterapply is not installed/available. ",
+                        "Running with modified b-splines ('modbs').\n")
+    new_settings[["fc_splines"]] <- "modbs"
+  }
 
 
+  #ncores
+  if (!is.null(raw_settings[["fc_ncores"]])) {
+    new_settings[["fc_ncores"]] <- raw_settings[["fc_ncores"]]
+  } else {
+    #calc default
+    #detectCores can return NA, so catch
+    new_settings[["fc_ncores"]] <- min(parallel::detectCores(logical=FALSE),
+                                       1,
+                                       na.rm = TRUE)
+  }
   #nthreads
   #default value is 1 for 1 core machines, 2 for multi-core (testing shows no additional value past 2)
-  #if user-supplied, use that cap at 2, otherwise create a default number
-  #used to decide if run anomalize_env() prior to forecasting
   if (!is.null(raw_settings[["fc_nthreads"]])) {
     # nthreads above 2 is not actually helpful
     new_settings[["fc_nthreads"]] <- ifelse(raw_settings[["fc_nthreads"]] > 1, 2, 1)
   } else {
     #calc default
-    new_settings[["fc_nthreads"]] <- ifelse(parallel::detectCores(logical=FALSE) > 1, 2, 1)
+    new_settings[["fc_nthreads"]] <- ifelse(new_settings[["fc_ncores"]] > 1, 2, 1)
   }
 
 
   # Developer options
   if (is.null(raw_settings[["dev_fc_fit_freq"]])){
     new_settings[["dev_fc_fit_freq"]] <- "once"
-  }
-  if (is.null(raw_settings[["dev_fc_modbsplines"]])){
-    new_settings[["dev_fc_modbsplines"]] <- FALSE
   }
   if (is.null(raw_settings[["dev_fc_formula"]])){
     new_settings[["dev_fc_formula"]] <- NULL
@@ -565,9 +603,6 @@ input_check <- function(epi_data,
                         raw_settings[["report_value_type"]],
                         "does not match 'cases' or 'incidence', running as 'cases'.\n")
     "cases"
-  }, finally = {
-    #failsafe default
-    "cases"
   })
 
   # epi_date_type
@@ -593,9 +628,6 @@ input_check <- function(epi_data,
     warn_flag <- TRUE
     warn_msgs <- paste0(warn_msgs, "Given 'epi_date_type'", raw_settings[["epi_date_type"]],
                         "does not match 'weekISO' or 'weekCDC', running as 'weekISO' (weekly, ISO/WHO standard).\n")
-    "weekISO"
-  }, finally = {
-    #failsafe default
     "weekISO"
   })
 
@@ -624,9 +656,6 @@ input_check <- function(epi_data,
     warn_flag <- TRUE
     warn_msgs <- paste0(warn_msgs,"Given 'ed_method' ", raw_settings[["ed_method"]],
                         " does not match 'none' or 'farrington', running as 'none'.\n")
-    "none"
-  }, finally = {
-    #failsafe default to no event detection
     "none"
   })
 
@@ -716,250 +745,3 @@ input_check <- function(epi_data,
 } #end input_check()
 
 
-
-
-
-
-# #'Set defaults of any missing report_settings parameters
-# #'
-# #'Function sets defaults to report_settings parameters.
-# #'
-# #'@param raw_settings The report_settings object as given by the user.
-# #'@param env_variables List of all unique environmental variables in env_data.
-# #'@param quo_obsfield Quosure of user given field name of the environmental data
-# #'  variables.
-# #'@param groupings List of all unique geographical groupings in epi_data.
-# #'@param quo_groupfield Quosure of the user given geographic grouping field to
-# #'  run_epidemia().
-# #'
-# #'@inheritParams run_epidemia
-# #'
-# #'@return Returns a full report_settings object, using user supplied values or
-# #'  defaults is option was missing, or overrides in certain cases.
-# #'
-#
-# set_report_defaults <- function(raw_settings,
-#                                 epi_data,
-#                                 env_info,
-#                                 env_ref_data,
-#                                 env_variables,
-#                                 quo_obsfield,
-#                                 groupings,
-#                                 quo_groupfield){
-#
-#   #set up list in case no report_settings were given
-#   if (is.null(raw_settings)){
-#     new_settings <- list()
-#   } else {
-#     #copy over to begin before editing/updating below
-#     new_settings <- raw_settings
-#   }
-#
-#   if (is.null(raw_settings[["report_period"]])){
-#     new_settings[["report_period"]] <- 26
-#   }
-#
-#   if (is.null(raw_settings[["report_inc_per"]])){
-#     new_settings[["report_inc_per"]] <- 1000
-#     #okay if not used, if report_value_type is cases instead of incidence
-#   }
-#
-#   if (is.null(raw_settings[["epi_interpolate"]])){
-#     new_settings[["epi_interpolate"]] <- FALSE
-#   }
-#
-#   if (is.null(raw_settings[["ed_summary_period"]])){
-#     new_settings[["ed_summary_period"]] <- 4
-#   }
-#
-#   if (is.null(raw_settings[["model_run"]])){
-#     new_settings[["model_run"]] <- FALSE
-#   }
-#
-#   if (is.null(raw_settings[["model_cached"]])){
-#     new_settings[["model_cached"]] <- NULL
-#   }
-#
-#   if (is.null(raw_settings[["env_lag_length"]])){
-#     #maybe make default based on data length, but for now
-#     new_settings[["env_lag_length"]] <- 180
-#   }
-#
-#   if (is.null(raw_settings[["fc_cyclicals"]])){
-#     new_settings[["fc_cyclicals"]] <- FALSE
-#   }
-#
-#   if (is.null(raw_settings[["fc_future_period"]])){
-#     new_settings[["fc_future_period"]] <- 8
-#   }
-#
-#   #default false, with explicit false for naive models
-#   if (is.null(raw_settings[["env_anomalies"]])){
-#     new_settings[["env_anomalies"]] <- dplyr::case_when(
-#       fc_model_family == "naive-persistence" ~ FALSE,
-#       fc_model_family == "naive-weekaverage" ~ FALSE,
-#       #default to FALSE
-#       TRUE ~ FALSE)
-#   }
-#
-#
-#   # For things that are being string matched:
-#   # tolower to capture upper and lower case user-input variations since match.arg is case sensitive
-#   # but must only try function if ed_method is not null (i.e. was given)
-#
-#   #report_value_type
-#   # if provided, prepare for matching
-#   if (!is.null(raw_settings[["report_value_type"]])){
-#     new_settings[["report_value_type"]] <- tolower(raw_settings[["report_value_type"]])
-#   } else {
-#     #if not provided/missing/null
-#     message("Note: 'report_value_type' was not provided, returning results in case counts ('cases').")
-#     new_settings[["report_value_type"]] <- "cases"
-#   }
-#   #try match
-#   new_settings[["report_value_type"]] <- tryCatch({
-#     match.arg(new_settings[["report_value_type"]], c("cases", "incidence"))
-#   }, error = function(e){
-#     message("Warning: Given 'report_value_type' does not match 'cases' or 'incidence', running as 'cases'.")
-#     "cases"
-#   }, finally = {
-#     #failsafe default
-#     "cases"
-#   })
-#
-#   # epi_date_type
-#   # if provided, prepare for matching
-#   if (!is.null(raw_settings[["epi_date_type"]])){
-#     #want to keep ISO and CDC capitalized, but drop 'Week' to 'week' if had been entered that way
-#     first_char <- substr(raw_settings[["epi_date_type"]], 1, 1) %>%
-#       tolower()
-#     #remainder of user entry
-#     rest_char <- substr(raw_settings[["epi_date_type"]], 2, nchar(raw_settings[["epi_date_type"]]))
-#     #paste back together
-#     new_settings[["epi_date_type"]] <- paste0(first_char, rest_char)
-#   } else {
-#     #if not provided/missing/null
-#     message("Note: 'epi_date_type' was not provided, running as weekly, ISO/WHO standard ('weekISO').")
-#     new_settings[["epi_date_type"]] <- "weekISO"
-#   }
-#   #try match
-#   new_settings[["epi_date_type"]] <- tryCatch({
-#     match.arg(new_settings[["epi_date_type"]], c("weekISO", "weekCDC")) #"monthly" reserved for future
-#   }, error = function(e){
-#     message("Warning: Given 'epi_date_type' does not match 'weekISO' or 'weekCDC', running as 'weekISO' (weekly, ISO/WHO standard).")
-#     "weekISO"
-#   }, finally = {
-#     #failsafe default
-#     "weekISO"
-#   })
-#
-#
-#   # ed_method
-#   # if provided, prepare for matching
-#   if (!is.null(raw_settings[["ed_method"]])){
-#     new_settings[["ed_method"]] <- tolower(raw_settings[["ed_method"]])
-#   } else {
-#     #if not provided/missing/null
-#     message("Note: 'ed_method' was not provided, running as 'none'.")
-#     new_settings[["ed_method"]] <- "none"
-#   }
-#   #try match
-#   new_settings[["ed_method"]] <- tryCatch({
-#     match.arg(new_settings[["ed_method"]], c("none", "farrington"))
-#   }, error = function(e){
-#     message("Warning: Given 'ed_method' does not match 'none' or 'farrington', running as 'none'.")
-#     "none"
-#   }, finally = {
-#     #failsafe default to no event detection
-#     "none"
-#   })
-#
-#
-#   # For other or more complicated defaults
-#
-#   #report lengths structure:
-#   # full report length must be at least 1 time unit longer than forecast period + any ed summary period
-#   # (will also handle: ed summary period must be <= time points than 'prev' period (report length - forecast length))
-#   if (new_settings[["report_period"]] < new_settings[["fc_future_period"]] + min(1, new_settings[["ed_summary_period"]])) {
-#     #make report period make sense with forecast period and (possible) ed summary period
-#     new_settings[["report_period"]] <- new_settings[["fc_future_period"]] + min(1, new_settings[["ed_summary_period"]])
-#     message("Warning: With forecast period ", new_settings[["fc_future_period"]],
-#             " and event detection summary period ", new_settings[["ed_summary_period"]],
-#             ", the report length has been adjusted to ", new_settings[["report_period"]], ".")
-#   }
-#
-#   #fc_start_date: date when to start forecasting
-#   if (is.null(raw_settings[["fc_start_date"]])){
-#     # defaults to last known epidemiological data date + one week
-#     last_known <- max(epi_data[["obs_date"]], na.rm = TRUE)
-#     new_settings[["fc_start_date"]] <- last_known + lubridate::as.difftime(1, units = "weeks")
-#   } else {
-#     #other checks will come later, for now, copy user entry as is over
-#     new_settings[["fc_start_date"]] <- raw_settings[["fc_start_date"]]
-#   }
-#
-#   #env_var -- what is listed in env_data, env_ref_data, & env_info
-#   if (is.null(raw_settings[["env_var"]])){
-#
-#     #create list of all environmental variables in env_info
-#     env_info_variables <- dplyr::pull(env_info, !!quo_obsfield) %>% unique()
-#
-#     #create list of all environmental variables in env_ref_data
-#     env_ref_variables <- dplyr::pull(env_ref_data, !!quo_obsfield) %>% unique()
-#
-#     #env_variables already gen list of env_data
-#
-#     #Two sets of intersection to create list that are present in all three
-#     env_data_info <- dplyr::intersect(env_variables, env_info_variables)
-#     default_env_var <- dplyr::intersect(env_data_info, env_ref_variables)
-#     new_settings[["env_var"]] <- dplyr::tibble(obs_temp = default_env_var) %>%
-#       #rename NSE fun
-#       dplyr::rename(!!rlang::quo_name(quo_obsfield) := .data$obs_temp)
-#
-#     #message result
-#     message("No user supplied list of environmetal variables to use. Using: ", paste(default_env_var, ""),
-#             " based on presence in env_data, env_ref_data, and env_info.\n")
-#   }
-#
-#   #nthreads
-#   #default value is 1 for 1 core machines, 2 for multi-core (testing shows no additional value past 2)
-#   #if user-supplied, use that cap at 2, otherwise create a default number
-#   #used to decide if run anomalize_env() prior to forecasting
-#   if (!is.null(raw_settings[["fc_nthreads"]])) {
-#     # nthreads above 2 is not actually helpful
-#     new_settings[["fc_nthreads"]] <- ifelse(raw_settings[["fc_nthreads"]] > 1, 2, 1)
-#   } else {
-#     #no value fed in, so test and determine
-#     new_settings[["fc_nthreads"]] <- ifelse(parallel::detectCores(logical=FALSE) > 1, 2, 1)
-#   } #end else for ncores not given
-#
-#
-#   #fc_clusters
-#   #default is one cluster, probably not what you actually want for any type of large system
-#   if (is.null(raw_settings[["fc_clusters"]])){
-#     #create tbl of only one cluster
-#     #groupings already exist as list of geographic groups
-#     cluster_tbl <- tibble::tibble(group_temp = groupings, cluster_id = 1) %>%
-#       #and fix names with NSE
-#       dplyr::rename(!!rlang::quo_name(quo_groupfield) := .data$group_temp)
-#     #assign
-#     new_settings[["fc_clusters"]] <- cluster_tbl
-#   }
-#
-#
-#   # Developer options
-#   if (is.null(raw_settings[["dev_fc_fit_freq"]])){
-#     new_settings[["dev_fc_fit_freq"]] <- "once"
-#   }
-#   if (is.null(raw_settings[["dev_fc_modbsplines"]])){
-#     new_settings[["dev_fc_modbsplines"]] <- FALSE
-#   }
-#   if (is.null(raw_settings[["dev_fc_formula"]])){
-#     new_settings[["dev_fc_formula"]] <- NULL
-#   }
-#
-#
-#   new_settings
-#
-# }
-#

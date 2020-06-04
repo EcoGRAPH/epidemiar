@@ -495,13 +495,12 @@ input_check <- function(epi_data,
                         default_splines, ".\n")
     default_splines
   })
-  #override tp if batchapply is not installed/available
+  #stop/error if requested tp if batchapply is not installed/available
   if (new_settings[["fc_splines"]] == "tp" & !batchbam_ok){
-    warn_flag <- TRUE
-    warn_msgs <- paste0(warn_msgs, "User requested thin plate splines (fc_splines = 'tp'),",
+    err_flag <- TRUE
+    err_msgs <- paste0(err_msgs, "User requested thin plate splines (fc_splines = 'tp'),",
                         "but package clusterapply is not installed/available. ",
-                        "Running with modified b-splines ('modbs').\n")
-    new_settings[["fc_splines"]] <- "modbs"
+                        "Try running with modified b-splines ('modbs') instead.\n")
   }
 
 

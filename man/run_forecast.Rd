@@ -4,9 +4,22 @@
 \alias{run_forecast}
 \title{Runs the forecast modeling}
 \usage{
-run_forecast(epi_data, quo_popfield, quo_groupfield, env_data,
-  quo_obsfield, quo_valuefield, env_ref_data, env_info, fc_model_family,
-  report_settings, valid_run, groupings, env_variables, report_dates)
+run_forecast(
+  epi_data,
+  quo_popfield,
+  quo_groupfield,
+  env_data,
+  quo_obsfield,
+  quo_valuefield,
+  env_ref_data,
+  env_info,
+  fc_model_family,
+  report_settings,
+  valid_run,
+  groupings,
+  env_variables,
+  report_dates
+)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date

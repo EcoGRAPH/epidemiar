@@ -4,9 +4,21 @@
 \alias{input_check}
 \title{Functions to check input to epidemiar and set report settings defaults.}
 \usage{
-input_check(epi_data, env_data, env_ref_data, env_info, quo_casefield,
-  quo_popfield, quo_groupfield, quo_obsfield, quo_valuefield,
-  fc_model_family, raw_settings, groupings, env_variables)
+input_check(
+  epi_data,
+  env_data,
+  env_ref_data,
+  env_info,
+  quo_casefield,
+  quo_popfield,
+  quo_groupfield,
+  quo_obsfield,
+  quo_valuefield,
+  fc_model_family,
+  raw_settings,
+  groupings,
+  env_variables
+)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date

@@ -4,13 +4,26 @@
 \alias{run_validation}
 \title{Run EPIDEMIA model validation statistics}
 \usage{
-run_validation(date_start = NULL, total_timesteps = 26,
-  timesteps_ahead = 2, reporting_lag = 0, per_timesteps = 12,
-  skill_test = TRUE, epi_data = NULL, env_data = NULL,
-  env_ref_data = NULL, env_info = NULL, casefield = NULL,
-  groupfield = NULL, populationfield = NULL, obsfield = NULL,
-  valuefield = NULL, fc_model_family = NULL, report_settings = NULL,
-  ...)
+run_validation(
+  date_start = NULL,
+  total_timesteps = 26,
+  timesteps_ahead = 2,
+  reporting_lag = 0,
+  per_timesteps = 12,
+  skill_test = TRUE,
+  epi_data = NULL,
+  env_data = NULL,
+  env_ref_data = NULL,
+  env_info = NULL,
+  casefield = NULL,
+  groupfield = NULL,
+  populationfield = NULL,
+  obsfield = NULL,
+  valuefield = NULL,
+  fc_model_family = NULL,
+  report_settings = NULL,
+  ...
+)
 }
 \arguments{
 \item{date_start}{Date to start testing for model validation.}

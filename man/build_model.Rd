@@ -4,8 +4,13 @@
 \alias{build_model}
 \title{Build the appropriate model}
 \usage{
-build_model(fc_model_family, quo_groupfield, epi_input, report_settings,
-  env_variables_used)
+build_model(
+  fc_model_family,
+  quo_groupfield,
+  epi_input,
+  report_settings,
+  env_variables_used
+)
 }
 \arguments{
 \item{fc_model_family}{The \code{\link[stats]{family}} parameter passsed to

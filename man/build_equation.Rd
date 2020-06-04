@@ -4,8 +4,14 @@
 \alias{build_equation}
 \title{Create the appropriate regression equation.}
 \usage{
-build_equation(quo_groupfield, epi_input, report_settings, n_groupings,
-  n_clusters, env_variables_used)
+build_equation(
+  quo_groupfield,
+  epi_input,
+  report_settings,
+  n_groupings,
+  n_clusters,
+  env_variables_used
+)
 }
 \arguments{
 \item{quo_groupfield}{Quosure of the user given geographic grouping field to

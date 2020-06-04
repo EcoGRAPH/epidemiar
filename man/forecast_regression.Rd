@@ -4,8 +4,16 @@
 \alias{forecast_regression}
 \title{Run forecast regression}
 \usage{
-forecast_regression(epi_lag, quo_groupfield, fc_model_family,
-  report_settings, groupings, env_variables_used, report_dates, req_date)
+forecast_regression(
+  epi_lag,
+  quo_groupfield,
+  fc_model_family,
+  report_settings,
+  groupings,
+  env_variables_used,
+  report_dates,
+  req_date
+)
 }
 \arguments{
 \item{epi_lag}{Epidemiological dataset with basis spline summaries of the

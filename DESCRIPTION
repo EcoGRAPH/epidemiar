@@ -17,7 +17,7 @@ Description: The Epidemic Prognosis Incorporating Disease and Environmental Moni
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0
 Imports: dplyr (>= 0.8.3),
     glue (>= 1.3.1),
     lubridate (>= 1.7.4),

@@ -4,10 +4,19 @@
 \alias{run_epidemia}
 \title{Run EPIDEMIA forecast models and early detection algorithm.}
 \usage{
-run_epidemia(epi_data = NULL, env_data = NULL, env_ref_data = NULL,
-  env_info = NULL, casefield = NULL, groupfield = NULL,
-  populationfield = NULL, obsfield = NULL, valuefield = NULL,
-  fc_model_family = NULL, report_settings = NULL)
+run_epidemia(
+  epi_data = NULL,
+  env_data = NULL,
+  env_ref_data = NULL,
+  env_info = NULL,
+  casefield = NULL,
+  groupfield = NULL,
+  populationfield = NULL,
+  obsfield = NULL,
+  valuefield = NULL,
+  fc_model_family = NULL,
+  report_settings = NULL
+)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date

@@ -4,8 +4,13 @@
 \alias{create_predictions}
 \title{Create the appropriate predictions/forecasts.}
 \usage{
-create_predictions(fc_model_family, report_settings, regress, epi_lag,
-  req_date)
+create_predictions(
+  fc_model_family,
+  report_settings,
+  regress,
+  epi_lag,
+  req_date
+)
 }
 \arguments{
 \item{fc_model_family}{The \code{\link[stats]{family}} parameter passsed to

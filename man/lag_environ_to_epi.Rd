@@ -4,8 +4,14 @@
 \alias{lag_environ_to_epi}
 \title{Lag the environmental data.}
 \usage{
-lag_environ_to_epi(epi_fc, env_fc, quo_groupfield, report_settings,
-  groupings, env_variables_used)
+lag_environ_to_epi(
+  epi_fc,
+  env_fc,
+  quo_groupfield,
+  report_settings,
+  groupings,
+  env_variables_used
+)
 }
 \arguments{
 \item{epi_fc}{An epidemiological dataset extended into the future/forecast

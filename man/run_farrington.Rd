@@ -4,8 +4,16 @@
 \alias{run_farrington}
 \title{Run the Farrington early detection algorithm}
 \usage{
-run_farrington(epi_fc_data, quo_groupfield, quo_popfield, ed_control,
-  val_type, inc_per, groupings, report_dates)
+run_farrington(
+  epi_fc_data,
+  quo_groupfield,
+  quo_popfield,
+  ed_control,
+  val_type,
+  inc_per,
+  groupings,
+  report_dates
+)
 }
 \arguments{
 \item{epi_fc_data}{Internal pass of epidemiological data complete with future

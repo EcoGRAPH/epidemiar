@@ -4,8 +4,16 @@
 \alias{stss_res_to_output_data}
 \title{Formats output data from sts result objects}
 \usage{
-stss_res_to_output_data(stss_res_list, epi_fc_data, quo_groupfield,
-  quo_popfield, val_type, inc_per, groupings, report_dates)
+stss_res_to_output_data(
+  stss_res_list,
+  epi_fc_data,
+  quo_groupfield,
+  quo_popfield,
+  val_type,
+  inc_per,
+  groupings,
+  report_dates
+)
 }
 \arguments{
 \item{stss_res_list}{List of sts output object from Farrington algorithm.}

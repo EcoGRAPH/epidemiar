@@ -4,8 +4,17 @@
 \alias{run_event_detection}
 \title{Main subfunction for running event detection algorithm.}
 \usage{
-run_event_detection(epi_fc_data, quo_groupfield, quo_popfield, ed_method,
-  ed_control, val_type, inc_per, groupings, report_dates)
+run_event_detection(
+  epi_fc_data,
+  quo_groupfield,
+  quo_popfield,
+  ed_method,
+  ed_control,
+  val_type,
+  inc_per,
+  groupings,
+  report_dates
+)
 }
 \arguments{
 \item{epi_fc_data}{Internal pass of epidemiological data complete with future

@@ -4,9 +4,20 @@
 \alias{extend_env_future}
 \title{Extend environmental data into the future.}
 \usage{
-extend_env_future(env_data, quo_groupfield, quo_obsfield, quo_valuefield,
-  env_ref_data, env_info, fc_model_family, epi_date_type, valid_run,
-  groupings, env_variables_used, report_dates)
+extend_env_future(
+  env_data,
+  quo_groupfield,
+  quo_obsfield,
+  quo_valuefield,
+  env_ref_data,
+  env_info,
+  fc_model_family,
+  epi_date_type,
+  valid_run,
+  groupings,
+  env_variables_used,
+  report_dates
+)
 }
 \arguments{
 \item{env_data}{Daily environmental data for the same groupfields and date

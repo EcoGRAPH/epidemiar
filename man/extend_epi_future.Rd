@@ -4,8 +4,13 @@
 \alias{extend_epi_future}
 \title{Extend epidemiology dataframe into future.}
 \usage{
-extend_epi_future(epi_data, quo_popfield, quo_groupfield, groupings,
-  report_dates)
+extend_epi_future(
+  epi_data,
+  quo_popfield,
+  quo_groupfield,
+  groupings,
+  report_dates
+)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date

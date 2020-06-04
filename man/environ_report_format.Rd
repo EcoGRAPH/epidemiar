@@ -4,8 +4,16 @@
 \alias{environ_report_format}
 \title{Formats environmental data for report timeseries.}
 \usage{
-environ_report_format(env_ext_data, env_ref_data, quo_groupfield,
-  quo_obsfield, env_used, env_info, epi_date_type, report_dates)
+environ_report_format(
+  env_ext_data,
+  env_ref_data,
+  quo_groupfield,
+  quo_obsfield,
+  env_used,
+  env_info,
+  epi_date_type,
+  report_dates
+)
 }
 \arguments{
 \item{env_ext_data}{An environmental dataset extended into the

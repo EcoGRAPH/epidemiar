@@ -368,7 +368,7 @@ forecast_regression <- function(epi_lag,
 
   ## Creating predictions switching point on model choice
   preds <- create_predictions(fc_model_family,
-                              nthreads = report_settings[["fc_nthreads"]],
+                              report_settings,
                               regress,
                               epi_lag,
                               req_date)
@@ -508,15 +508,19 @@ build_model <- function(fc_model_family,
     epi_input_tp <- format_lag_ca(epi_input,
                                   env_variables_used)
 
-    # create a cluster for all the functions below to use
+    # create a cluster for clusterapply to use
     mycluster <- parallel::makeCluster(min(1, (report_settings[["ncores"]]-1), na.rm = TRUE))
 
     regress <- clusterapply::batch_bam(data = epi_input_tp,
-                                       bamargs=list("formula" = reg_eq,
-                                                     "family" = fc_model_family,
-                                                     "discrete" = TRUE),
-                                       batchvar="cluster_id",
-                                       cluster=mycluster)
+                                       bamargs = list("formula" = reg_eq,
+                                                      "family" = fc_model_family,
+                                                      "discrete" = TRUE),
+                                       over = "cluster_id",
+                                       cluster = mycluster)
+
+    #stop the cluster (if model run, won't use again,
+    #  so starts and ends for modeling building or predictions)
+    parallel::stopCluster(mycluster)
 
   } #end thin plate
 
@@ -687,7 +691,6 @@ build_equation <- function(quo_groupfield,
 
 #'Create the appropriate predictions/forecasts.
 #'
-#'@param nthreads Extract of `report_settings$fc_nthreads`
 #'@param regress The regression object, either the user-supplied one from
 #'  `report_settings$model_cached`, or the one just generated.
 #'@param epi_lag Epidemiological dataset with basis spline summaries of the
@@ -704,7 +707,7 @@ build_equation <- function(quo_groupfield,
 #'
 #'
 create_predictions <- function(fc_model_family,
-                               nthreads,
+                               report_settings,
                                regress,
                                epi_lag,
                                req_date){
@@ -718,11 +721,6 @@ create_predictions <- function(fc_model_family,
     #persistence model just carries forward the last known value
     #the important part is the forecast / trailing end part
     #manipulating to be in quasi-same format as the other models return
-
-    #cleaning up as not needed, and for bug hunting
-    epi_lag <- epi_lag %>%
-      dplyr::select(-dplyr::starts_with("band")) %>%
-      dplyr::select(-dplyr::starts_with("modbs"))
 
     #regress is a tibble not regression object here
     # has a variable fit with lag of 1 on known data
@@ -769,15 +767,35 @@ create_predictions <- function(fc_model_family,
 
     message("Creating predictions...")
 
-    #output prediction (through req_date)
-    preds <- mgcv::predict.bam(regress,
-                               newdata = epi_lag %>% dplyr::filter(.data$obs_date <= req_date),
-                               se.fit = TRUE,       # included for backwards compatibility
-                               type="response",
-                               discrete = TRUE,
-                               n.threads = nthreads)
+    if (report_settings[["fc_splines"]] == "modbs"){
+      #output prediction (through req_date)
+      preds <- mgcv::predict.bam(regress,
+                                 newdata = epi_lag %>% dplyr::filter(.data$obs_date <= req_date),
+                                 se.fit = TRUE,       # included for backwards compatibility
+                                 type = "response",
+                                 discrete = TRUE,
+                                 n.threads = report_settings[["fc_nthreads"]])
+
+    } else if (report_settings[["fc_splines"]] == "tp"){
+
+      # create a cluster for clusterapply to use
+      mycluster <- parallel::makeCluster(min(1, (report_settings[["ncores"]]-1), na.rm = TRUE))
+
+      preds <- clusterapply::predict.batch_bam(models = regress,
+                                               predictargs = list("type"="response"),
+                                               over = "cluster_id",
+                                               newdata = epi_lag %>%
+                                                 dplyr::filter(.data$obs_date <= req_date),
+                                               cluster = mycluster)
+
+      #stop the cluster
+      parallel::stopCluster(mycluster)
 
 
-  }
+    } #end else if fc_splines
+
+
+
+  } #end else user supplied fc_family
 
 } #end create_predictions()

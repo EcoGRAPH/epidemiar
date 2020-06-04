@@ -510,18 +510,18 @@ build_model <- function(fc_model_family,
                                   report_settings)
 
     # create a cluster for clusterapply to use
-    mycluster <- parallel::makeCluster(min(1, (report_settings[["ncores"]]-1), na.rm = TRUE))
+    bb_cluster <- parallel::makeCluster(max(1, (report_settings[["ncores"]]-1), na.rm = TRUE))
 
     regress <- clusterapply::batch_bam(data = epi_input_tp,
                                        bamargs = list("formula" = reg_eq,
                                                       "family" = fc_model_family,
                                                       "discrete" = TRUE),
                                        over = "cluster_id",
-                                       cluster = mycluster)
+                                       cluster = bb_cluster)
 
     #stop the cluster (if model run, won't use again,
     #  so starts and ends for modeling building or predictions)
-    parallel::stopCluster(mycluster)
+    parallel::stopCluster(bb_cluster)
 
   } #end thin plate
 
@@ -780,17 +780,17 @@ create_predictions <- function(fc_model_family,
     } else if (report_settings[["fc_splines"]] == "tp"){
 
       # create a cluster for clusterapply to use
-      mycluster <- parallel::makeCluster(min(1, (report_settings[["ncores"]]-1), na.rm = TRUE))
+      pred_cluster <- parallel::makeCluster(max(1, (report_settings[["ncores"]]-1), na.rm = TRUE))
 
       preds <- clusterapply::predict.batch_bam(models = regress,
                                                predictargs = list("type"="response"),
                                                over = "cluster_id",
                                                newdata = epi_lag %>%
                                                  dplyr::filter(.data$obs_date <= req_date),
-                                               cluster = mycluster)
+                                               cluster = pred_cluster)
 
       #stop the cluster
-      parallel::stopCluster(mycluster)
+      parallel::stopCluster(pred_cluster)
 
 
     } #end else if fc_splines

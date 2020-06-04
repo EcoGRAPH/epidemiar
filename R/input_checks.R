@@ -510,7 +510,7 @@ input_check <- function(epi_data,
   } else {
     #calc default
     #detectCores can return NA, so catch
-    new_settings[["fc_ncores"]] <- min(parallel::detectCores(logical=FALSE),
+    new_settings[["fc_ncores"]] <- max(parallel::detectCores(logical=FALSE),
                                        1,
                                        na.rm = TRUE)
   }

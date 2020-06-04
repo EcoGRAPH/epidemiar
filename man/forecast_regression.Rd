@@ -70,9 +70,9 @@ input "poisson()". If a cached model is being used, set the parameter to
  variables that are present in all three of env_data, env_ref_data, and
  env_info.
 
- \item \code{env_lag_length} = 180: The number of days of past environmental
+ \item \code{env_lag_length} = 181: The number of days of past environmental
  data to include for the lagged effects. The distributed lags are summarized
- using a thin plate basis function. Default is 180 days.
+ using a thin plate basis function. Default is 181 days.
 
  \item \code{env_anomalies} = FALSE: TRUE/FALSE indicating if the
  environmental variables should be replaced with their anomalies. The

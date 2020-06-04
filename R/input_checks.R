@@ -409,7 +409,7 @@ input_check <- function(epi_data,
   } else {
     #default
     #maybe make default based on data length, but for now
-    new_settings[["env_lag_length"]] <- 180
+    new_settings[["env_lag_length"]] <- 181
     warn_flag <- TRUE
     warn_msgs <- paste0(warn_msgs, "'report_settings$env_lag_length' was not provided, running with default ", new_settings[["env_lag_length"]], ".\n")
 

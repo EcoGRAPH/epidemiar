@@ -648,10 +648,14 @@ truncpoly <- function(x = NULL, degree = 6, maxobs = NULL, minobs = NULL){
 #'@param env_variables_used Vector of the names of the environmental variables
 #'  that are being used in the model.
 #'
+#'@inheritParams run_forecast
+#'
 #'@return A dataframe with sub-matrices for each of the lagged environmental
 #'  variable data.
 #'
-format_lag_ca <- function(tbl, env_variables_used){
+format_lag_ca <- function(tbl,
+                          env_variables_used,
+                          report_settings){
 
   #initialize
   #vector to collect all lagged environmental column names
@@ -681,6 +685,17 @@ format_lag_ca <- function(tbl, env_variables_used){
   front_df <- tbl %>%
     dplyr::select(-all_lag_cols) %>%
     as.data.frame()
+
+  #create lag matrix (days of lag)
+  #next column after vars
+  index_lag <- length(env_variables_used) + 1
+  collecting_df[,index_lag] <- matrix(data = rep(0:(report_settings[["env_lag_length"]]-1),
+                                                 times = nrow(tbl)),
+                                      nrow = nrow(tbl),
+                                      ncol = report_settings[["env_lag_length"]],
+                                      byrow = TRUE)
+  colnames(collecting_df[,index_lag]) <- 0:(report_settings[["env_lag_length"]] - 1)
+  names(collecting_df)[index_lag] <- "lag"
 
   #column bind the non-lagged with the submatrix-filled dataframe
   dfm <- cbind(front_df, collecting_df)

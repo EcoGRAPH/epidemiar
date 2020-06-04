@@ -506,7 +506,8 @@ build_model <- function(fc_model_family,
 
     #tibble to dataframe, and turn all env wide data into each own sub matrix
     epi_input_tp <- format_lag_ca(epi_input,
-                                  env_variables_used)
+                                  env_variables_used,
+                                  report_settings)
 
     # create a cluster for clusterapply to use
     mycluster <- parallel::makeCluster(min(1, (report_settings[["ncores"]]-1), na.rm = TRUE))

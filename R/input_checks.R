@@ -426,16 +426,16 @@ input_check <- function(epi_data,
     #get earliest dates available
     env_start_dts <- env_model_data %>% dplyr::group_by(!!quo_obsfield) %>% dplyr::summarize(start_dt = min(.data$obs_date))
     #date needed by laglength and first epidemiological data date
-    need_dt <- min(epi_data$obs_date) - as.difftime(new_settings[["env_lag_length"]], units = "days")
+    lag_need_dt <- min(epi_data$obs_date) - as.difftime(new_settings[["env_lag_length"]], units = "days")
     #all env dates equal or before needed date?
-    if (!all(env_start_dts$start_dt <= need_dt)){
+    if (!all(env_start_dts$start_dt <= lag_need_dt)){
       err_flag <- TRUE
       err_msgs <- paste0(err_msgs, "Not enough environmental data for a lag length of ",
                          new_settings[["env_lag_length"]],
                         "days.\n Epidemiological start is", min(epi_data$obs_date),
-                        "therefore environmental data is needed starting", need_dt,
+                        "therefore environmental data is needed starting", lag_need_dt,
                         "for variables:",
-                        env_start_dts[which(!env_start_dts$start_dt <= need_dt),1],
+                        env_start_dts[which(!env_start_dts$start_dt <= lag_need_dt),1],
                         ".\n")
 
     }
@@ -451,6 +451,8 @@ input_check <- function(epi_data,
     pre_env_check <- env_data %>%
       #only pre-report data check
       dplyr::filter(.data$obs_date < report_start_date) %>%
+      #and only after needed date for lag length (earlier entries don't matter)
+      dplyr::filter(.data$obs_date >= lag_need_dt) %>%
       #field for error message
       dplyr::mutate(group_obs = paste0(!!quo_groupfield, "-", !!quo_obsfield)) %>%
       #calc number of rows, should be the same for all if no missing rows

@@ -775,7 +775,11 @@ create_predictions <- function(fc_model_family,
                                  se.fit = TRUE,       # included for backwards compatibility
                                  type = "response",
                                  discrete = TRUE,
-                                 n.threads = report_settings[["fc_nthreads"]])
+                                 n.threads = report_settings[["fc_nthreads"]],
+                                 #default, and environmental predictors should not be NA
+                                 #but setting explicit since it is assumed to return
+                                 # the same number of rows as in newdata
+                                 na.action = stats::na.pass)
 
     } else if (report_settings[["fc_splines"]] == "tp"){
 

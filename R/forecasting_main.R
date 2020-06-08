@@ -481,8 +481,6 @@ build_model <- function(fc_model_family,
                                n_clusters,
                                env_variables_used)
     }
-  } #end else user supplied family
-
 
   #run the regression
   if (report_settings[["fc_splines"]] == "modbs"){
@@ -524,6 +522,8 @@ build_model <- function(fc_model_family,
     parallel::stopCluster(bb_cluster)
 
   } #end thin plate
+
+    } #end else user supplied family
 
 
 } # end build_model()

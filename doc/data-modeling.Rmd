@@ -55,6 +55,7 @@ When calling the epidemiar function:
 * `groupfield`:  Give the field name for districts or area divisions of epidemiological AND environmental data. If there are no groupings (all one area), user should give a field with the same value throughout the entire datasets. 
 
 In the `report_settings` there is an additional parameters for epidemiological settings:
+
 * `report_settings$epi_date_type`: For the `obs_date` in `epi_data`, you need to specify if you are using "weekCDC" epiweeks, or ISO-8601 ("weekISO") standard weeks of the year (what WHO uses). The default setting is "weekISO". The date should be the _last_ day of the epidemiological week. 
 
 
@@ -125,10 +126,11 @@ Many of the settings are bundled into the named list `report_settings` argument.
 Besides `fc_model_family`, the rest of the forecasting controls (along with other settings) are bundled into the named list `report_settings`:
 
 * `report_settings$fc_start_date`: Option to set a custom date for when forecasting (i.e. `report_settings$fc_future_period`) begins. Default is one week past the last known/observed epidemiological data date. Note that model accuracy decreases without recent epidemiological data, and that there may be no known data (and therefore results) for 'early detection' in the event detection section if the `report_settings$fc_start_date` is more than `report_settings$ed_summary_period` weeks after known/observed epidemiological data.
-* `report_settings$fc_future_period`: The number of weeks to forecast into the future. As the future values of the environmental variables are being imputed based on recent and historical values, it is not recommended to extend the forecast very far into the future, probably no longer than 12 weeks. 
+* `report_settings$fc_future_period`: The number of weeks to forecast into the future. As the future values of the environmental variables are being imputed based on recent and historical values, it is not recommended to extend the forecast very far into the future, probably no longer than 12 weeks without known environmental data. 
 * `report_settings$fc_clusters`: Geographic grouping clusters. This is a two-column list matching the geographic group to its cluster number. There must be an entry for each geographic group included in the epidemiological data. The fields are: the geographic group field, `groupfield`, and "cluster_id", the numeric ID number for each geographic group. The default is a global model (one cluster), which is the equivalent to `fc_clusters` having each entry for the geographic group contains the same "cluster_id" value. If you only have one geographic group, this would contain one row for that geographic group with a "cluster_id" (1, for example). If you want each geographic group to be in its own cluster (individual model), then each entry should contain a unique value (e.g. 1 to the number of geographic groups). Neither global model or individual model are recommended for large numbers of geographic groups, or for geographic groups in different environmental contexts. See overview vignette for more discussion.
+* `report_settings$fc_splines`: The type of splines that will be used to handle long-term trends and lagged environmental variables. If supplemental package `batchapply` is installed, the default 'tp' uses thin plate splines. If the package is not installed, then it uses modified b-splines ('modbs').
 * `report_settings$fc_cyclicals`: Boolean on whether to include a cyclical cubic regression spline smooth term based on day of year per geographic group. Defaults to FALSE (no cyclicals). 
-* `report_settings$fc_nthreads`: For the number of threads argument for parallel processing in modelling. Either 1 or 2, if multiple cores are present. 
+* `report_settings$fc_ncores`: The number of physical CPU cores on the machine. Default is to use this number minus 1 as available to use for parallel processing for modelling. If not set, it will attempt to detect this on its own. 
 
 Environmental data-related forecasting settings:
 
@@ -143,7 +145,7 @@ The event detection settings are also bundled into the named list `report_settin
 
 * `report_settings$ed_method`: At the moment, the only choices are "farrington" for the Farrington improved algorithm as implemented in the `surveillance` package, or "none".  
 * `report_settings$ed_summary_period`: The last n weeks of known epidemiological data that will be considered the early detection period for alert summaries. The algorithm will run over the entire report length for each geographic group and mark alerts for all weeks, but it will create the early detection summary alerts only during the `report_settings$ed_summary_period` weeks. The early detection summary alerts are recorded in the `summary_data` item in the output. Default is 4 weeks. 
-* `report_settings$ed_control`: This is a list of parameters that are handed to the `surveillance::farringtonFlexible()` function as the `control` argument for "farrington" option. It is unused for the "none" option. See the help for `surveillance::farringtonFlexible()` for more details. In our use of the function, the user can leave `b`, the number of past years to include in the creation of the thresholds, as NULL (not set) and epidemiar will calculate the maximum possible value to use, based on what data is available in `epi_data`. If the other parameters are not set, the defaults from the surveillance package will be used.
+* `report_settings$ed_control`: This is a list of parameters that are handed to the `farringtonFlexible()` function from the `surveillance` package as the `control` argument for "farrington" option. It is unused for the "none" option. See the help for `surveillance::farringtonFlexible()` for more details. In our use of the function, the user can leave `b`, the number of past years to include in the creation of the thresholds, as NULL (not set) and epidemiar will calculate the maximum possible value to use, based on what data is available in `epi_data`. If the other parameters are not set, the defaults from the surveillance package will be used.
 
 
 ## Setting up Model Input (Optional)

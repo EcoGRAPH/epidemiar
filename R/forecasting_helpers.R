@@ -389,6 +389,8 @@ epi_format_fc <- function(epi_data_extd,
                                            rlang::quo_name(quo_groupfield))) %>%
     #set cluster id as factor, must be for regression later
     dplyr::mutate(cluster_id = as.factor(.data$cluster_id),
+                  #doy for cyclical regression
+                  doy = as.numeric(format(.data$obs_date, "%j")),
                   #need numeric date for regression
                   numericdate = as.numeric(.data$obs_date))
 

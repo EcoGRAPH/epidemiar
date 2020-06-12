@@ -150,7 +150,6 @@ run_forecast <- function(epi_data,
   #Split regression call depending on {once|week} model fit frequency
 
   if (report_settings[["dev_fc_fit_freq"]] == "once"){
-    message("Generating forecasts...")
     #for single fit, call with last week (and subfunction has switch to return all)
     forereg_return <- forecast_regression(epi_lag,
                                           quo_groupfield,
@@ -195,9 +194,9 @@ run_forecast <- function(epi_data,
 
   # Interval calculation
   preds_catch <- preds_catch %>%
-    dplyr::mutate(fc_cases = .data$fit,
-                  fc_cases_upr = .data$fit+1.96*sqrt(.data$fit),
-                  fc_cases_lwr = .data$fit-1.96*sqrt(.data$fit))
+    dplyr::mutate(fc_cases = .data$preds,
+                  fc_cases_upr = .data$preds+1.96*sqrt(.data$preds),
+                  fc_cases_lwr = .data$preds-1.96*sqrt(.data$preds))
 
   #Trim fc report results ONLY (not full epi dataset) to report period
   preds_catch_trim <- preds_catch %>%
@@ -320,10 +319,10 @@ forecast_regression <- function(epi_lag,
   epi_lag <- epi_lag %>% dplyr::mutate(!!rlang::quo_name(quo_groupfield) := factor(!!quo_groupfield))
 
 
-  if (report_settings[["fc_cyclicals"]] == TRUE){
-    # create a doy field so that we can use a cyclical spline
-    epi_lag <- dplyr::mutate(epi_lag, doy = as.numeric(format(.data$obs_date, "%j")))
-  }
+  # if (report_settings[["fc_cyclicals"]] == TRUE){
+  #   # create a doy field so that we can use a cyclical spline
+  #   epi_lag <- dplyr::mutate(epi_lag, doy = as.numeric(format(.data$obs_date, "%j")))
+  # }
 
   if (report_settings[["fc_splines"]] == "modbs"){
     # create modified bspline basis in epi_lag file to model longterm trends
@@ -366,20 +365,30 @@ forecast_regression <- function(epi_lag,
     return(regress)
   }
 
+  # ## Error check all model results if using batch_bam/tp
+  # if (report_settings[["fc_splines"]] == "tp"){
+  #   check_bb_models(regress)
+  # }
+
+
   ## Creating predictions switching point on model choice
   preds <- create_predictions(fc_model_family,
                               report_settings,
                               regress,
                               epi_lag,
+                              env_variables_used,
                               req_date)
 
 
   #now cbind to get ready to return
   epi_preds <- cbind(epi_lag %>%
                        dplyr::filter(.data$obs_date <= req_date),
+                     #column will be named preds
                      as.data.frame(preds)) %>%
     #and convert factor back to character for the groupings (originally converted b/c of bam/gam requirements)
-    dplyr::mutate(!!rlang::quo_name(quo_groupfield) := as.character(!!quo_groupfield))
+    dplyr::mutate(!!rlang::quo_name(quo_groupfield) := as.character(!!quo_groupfield)) %>%
+    #remake into tibble
+    tibble::as_tibble()
 
 
   if (report_settings[["dev_fc_fit_freq"]] == "once"){
@@ -445,8 +454,8 @@ build_model <- function(fc_model_family,
       #grouping by geographical unit
       dplyr::group_by(!!quo_groupfield) %>%
       #prediction is 1 lag (previous week)
-      #fit is name of value from regression models
-      dplyr::mutate(fit = dplyr::lag(.data$cases_epidemiar, n = 1))
+      #preds is name of value from regression models
+      dplyr::mutate(preds = dplyr::lag(.data$cases_epidemiar, n = 1))
 
   } else if (fc_model_family == "naive-averageweek"){
 
@@ -458,7 +467,7 @@ build_model <- function(fc_model_family,
     regress <- epi_input %>%
       #calculate averages per geographic group per week of year
       dplyr::group_by(!!quo_groupfield, .data$week_epidemiar) %>%
-      dplyr::summarize(fit = mean(.data$cases_epidemiar, na.rm = TRUE))
+      dplyr::summarize(preds = mean(.data$cases_epidemiar, na.rm = TRUE))
 
 
   } else {
@@ -483,6 +492,8 @@ build_model <- function(fc_model_family,
     }
 
   #run the regression
+    message("Creating regression model...")
+
   if (report_settings[["fc_splines"]] == "modbs"){
     if (report_settings[["fc_cyclicals"]]) {
       #yes cyclicals
@@ -523,8 +534,9 @@ build_model <- function(fc_model_family,
 
   } #end thin plate
 
-    } #end else user supplied family
+  } #end else user supplied family
 
+return(regress)
 
 } # end build_model()
 
@@ -696,6 +708,9 @@ build_equation <- function(quo_groupfield,
 #'  `report_settings$model_cached`, or the one just generated.
 #'@param epi_lag Epidemiological dataset with basis spline summaries of the
 #'  lagged environmental data (or anomalies), with groupings as a factor.
+#'@param env_variables_used a list of environmental variables that will be used in the
+#'  modeling (had to be listed in model variables input file and present the
+#'  env_data and env_info datasets)
 #'@param req_date The end date of requested forecast regression. When fit_freq
 #'  == "once", this is the last date of the full report, the end date of the
 #'  forecast period.
@@ -711,6 +726,7 @@ create_predictions <- function(fc_model_family,
                                report_settings,
                                regress,
                                epi_lag,
+                               env_variables_used,
                                req_date){
 
 
@@ -724,18 +740,18 @@ create_predictions <- function(fc_model_family,
     #manipulating to be in quasi-same format as the other models return
 
     #regress is a tibble not regression object here
-    # has a variable fit with lag of 1 on known data
+    # has a variable preds with lag of 1 on known data
     #epi_lag has the newer rows
     preds <- epi_lag %>%
       #filter to requested date
       dplyr::filter(.data$obs_date <= req_date) %>%
-      #join to get "fit" values from "model"
-      #join on all shared columns (i.e. everything in regress not "fit") to prevent renaming
-      dplyr::left_join(regress, by = names(regress)[!names(regress) %in% c("fit")]) %>%
+      #join to get "preds" values from "model"
+      #join on all shared columns (i.e. everything in regress not "preds") to prevent renaming
+      dplyr::left_join(regress, by = names(regress)[!names(regress) %in% c("preds")]) %>%
       #important at end/fc section, when we fill down
-      tidyr::fill(.data$fit, .direction = "down") %>%
+      tidyr::fill(.data$preds, .direction = "down") %>%
       #format into nominal regression predict output
-      dplyr::select(.data$fit) %>%
+      dplyr::select(.data$preds) %>%
       as.data.frame()
 
   } else if (fc_model_family == "naive-averageweek"){
@@ -755,11 +771,11 @@ create_predictions <- function(fc_model_family,
     #join back
     preds <- epi_lag %>%
       #join to get average values
-      #join on all shared columns (i.e. everything in regress not "fit") to prevent renaming
+      #join on all shared columns (i.e. everything in regress not "preds") to prevent renaming
       # and so don't need column names not passed into this function
-      dplyr::left_join(regress, by = names(regress)[!names(regress) %in% c("fit")]) %>%
+      dplyr::left_join(regress, by = names(regress)[!names(regress) %in% c("preds")]) %>%
       #format into nominal regression output
-      dplyr::select(.data$fit) %>%
+      dplyr::select(.data$preds) %>%
       as.data.frame()
 
 
@@ -772,7 +788,6 @@ create_predictions <- function(fc_model_family,
       #output prediction (through req_date)
       preds <- mgcv::predict.bam(regress,
                                  newdata = epi_lag %>% dplyr::filter(.data$obs_date <= req_date),
-                                 se.fit = TRUE,       # included for backwards compatibility
                                  type = "response",
                                  discrete = TRUE,
                                  n.threads = report_settings[["fc_nthreads"]],
@@ -783,14 +798,22 @@ create_predictions <- function(fc_model_family,
 
     } else if (report_settings[["fc_splines"]] == "tp"){
 
+      pred_input <- epi_lag %>%
+        dplyr::filter(.data$obs_date <= req_date)
+
+      #tibble to dataframe, and turn all env wide data into each own sub matrix
+      pred_input_tp <- format_lag_ca(pred_input,
+                                    env_variables_used,
+                                    report_settings)
+
+
       # create a cluster for clusterapply to use
       pred_cluster <- parallel::makeCluster(max(1, (report_settings[["ncores"]]-1), na.rm = TRUE))
 
       preds <- clusterapply::predict.batch_bam(models = regress,
                                                predictargs = list("type"="response"),
                                                over = "cluster_id",
-                                               newdata = epi_lag %>%
-                                                 dplyr::filter(.data$obs_date <= req_date),
+                                               newdata = pred_input_tp,
                                                cluster = pred_cluster)
 
       #stop the cluster
@@ -799,8 +822,8 @@ create_predictions <- function(fc_model_family,
 
     } #end else if fc_splines
 
-
-
   } #end else user supplied fc_family
+
+  return(preds)
 
 } #end create_predictions()

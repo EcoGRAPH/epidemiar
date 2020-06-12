@@ -639,15 +639,29 @@ build_equation <- function(quo_groupfield,
     #end if modbs
   } else if (report_settings[["fc_splines"]] == "tp"){
 
-    message("Creating equation using thin plate splines.")
+    message("Creating equation using thin plate splines...")
 
-    #create s(lag, by = <>, bs = 'tp')
+    #create s({}, by = {}, bs = 'tp', id = {unique})
+    # numericdate column for long-term trend
+    # lag column-matrix for environmental variables
+    # ids need to be unique for each, but do not have to be sequential
+      # id = 1 reserved for cyclicals which may or may not be present
+      # id = 2 reserved for long-term trend
+      # id = 3+ for each of the environmental variables
 
     #for geogroup
-    tp_geo_eq <- paste0("s(lag, by = ", rlang::quo_name(quo_groupfield), ", bs = \'tp\')")
+    #need different formulas if 1+ or only 1 geographic grouping
+    tp_geo_eq <- if (n_groupings > 1){
+      paste0("s(numericdate, by = ", rlang::quo_name(quo_groupfield),
+             ", bs = \'tp\', id = 2)")
+    } else {
+      paste0("s(numericdate, ", "bs = \'tp\', id = 2)")
+    }
 
     #for each env var
-    tp_env_eq_list <- paste0("s(lag, by = ", env_variables_used, ", bs = \'tp\')")
+    idn_var <- seq(from = 3, to = (3-1+length(env_variables_used)))
+    tp_env_eq_list <- paste0("s(lag, by = ", env_variables_used,
+                             ", bs = \'tp\', id = ", idn_var, ")")
     tp_env_eq <- glue::glue_collapse(tp_env_eq_list, sep = " + ")
 
 
@@ -656,7 +670,7 @@ build_equation <- function(quo_groupfield,
 
       message("Including seasonal cyclicals into model...")
 
-      #build equation
+      #build formula
 
       #need different formulas if 1+ or only 1 geographic grouping
       if (n_groupings > 1){
@@ -665,20 +679,20 @@ build_equation <- function(quo_groupfield,
                                           #cyclical
                                           " + s(doy, bs=\"cc\", by=",
                                           rlang::quo_name(quo_groupfield),
-                                          ") + ",
+                                          ", id = 1) + ",
                                           #tp
                                           tp_geo_eq, " + ",
                                           tp_env_eq))
       } else {
         reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                          "s(doy, bs=\"cc\") + ",
+                                          "s(doy, bs=\"cc\", id = 1) + ",
                                           tp_geo_eq, " + ",
                                           tp_env_eq))
       }
     } else {
       # FALSE, no cyclicals
 
-      #build equation
+      #build formula
 
       #need different formulas if 1+ or only 1 geographic grouping
       if (n_groupings > 1){

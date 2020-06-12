@@ -528,10 +528,16 @@ input_check <- function(epi_data,
 
 
   # Developer options
-  if (is.null(raw_settings[["dev_fc_fit_freq"]])){
+  if (!is.null(raw_settings[["dev_fc_fit_freq"]])){
+    new_settings[["dev_fc_fit_freq"]] <- raw_settings[["dev_fc_fit_freq"]]
+  } else {
+    #default
     new_settings[["dev_fc_fit_freq"]] <- "once"
   }
-  if (is.null(raw_settings[["dev_fc_formula"]])){
+  if (!is.null(raw_settings[["dev_fc_formula"]])){
+    new_settings[["dev_fc_formula"]] <- raw_settings[["dev_fc_formula"]]
+  } else {
+    #default
     new_settings[["dev_fc_formula"]] <- NULL
   }
 

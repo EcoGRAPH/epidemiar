@@ -110,13 +110,15 @@ If you are creating a formatted report later and wish to have maps of the result
 ## Setting up the Report and Model
 
 
-### Report level settings
+### Report level and epidemiological settings
 
 Many of the settings are bundled into the named list `report_settings` argument. These all have defaults, but they are not likely the correct defaults for your dataset and modeling.
 
 * `report_settings$report_period`: Total number of weeks for the report to include, including the number of future forecast weeks, `report_settings$fc_future_period`, see forecasting section below. Default for total report period is 26 weeks.
 * `report_settings$report_value_type`: How to report the results, either in terms of "cases" (default) or "incidence". If 'incidence', population data must be supplied in the `epi_data` under `{populationfield}`.
 * `report_settings$report_inc_per`: If reporting incidence, what should be denominator be? Default is per 1000 persons, and ignored if `report_settings$report_value_type = "cases"`.
+* `report_settings$epi_date_type`: What type of weekly dates are the epidemiological data (and environmental reference data) in? This would be a string indicating the standard used: "weekISO" for WHO ISO-8601 weeks (default), or "weekCDC" for CDC epi weeks. Required: epidemiological observation dates listed are LAST day of the given week.
+* `report_settings$epi_date_type`: Should the epidemiological data be linearly interpolated for any missing values? Boolean value, default is FALSE. 
 
 
 ### Setting up for Forecasting

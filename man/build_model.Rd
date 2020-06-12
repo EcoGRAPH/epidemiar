@@ -115,7 +115,7 @@ data and groupings converted to factors.}
  option and the default which uses thin plate splines instead.
 
  \item \code{fc_ncores}: The number of physical CPU cores to use for parallel
- processing for modelling. Only relevant when `fc_splines == 'tp'`.
+ processing for modelling (default use is ncores - 1).
 
  \item \code{ed_summary_period} = 4: The number of weeks that will be
  considered the "early detection period". It will count back from the week of

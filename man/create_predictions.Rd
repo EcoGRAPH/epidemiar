@@ -9,6 +9,7 @@ create_predictions(
   report_settings,
   regress,
   epi_lag,
+  env_variables_used,
   req_date
 )
 }
@@ -108,7 +109,7 @@ input "poisson()". If a cached model is being used, set the parameter to
  option and the default which uses thin plate splines instead.
 
  \item \code{fc_ncores}: The number of physical CPU cores to use for parallel
- processing for modelling. Only relevant when `fc_splines == 'tp'`.
+ processing for modelling (default use is ncores - 1).
 
  \item \code{ed_summary_period} = 4: The number of weeks that will be
  considered the "early detection period". It will count back from the week of
@@ -135,6 +136,10 @@ input "poisson()". If a cached model is being used, set the parameter to
 
 \item{epi_lag}{Epidemiological dataset with basis spline summaries of the
 lagged environmental data (or anomalies), with groupings as a factor.}
+
+\item{env_variables_used}{a list of environmental variables that will be used in the
+modeling (had to be listed in model variables input file and present the
+env_data and env_info datasets)}
 
 \item{req_date}{The end date of requested forecast regression. When fit_freq
 == "once", this is the last date of the full report, the end date of the

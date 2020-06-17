@@ -91,17 +91,17 @@ extend_env_future <- function(env_data,
                                   obs_temp = env_variables_used)
   #and fix names with NSE
   env_complete <- env_complete %>%
-    dplyr::rename(!!rlang::quo_name(quo_groupfield) := .data$group_temp,
-                  !!rlang::quo_name(quo_obsfield) := .data$obs_temp)
+    dplyr::rename(!!rlang::as_name(quo_groupfield) := .data$group_temp,
+                  !!rlang::as_name(quo_obsfield) := .data$obs_temp)
 
   #could have ragged env data per variable per grouping
   #so, antijoin with env_known_fill first to get the actually missing rows
   env_missing <- env_complete %>%
-    dplyr::anti_join(env_trim, by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
-                                                       rlang::quo_name(quo_obsfield),
+    dplyr::anti_join(env_trim, by = rlang::set_names(c(rlang::as_name(quo_groupfield),
+                                                       rlang::as_name(quo_obsfield),
                                                        "obs_date"),
-                                                     c(rlang::quo_name(quo_groupfield),
-                                                       rlang::quo_name(quo_obsfield),
+                                                     c(rlang::as_name(quo_groupfield),
+                                                       rlang::as_name(quo_obsfield),
                                                        "obs_date")))
 
 
@@ -164,18 +164,18 @@ extend_env_future <- function(env_data,
         #get reference/summarizing method from user supplied env_info
         dplyr::left_join(env_info %>%
                            dplyr::select(!!quo_obsfield, .data$reference_method),
-                         by = rlang::set_names(rlang::quo_name(quo_obsfield),
-                                               rlang::quo_name(quo_obsfield))) %>%
+                         by = rlang::set_names(rlang::as_name(quo_obsfield),
+                                               rlang::as_name(quo_obsfield))) %>%
         #get weekly ref value
         dplyr::left_join(env_ref_varused %>%
                            dplyr::select(!!quo_obsfield, !!quo_groupfield,
                                          .data$week_epidemiar, .data$ref_value),
                          #NSE fun
-                         by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
-                                                 rlang::quo_name(quo_obsfield),
+                         by = rlang::set_names(c(rlang::as_name(quo_groupfield),
+                                                 rlang::as_name(quo_obsfield),
                                                  "week_epidemiar"),
-                                               c(rlang::quo_name(quo_groupfield),
-                                                 rlang::quo_name(quo_obsfield),
+                                               c(rlang::as_name(quo_groupfield),
+                                                 rlang::as_name(quo_obsfield),
                                                  "week_epidemiar")))
 
 
@@ -313,14 +313,14 @@ extend_epi_future <- function(epi_data,
                                 group_temp = groupings)
   #and fix names with NSE
   epi_future <- epi_future %>%
-    dplyr::rename(!!rlang::quo_name(quo_groupfield) := .data$group_temp)
+    dplyr::rename(!!rlang::as_name(quo_groupfield) := .data$group_temp)
 
   #with fc_start_date, there MAY be observed data in future/forecast period
   #so antijoin and bind actual needed rows to avoid duplication
   epi_future_missing <- epi_future %>%
-    dplyr::anti_join(epi_data, by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+    dplyr::anti_join(epi_data, by = rlang::set_names(c(rlang::as_name(quo_groupfield),
                                                        "obs_date"),
-                                                     c(rlang::quo_name(quo_groupfield),
+                                                     c(rlang::as_name(quo_groupfield),
                                                        "obs_date")))
 
   #bind with exisiting data (NAs for everything else in epi_future)
@@ -385,8 +385,8 @@ epi_format_fc <- function(epi_data_extd,
     #join with cluster info
     dplyr::left_join(fc_clusters,
                      #NSE
-                     by = rlang::set_names(rlang::quo_name(quo_groupfield),
-                                           rlang::quo_name(quo_groupfield))) %>%
+                     by = rlang::set_names(rlang::as_name(quo_groupfield),
+                                           rlang::as_name(quo_groupfield))) %>%
     #set cluster id as factor, must be for regression later
     dplyr::mutate(cluster_id = as.factor(.data$cluster_id),
                   #doy for cyclical regression
@@ -503,13 +503,13 @@ lag_environ_to_epi <- function(epi_fc,
 
   #and fix names with NSE
   datalagger <- datalagger %>%
-    dplyr::rename(!!rlang::quo_name(quo_groupfield) := .data$group_temp)
+    dplyr::rename(!!rlang::as_name(quo_groupfield) := .data$group_temp)
 
   #add env data
   datalagger <- dplyr::left_join(datalagger, env_fc,
                                  #because dplyr NSE, notice flip order
-                                 by = rlang::set_names(c(rlang::quo_name(quo_groupfield), "obs_date"),
-                                                       c(rlang::quo_name(quo_groupfield), "laggeddate")))
+                                 by = rlang::set_names(c(rlang::as_name(quo_groupfield), "obs_date"),
+                                                       c(rlang::as_name(quo_groupfield), "laggeddate")))
 
   # pivot lagged environmental data to epi data
   epi_lagged <- epi_fc #to more easily debug and rerun
@@ -525,8 +525,8 @@ lag_environ_to_epi <- function(epi_fc,
     #join cur var wide data to epi data
     epi_lagged <- dplyr::left_join(epi_lagged, meandat,
                                    #dplyr NSE
-                                   by = rlang::set_names(c(rlang::quo_name(quo_groupfield), "obs_date"),
-                                                         c(rlang::quo_name(quo_groupfield), "obs_date")))
+                                   by = rlang::set_names(c(rlang::as_name(quo_groupfield), "obs_date"),
+                                                         c(rlang::as_name(quo_groupfield), "obs_date")))
   } #end pivot loop
 
   #if using modified b-splines, do the basis functions and calcs here

@@ -41,8 +41,8 @@ data_to_daily <- function(data_notdaily, valuefield, interpolate = TRUE){
       #check if group_vars will handle grouping sorting issue
       dplyr::arrange(dplyr::group_vars(), .data$obs_date) %>%
       #will not extrapolate beyond last known value, that will happen inside run_epidemia()
-      #dplyr::mutate(!!rlang::quo_name(quo_valuefield) := epidemiar::na_approx(!!quo_valuefield)) %>%
-      dplyr::mutate(!!rlang::quo_name(quo_valuefield) := zoo::na.approx(!!quo_valuefield,
+      #dplyr::mutate(!!rlang::as_name(quo_valuefield) := epidemiar::na_approx(!!quo_valuefield)) %>%
+      dplyr::mutate(!!rlang::as_name(quo_valuefield) := zoo::na.approx(!!quo_valuefield,
                                                                         rule = 2:1, na.rm = FALSE)) %>%
       #finish by ungrouping
       dplyr::ungroup()

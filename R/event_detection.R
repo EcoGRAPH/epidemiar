@@ -311,9 +311,9 @@ stss_res_to_output_data <- function(stss_res_list,
   #flatten out of list (now that we have the grouping labels)
   stss_res_flat <- do.call(rbind, stss_res_grp) %>%
     #fix group name field with dplyr programming
-    dplyr::rename(!!rlang::quo_name(quo_groupfield) := .data$group_temp) %>%
+    dplyr::rename(!!rlang::as_name(quo_groupfield) := .data$group_temp) %>%
     #and convert to character for joining
-    dplyr::mutate(!!rlang::quo_name(quo_groupfield) := as.character(!!quo_groupfield))
+    dplyr::mutate(!!rlang::as_name(quo_groupfield) := as.character(!!quo_groupfield))
 
   #recover population (for incidence calculations), not present if popoffset was FALSE
   #only if optional population field was given
@@ -321,9 +321,9 @@ stss_res_to_output_data <- function(stss_res_list,
     stss_res_flat <- stss_res_flat %>%
       dplyr::left_join(epi_fc_data %>%
                          dplyr::select(!!quo_groupfield, !!quo_popfield, .data$obs_date),
-                       by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                       by = rlang::set_names(c(rlang::as_name(quo_groupfield),
                                                "obs_date"),
-                                             c(rlang::quo_name(quo_groupfield),
+                                             c(rlang::as_name(quo_groupfield),
                                                "epoch")))
   }
 
@@ -332,9 +332,9 @@ stss_res_to_output_data <- function(stss_res_list,
   stss_res_flat <- stss_res_flat %>%
     dplyr::left_join(epi_fc_data %>%
                        dplyr::select(!!quo_groupfield, .data$obs_date, .data$censor_flag),
-                     by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                     by = rlang::set_names(c(rlang::as_name(quo_groupfield),
                                              "obs_date"),
-                                           c(rlang::quo_name(quo_groupfield),
+                                           c(rlang::as_name(quo_groupfield),
                                              "epoch")))
 
 

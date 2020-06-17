@@ -480,13 +480,13 @@ run_epidemia <- function(epi_data = NULL,
                               group_temp = groupings)
   #and fix names with NSE
   epi_full <- epi_full %>%
-    dplyr::rename(!!rlang::quo_name(quo_groupfield) := .data$group_temp)
+    dplyr::rename(!!rlang::as_name(quo_groupfield) := .data$group_temp)
 
   #antijoin with existing data to find rows are implicitly missing
   epi_implicit <- epi_full %>%
-    dplyr::anti_join(epi_data, by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+    dplyr::anti_join(epi_data, by = rlang::set_names(c(rlang::as_name(quo_groupfield),
                                                        "obs_date"),
-                                                     c(rlang::quo_name(quo_groupfield),
+                                                     c(rlang::as_name(quo_groupfield),
                                                        "obs_date")))
   #bind missing
   epi_data <- epi_data %>%
@@ -586,11 +586,11 @@ run_epidemia <- function(epi_data = NULL,
   if (report_settings[["model_run"]]){
     message("Model run only, returning regression object and model information.")
 
-    fieldnames <- list(casefield = rlang::quo_name(quo_casefield),
-                       populationfield = rlang::quo_name(quo_popfield),
-                       groupfield = rlang::quo_name(quo_groupfield),
-                       obsfield = rlang::quo_name(quo_obsfield),
-                       valuefield = rlang::quo_name(quo_valuefield))
+    fieldnames <- list(casefield = rlang::as_name(quo_casefield),
+                       populationfield = rlang::as_name(quo_popfield),
+                       groupfield = rlang::as_name(quo_groupfield),
+                       obsfield = rlang::as_name(quo_obsfield),
+                       valuefield = rlang::as_name(quo_valuefield))
 
 
     model_meta <- create_named_list(date_created = Sys.Date(),
@@ -754,11 +754,11 @@ run_epidemia <- function(epi_data = NULL,
 
     ## Parameters and metadata that might be useful in report generation
     # all of these may not be needed
-    fieldnames <- list(casefield = rlang::quo_name(quo_casefield),
-                       populationfield = rlang::quo_name(quo_popfield),
-                       groupfield = rlang::quo_name(quo_groupfield),
-                       obsfield = rlang::quo_name(quo_obsfield),
-                       valuefield = rlang::quo_name(quo_valuefield))
+    fieldnames <- list(casefield = rlang::as_name(quo_casefield),
+                       populationfield = rlang::as_name(quo_popfield),
+                       groupfield = rlang::as_name(quo_groupfield),
+                       obsfield = rlang::as_name(quo_obsfield),
+                       valuefield = rlang::as_name(quo_valuefield))
 
     params_meta <- create_named_list(date_created = Sys.Date(),
                                      fieldnames,

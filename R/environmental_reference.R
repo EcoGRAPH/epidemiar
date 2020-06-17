@@ -73,8 +73,8 @@ env_daily_to_ref <- function(daily_env_data,
     #get reference/summarizing method from user supplied env_info
     dplyr::inner_join(env_info %>%
                         dplyr::select(!!quo_obsfield, .data$reference_method),
-                      by = rlang::set_names(rlang::quo_name(quo_obsfield),
-                                            rlang::quo_name(quo_obsfield))) %>%
+                      by = rlang::set_names(rlang::as_name(quo_obsfield),
+                                            rlang::as_name(quo_obsfield))) %>%
     #add week, year fields
     epidemiar::add_datefields(week_type) %>%
     #group by grouping, env var, and date week

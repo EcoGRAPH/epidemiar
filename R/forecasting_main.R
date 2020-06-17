@@ -314,9 +314,9 @@ forecast_regression <- function(epi_lag,
   epi_lag <- epi_lag %>%
     dplyr::mutate(input = ifelse(.data$obs_date <= last_known_date, 1, 0))
 
-  # ensure that quo_name(quo_groupfield) is a factor - gam/bam will fail if given a character,
+  # ensure that as_name(quo_groupfield) is a factor - gam/bam will fail if given a character,
   # which is unusual among regression functions, which typically just coerce into factors.
-  epi_lag <- epi_lag %>% dplyr::mutate(!!rlang::quo_name(quo_groupfield) := factor(!!quo_groupfield))
+  epi_lag <- epi_lag %>% dplyr::mutate(!!rlang::as_name(quo_groupfield) := factor(!!quo_groupfield))
 
 
   # if (report_settings[["fc_cyclicals"]] == TRUE){
@@ -386,7 +386,7 @@ forecast_regression <- function(epi_lag,
                      #column will be named preds
                      as.data.frame(preds)) %>%
     #and convert factor back to character for the groupings (originally converted b/c of bam/gam requirements)
-    dplyr::mutate(!!rlang::quo_name(quo_groupfield) := as.character(!!quo_groupfield)) %>%
+    dplyr::mutate(!!rlang::as_name(quo_groupfield) := as.character(!!quo_groupfield)) %>%
     #remake into tibble
     tibble::as_tibble()
 
@@ -589,7 +589,7 @@ build_equation <- function(quo_groupfield,
     modb_list <- grep("modbs_reserved_*", colnames(epi_input), value = TRUE)
     # variant depending on >1 geographic area groupings
     if (n_groupings > 1){
-      modb_list_grp <- paste(modb_list, ":", rlang::quo_name(quo_groupfield))
+      modb_list_grp <- paste(modb_list, ":", rlang::as_name(quo_groupfield))
       modb_eq <- glue::glue_collapse(modb_list_grp, sep = " + ")
     } else {
       modb_eq <- glue::glue_collapse(modb_list, sep = " + ")
@@ -606,9 +606,9 @@ build_equation <- function(quo_groupfield,
       #need different formulas if 1+ or only 1 geographic grouping
       if (n_groupings > 1){
         reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                          rlang::quo_name(quo_groupfield),
+                                          rlang::as_name(quo_groupfield),
                                           " + s(doy, bs=\"cc\", by=",
-                                          rlang::quo_name(quo_groupfield),
+                                          rlang::as_name(quo_groupfield),
                                           ") + ",
                                           modb_eq, " + ",
                                           bandsums_eq))
@@ -626,7 +626,7 @@ build_equation <- function(quo_groupfield,
       #need different formulas if 1+ or only 1 geographic grouping
       if (n_groupings > 1){
         reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                          rlang::quo_name(quo_groupfield), " + ",
+                                          rlang::as_name(quo_groupfield), " + ",
                                           modb_eq, " + ",
                                           bandsums_eq))
       } else {
@@ -675,10 +675,10 @@ build_equation <- function(quo_groupfield,
       #need different formulas if 1+ or only 1 geographic grouping
       if (n_groupings > 1){
         reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                          rlang::quo_name(quo_groupfield),
+                                          rlang::as_name(quo_groupfield),
                                           #cyclical
                                           " + s(doy, bs=\"cc\", by=",
-                                          rlang::quo_name(quo_groupfield),
+                                          rlang::as_name(quo_groupfield),
                                           ", id = 1) + ",
                                           #tp
                                           tp_geo_eq, " + ",
@@ -697,7 +697,7 @@ build_equation <- function(quo_groupfield,
       #need different formulas if 1+ or only 1 geographic grouping
       if (n_groupings > 1){
         reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
-                                          rlang::quo_name(quo_groupfield), " + ",
+                                          rlang::as_name(quo_groupfield), " + ",
                                           tp_geo_eq, " + ",
                                           tp_env_eq))
       } else {

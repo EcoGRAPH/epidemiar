@@ -120,7 +120,7 @@ run_validation <- function(date_start = NULL,
                                 reporting_lag,
                                 per_timesteps,
                                 skill_test,
-                                casefield = rlang::quo_name(quo_casefield),
+                                casefield = rlang::as_name(quo_casefield),
                                 fc_model_family,
                                 report_settings)
 
@@ -138,7 +138,7 @@ run_validation <- function(date_start = NULL,
   obs_only <- epi_data_orig %>%
     dplyr::select(!!quo_groupfield, .data$obs_date, !!quo_casefield) %>%
     #rename observation
-    dplyr::rename(obs = !!rlang::quo_name(quo_casefield))
+    dplyr::rename(obs = !!rlang::as_name(quo_casefield))
 
 
   #Skill test loop set up
@@ -244,9 +244,9 @@ run_validation <- function(date_start = NULL,
     fc_join <- fcs_only %>%
       dplyr::left_join(obs_only,
                        #NSE fun
-                       by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
+                       by = rlang::set_names(c(rlang::as_name(quo_groupfield),
                                                "obs_date"),
-                                             c(rlang::quo_name(quo_groupfield),
+                                             c(rlang::as_name(quo_groupfield),
                                                "obs_date")))
 
     #make all the reporting_lag adjustments
@@ -556,14 +556,14 @@ calc_skill <- function(val_list, grp = NULL){
       #join with persistence
       dplyr::left_join(val_np,
                        #NSE fun
-                       by = rlang::set_names(c(rlang::quo_name(grp),
+                       by = rlang::set_names(c(rlang::as_name(grp),
                                                "timestep_ahead"),
-                                             c(rlang::quo_name(grp),
+                                             c(rlang::as_name(grp),
                                                "timestep_ahead"))) %>%
       #join with average week (1 value to all timesteps ahead)
       dplyr::left_join(val_naw,
-                       by = rlang::set_names(rlang::quo_name(grp),
-                                             rlang::quo_name(grp)))
+                       by = rlang::set_names(rlang::as_name(grp),
+                                             rlang::as_name(grp)))
   } #end joinings
 
   #perfect skill metrics

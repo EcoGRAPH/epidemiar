@@ -76,21 +76,21 @@ input_check <- function(epi_data,
     err_msgs <- paste0(err_msgs, "The 'obs_date' field in the epidemiological dataset, 'epi_data', must be type Date.\n")
   }
   # has casefield
-  if (!rlang::quo_name(quo_casefield) %in% colnames(epi_data)){
+  if (!rlang::as_name(quo_casefield) %in% colnames(epi_data)){
     err_flag <- TRUE
-    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::quo_name(quo_casefield), ", in the epidemiological dataset, 'epi_data'.\n")
+    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::as_name(quo_casefield), ", in the epidemiological dataset, 'epi_data'.\n")
   }
   # has groupfield
-  if(!rlang::quo_name(quo_groupfield) %in% colnames(epi_data)){
+  if(!rlang::as_name(quo_groupfield) %in% colnames(epi_data)){
     err_flag <- TRUE
-    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::quo_name(quo_groupfield), ", in the epidemiological dataset, 'epi_data'.\n")
+    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::as_name(quo_groupfield), ", in the epidemiological dataset, 'epi_data'.\n")
   }
   # has populationfield, but only if given as it is optional
   #testing if quosure was created on NULL object.
   if(!rlang::quo_is_null(quo_popfield)){
-    if(!rlang::quo_name(quo_popfield) %in% colnames(epi_data)){
+    if(!rlang::as_name(quo_popfield) %in% colnames(epi_data)){
       err_flag <- TRUE
-      err_msgs <- paste0(err_msgs, "The specified column ", rlang::quo_name(quo_popfield), ", for population must be in the in the epidemiological dataset, 'epi_data'.\n")
+      err_msgs <- paste0(err_msgs, "The specified column ", rlang::as_name(quo_popfield), ", for population must be in the in the epidemiological dataset, 'epi_data'.\n")
     }
   }
 
@@ -106,32 +106,32 @@ input_check <- function(epi_data,
     err_msgs <- paste0(err_msgs, "The 'obs_date' field in the environmental dataset, 'env_data', must be type Date.\n")
   }
   # has groupfield
-  if(!rlang::quo_name(quo_groupfield) %in% colnames(env_data)){
+  if(!rlang::as_name(quo_groupfield) %in% colnames(env_data)){
     err_flag <- TRUE
-    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::quo_name(quo_groupfield), ", in the environmental dataset, 'env_data'.\n")
+    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::as_name(quo_groupfield), ", in the environmental dataset, 'env_data'.\n")
   }
   # has obsfield
-  if(!rlang::quo_name(quo_obsfield) %in% colnames(env_data)){
+  if(!rlang::as_name(quo_obsfield) %in% colnames(env_data)){
     err_flag <- TRUE
-    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::quo_name(quo_obsfield), ", in the environmental dataset, 'env_data'.\n")
+    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::as_name(quo_obsfield), ", in the environmental dataset, 'env_data'.\n")
   }
   # has valuefield
-  if(!rlang::quo_name(quo_valuefield) %in% colnames(env_data)){
+  if(!rlang::as_name(quo_valuefield) %in% colnames(env_data)){
     err_flag <- TRUE
-    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::quo_name(quo_valuefield), ", in the environmental dataset, 'env_data'.\n")
+    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::as_name(quo_valuefield), ", in the environmental dataset, 'env_data'.\n")
   }
 
 
   # env_ref tests
   # has groupfield
-  if(!rlang::quo_name(quo_groupfield) %in% colnames(env_ref_data)){
+  if(!rlang::as_name(quo_groupfield) %in% colnames(env_ref_data)){
     err_flag <- TRUE
-    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::quo_name(quo_groupfield), ", in the environmental reference dataset, 'env_ref_data'.\n")
+    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::as_name(quo_groupfield), ", in the environmental reference dataset, 'env_ref_data'.\n")
   }
   # has obsfield
-  if(!rlang::quo_name(quo_obsfield) %in% colnames(env_ref_data)){
+  if(!rlang::as_name(quo_obsfield) %in% colnames(env_ref_data)){
     err_flag <- TRUE
-    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::quo_name(quo_obsfield), ", in the environmental reference dataset, 'env_ref_data'.\n")
+    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::as_name(quo_obsfield), ", in the environmental reference dataset, 'env_ref_data'.\n")
   }
   #has week_epidemiar
   if(!"week_epidemiar" %in% colnames(env_ref_data)){
@@ -150,9 +150,9 @@ input_check <- function(epi_data,
 
   # env_info
   # has obsfield
-  if(!rlang::quo_name(quo_obsfield) %in% colnames(env_info)){
+  if(!rlang::as_name(quo_obsfield) %in% colnames(env_info)){
     err_flag <- TRUE
-    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::quo_name(quo_obsfield), ", in the environmental metadata file, 'env_info'.\n")
+    err_msgs <- paste0(err_msgs, "There must be a column ", rlang::as_name(quo_obsfield), ", in the environmental metadata file, 'env_info'.\n")
   }
   # has reference_method
   if(!"reference_method" %in% colnames(env_info)){
@@ -290,9 +290,9 @@ input_check <- function(epi_data,
   if (!is.null(raw_settings[["env_var"]])){
     # given env_var
     # check has obsfield
-    if(!rlang::quo_name(quo_obsfield) %in% colnames(raw_settings[["env_var"]])){
+    if(!rlang::as_name(quo_obsfield) %in% colnames(raw_settings[["env_var"]])){
       err_flag <- TRUE
-      err_msgs <- paste0(err_msgs, "There must be a column", rlang::quo_name(quo_obsfield),
+      err_msgs <- paste0(err_msgs, "There must be a column", rlang::as_name(quo_obsfield),
                         ", to indicate the list of model environmental variables in 'report_settings$env_vars'.\n")
     } else {
       #does have obsfield,
@@ -333,7 +333,7 @@ input_check <- function(epi_data,
     default_env_var <- dplyr::intersect(env_data_info, env_ref_variables)
     new_settings[["env_var"]] <- dplyr::tibble(obs_temp = default_env_var) %>%
       #rename NSE fun
-      dplyr::rename(!!rlang::quo_name(quo_obsfield) := .data$obs_temp)
+      dplyr::rename(!!rlang::as_name(quo_obsfield) := .data$obs_temp)
     #message result
     warn_flag <- TRUE
     warn_msgs <- paste0(warn_msgs, "No user supplied list of environmetal variables to use. Using: ",
@@ -347,10 +347,10 @@ input_check <- function(epi_data,
     # special cluster flag
     cluster_flag <- FALSE
     # has groupfield
-    if(!rlang::quo_name(quo_groupfield) %in% colnames(raw_settings[["fc_clusters"]])){
+    if(!rlang::as_name(quo_groupfield) %in% colnames(raw_settings[["fc_clusters"]])){
       cluster_flag <- TRUE
       err_flag <- TRUE
-      err_msgs <- paste0(err_msgs, "There must be a column ", rlang::quo_name(quo_groupfield),
+      err_msgs <- paste0(err_msgs, "There must be a column ", rlang::as_name(quo_groupfield),
                         ", in 'report_settings$clusters'.\n")
     }
     # has cluster_id
@@ -388,7 +388,7 @@ input_check <- function(epi_data,
     #groupings already exist as list of geographic groups
     cluster_tbl <- tibble::tibble(group_temp = groupings, cluster_id = 1) %>%
       #and fix names with NSE
-      dplyr::rename(!!rlang::quo_name(quo_groupfield) := .data$group_temp)
+      dplyr::rename(!!rlang::as_name(quo_groupfield) := .data$group_temp)
     #assign
     new_settings[["fc_clusters"]] <- cluster_tbl
     warn_flag <- TRUE

@@ -58,8 +58,8 @@ environ_report_format <- function(env_ext_data,
     #get reference/summarizing method from user supplied env_info
     dplyr::left_join(env_info %>%
                        dplyr::select(!!quo_obsfield, .data$reference_method),
-                     by = rlang::set_names(rlang::quo_name(quo_obsfield),
-                                           rlang::quo_name(quo_obsfield))) %>%
+                     by = rlang::set_names(rlang::as_name(quo_obsfield),
+                                           rlang::as_name(quo_obsfield))) %>%
     #add date fields
     epidemiar::add_datefields(week_type) %>%
     #trim dates to reduce processing (dates are rough, technically just need week prior to start. 8 is not magical)
@@ -99,11 +99,11 @@ environ_report_format <- function(env_ext_data,
                                      .data$week_epidemiar,
                                      .data$ref_value, dplyr::starts_with("ref_")),
                      #NSE fun
-                     by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
-                                             rlang::quo_name(quo_obsfield),
+                     by = rlang::set_names(c(rlang::as_name(quo_groupfield),
+                                             rlang::as_name(quo_obsfield),
                                              "week_epidemiar"),
-                                           c(rlang::quo_name(quo_groupfield),
-                                             rlang::quo_name(quo_obsfield),
+                                           c(rlang::as_name(quo_groupfield),
+                                             rlang::as_name(quo_obsfield),
                                              "week_epidemiar")))
 }
 
@@ -190,8 +190,8 @@ create_summary_data <- function(ed_res,
 
   #join results
   summary_data <- dplyr::inner_join(ed_summary, ew_summary,
-                                    by = rlang::set_names(rlang::quo_name(quo_groupfield),
-                                                          rlang::quo_name(quo_groupfield)))
+                                    by = rlang::set_names(rlang::as_name(quo_groupfield),
+                                                          rlang::as_name(quo_groupfield)))
 
   summary_data
 }

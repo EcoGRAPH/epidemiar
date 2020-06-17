@@ -365,11 +365,10 @@ forecast_regression <- function(epi_lag,
     return(regress)
   }
 
-  # ## Error check all model results if using batch_bam/tp
-  # if (report_settings[["fc_splines"]] == "tp"){
-  #   check_bb_models(regress)
-  # }
-
+  ## Error check all model results if using batch_bam/tp
+  if (report_settings[["fc_splines"]] == "tp"){
+    check_bb_models(regress)
+  }
 
   ## Creating predictions switching point on model choice
   preds <- create_predictions(fc_model_family,

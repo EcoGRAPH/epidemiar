@@ -706,6 +706,35 @@ format_lag_ca <- function(tbl,
   dfm
 }
 
+#'Checks that all models successfully built when using batch_bam.
+#'
+#'@param reg_bb The regression model(s) returned by batch_bam.
+#'
+#'@return None. Will stop will informative error message if
+#'problems are found.
+#'
+check_bb_models <- function(reg_bb){
+
+  #check if each is a bam model
+  is_bam <- lapply(reg_bb, methods::is, "bam")
+
+  #if ALL are not bam models, then stop and return error messages(s) from modeling
+  if (!all(unlist(is_bam))){
+
+    #get which failed
+    fails <- names(is_bam[sapply(is_bam, function(x) x[1]==FALSE)])
+
+    #quick data frame for failure model names and messages
+    fails_msg_df <- data.frame(Model = unlist(names(reg_bb[fails])),
+                              Error_message = unlist(lapply(reg_bb[fails],
+                                                  function(x) conditionMessage(x))))
+
+    #stop and message
+    stop(paste("Model(s) failed, please review: \n",
+               paste0(utils::capture.output(fails_msg_df), collapse = "\n")))
+
+  }
+}
 
 
 

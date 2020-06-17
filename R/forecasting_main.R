@@ -517,19 +517,21 @@ build_model <- function(fc_model_family,
                                   env_variables_used,
                                   report_settings)
 
-    # create a cluster for clusterapply to use
-    bb_cluster <- parallel::makeCluster(max(1, (report_settings[["ncores"]]-1), na.rm = TRUE))
+    # # create a cluster for clusterapply to use
+    # bb_cluster <- parallel::makeCluster(max(1, (report_settings[["ncores"]]-1), na.rm = TRUE))
 
+    #create list of models, run SERIAL (no cluster), per geographic cluster ("cluster_id")
     regress <- clusterapply::batch_bam(data = epi_input_tp,
                                        bamargs = list("formula" = reg_eq,
                                                       "family" = fc_model_family,
-                                                      "discrete" = TRUE),
-                                       over = "cluster_id",
-                                       cluster = bb_cluster)
+                                                      "discrete" = TRUE,
+                                                      "nthreads" = report_settings[["fc_nthreads"]]),
+                                       over = "cluster_id")
+                                       #cluster = bb_cluster)
 
-    #stop the cluster (if model run, won't use again,
-    #  so starts and ends for modeling building or predictions)
-    parallel::stopCluster(bb_cluster)
+    # #stop the cluster (if model run, won't use again,
+    # #  so starts and ends for modeling building or predictions)
+    # parallel::stopCluster(bb_cluster)
 
   } #end thin plate
 
@@ -821,17 +823,20 @@ create_predictions <- function(fc_model_family,
                                     report_settings)
 
 
-      # create a cluster for clusterapply to use
-      pred_cluster <- parallel::makeCluster(max(1, (report_settings[["ncores"]]-1), na.rm = TRUE))
+      # # create a cluster for clusterapply to use
+      # pred_cluster <- parallel::makeCluster(max(1, (report_settings[["ncores"]]-1), na.rm = TRUE))
 
       preds <- clusterapply::predict.batch_bam(models = regress,
-                                               predictargs = list("type"="response"),
+                                               predictargs = list("type" = "response",
+                                                                  "discrete" = TRUE,
+                                                                  "n.threads" = report_settings[["fc_nthreads"]],
+                                                                  "na.action" = stats::na.pass),
                                                over = "cluster_id",
-                                               newdata = pred_input_tp,
-                                               cluster = pred_cluster)
+                                               newdata = pred_input_tp)
+                                               #cluster = pred_cluster)
 
-      #stop the cluster
-      parallel::stopCluster(pred_cluster)
+      # #stop the cluster
+      # parallel::stopCluster(pred_cluster)
 
 
     } #end else if fc_splines

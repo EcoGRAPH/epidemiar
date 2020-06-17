@@ -533,9 +533,12 @@ run_epidemia <- function(epi_data = NULL,
   #prep environmental data, filling in of missing data will happen in extend_env_future()
   env_data <- env_data %>%
     #copy over value
-    dplyr::mutate(val_epidemiar = !!quo_valuefield) %>%
-    #and sort by alphabetical groupfield
-    dplyr::arrange(!!quo_groupfield, !!quo_obsfield, .data$obs_date)
+    dplyr::mutate(val_epidemiar = !!quo_valuefield)
+
+  #not needed, cut for speed. Will be sorted in extend_env_future
+  # %>%
+  #   #and sort by alphabetical groupfield
+  #   dplyr::arrange(!!quo_groupfield, !!quo_obsfield, .data$obs_date)
 
 
 

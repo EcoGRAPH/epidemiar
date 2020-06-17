@@ -652,10 +652,11 @@ build_equation <- function(quo_groupfield,
     #for geogroup
     #need different formulas if 1+ or only 1 geographic grouping
     tp_geo_eq <- if (n_groupings > 1){
-      paste0("s(numericdate, by = ", rlang::quo_name(quo_groupfield),
-             ", bs = \'tp\', id = 2)")
+      #we are using discrete = TRUE, so one of the smooths must be fx = TRUE
+      paste0("s(numericdate, by = ", rlang::as_name(quo_groupfield),
+             ", bs = \'tp\', fx = TRUE, id = 2)")
     } else {
-      paste0("s(numericdate, ", "bs = \'tp\', id = 2)")
+      paste0("s(numericdate, ", "bs = \'tp\', fx = TRUE, id = 2)")
     }
 
     #for each env var

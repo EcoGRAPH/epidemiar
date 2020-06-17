@@ -107,17 +107,18 @@ input "poisson()". If a cached model is being used, set the parameter to
  units in one cluster.
 
  \item \code{fc_cyclicals} = FALSE: TRUE/FALSE flag on whether to include a
- smooth term based on day of year in the modelling (as one way of accounting
+ smooth term based on day of year in the modeling (as one way of accounting
  for seasonality).
 
  \item \code{fc_splines}: The type of splines that will be used to handle
  long-term trends and lagged environmental variables. If supplemental package
- `batchapply` is not installed, the default (and only choice) uses modified
+ `clusterapply` is not installed, the default (and only choice) uses modified
  b-splines ('modbs'). If the package is installed, then 'tp' becomes an
  option and the default which uses thin plate splines instead.
 
- \item \code{fc_ncores}: The number of physical CPU cores to use for parallel
- processing for modelling (default use is ncores - 1).
+ \item \code{fc_ncores}: The number of physical CPU cores available. Will be
+ used to determine the multi-threading (or not) for use in modeling and
+ predicting.
 
  \item \code{ed_summary_period} = 4: The number of weeks that will be
  considered the "early detection period". It will count back from the week of

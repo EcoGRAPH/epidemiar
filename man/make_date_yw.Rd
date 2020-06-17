@@ -43,6 +43,6 @@ make_date_yw(2010:2017, 1)
 
 }
 \references{
-\url{http://en.wikipedia.org/wiki/ISO_week_date}
-\url{http://www.cmmcp.org/epiweek.htm}
+\url{https://en.wikipedia.org/wiki/ISO_week_date}
+\url{https://www.cmmcp.org/sites/cmmcp/files/uploads/spring_skeeter_06.pdf}
 }

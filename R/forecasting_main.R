@@ -481,7 +481,8 @@ build_model <- function(fc_model_family,
       # dev users also need to set fc_splines appropriately
 
     } else {
-      #build equation
+      #build equation(s)
+      # if fc_splines = "tp" this will also build a fallback equation as well
       reg_eq <- build_equation(quo_groupfield,
                                epi_input,
                                report_settings,
@@ -503,7 +504,7 @@ build_model <- function(fc_model_family,
                            discrete = TRUE,
                            nthreads = report_settings[["fc_nthreads"]])
     } else {
-      #no cyclicals
+      #no cyclicals (i.e. no smooths, so discrete cannot be TRUE)
       regress <- mgcv::bam(reg_eq,
                            data = epi_input,
                            family = fc_model_family,
@@ -522,10 +523,14 @@ build_model <- function(fc_model_family,
 
     #create list of models, run SERIAL (no cluster), per geographic cluster ("cluster_id")
     regress <- clusterapply::batch_bam(data = epi_input_tp,
-                                       bamargs = list("formula" = reg_eq,
+                                       bamargs = list("formula" = reg_eq$reg_eq,
                                                       "family" = fc_model_family,
                                                       "discrete" = TRUE,
                                                       "nthreads" = report_settings[["fc_nthreads"]]),
+                                       bamargs_fallback = list("formula" = reg_eq$req_eq_fallback,
+                                                               "family" = fc_model_family,
+                                                               "discrete" = TRUE,
+                                                               "nthreads" = report_settings[["fc_nthreads"]]),
                                        over = "cluster_id")
                                        #cluster = bb_cluster)
 
@@ -559,6 +564,7 @@ return(regress)
 #'
 #'@return A formula to be used in the regression call, built based on settings
 #'  for cyclicals, spline type, and the number of geographic groupings present.
+#'  For thin plate splines, this will be a list of primary and fallback equations.
 #'
 #'
 build_equation <- function(quo_groupfield,
@@ -650,33 +656,53 @@ build_equation <- function(quo_groupfield,
       # id = 2 reserved for long-term trend
       # id = 3+ for each of the environmental variables
 
-    #for geogroup
-    #need different formulas if 1+ or only 1 geographic grouping
+    #a fall-back equation is built using the conditions for only 1 geogroup
+    # because clusters are not guaranteed to always have multiple geogroups
+    # will be used inside of clusterapply in case of model failure
+
+    ## Long term trend
+
+    #fallback / single geo group
+    tp_geo_eq_fallback <- paste0("s(numericdate, ", "bs = \'tp\', id = 2)")
+
+    #need different formulas if 1+ or only 1 geographic grouping (over all dataset)
     tp_geo_eq <- if (n_groupings > 1){
-      #we are using discrete = TRUE, so one of the smooths must be fx = TRUE
       paste0("s(numericdate, by = ", rlang::as_name(quo_groupfield),
-             ", bs = \'tp\', fx = TRUE, id = 2)")
+             ", bs = \'tp\', id = 2)")
     } else {
-      paste0("s(numericdate, ", "bs = \'tp\', fx = TRUE, id = 2)")
+      tp_geo_eq_fallback
     }
 
-    #for each env var
+    ## Environmental
+    #build list for penalization ids
     idn_var <- seq(from = 3, to = (3-1+length(env_variables_used)))
+    #create list of pieces
     tp_env_eq_list <- paste0("s(lag, by = ", env_variables_used,
                              ", bs = \'tp\', id = ", idn_var, ")")
+    #collapse list into formula form
     tp_env_eq <- glue::glue_collapse(tp_env_eq_list, sep = " + ")
 
 
     if (report_settings[["fc_cyclicals"]]) {
-      #TRUE, include cyclicals
+      #TRUE, include cyclical
 
       message("Including seasonal cyclicals into model...")
 
       #build formula
 
-      #need different formulas if 1+ or only 1 geographic grouping
+      #fall-back equation (used per model, if failure, e.g. only 1 geo group in ONE cluster)
+      reg_fallback <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                              #cyclical
+                                              "s(doy, bs=\"cc\", id = 1) + ",
+                                              #long-term trend (fallback form)
+                                              tp_geo_eq_fallback, " + ",
+                                              #lagged environmental variables
+                                              tp_env_eq))
+
+
+      #need different formulas if 1+ or only 1 geographic grouping (over all of dataset)
       if (n_groupings > 1){
-        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+        reg_eq_tp <- stats::as.formula(paste("cases_epidemiar ~ ",
                                           rlang::as_name(quo_groupfield),
                                           #cyclical
                                           " + s(doy, bs=\"cc\", by=",
@@ -686,29 +712,40 @@ build_equation <- function(quo_groupfield,
                                           tp_geo_eq, " + ",
                                           tp_env_eq))
       } else {
-        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+        reg_eq_tp <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                          #cyclical
                                           "s(doy, bs=\"cc\", id = 1) + ",
+                                          #long-term trend
                                           tp_geo_eq, " + ",
+                                          #lagged environmental variables
                                           tp_env_eq))
       }
     } else {
-      # FALSE, no cyclicals
+      # FALSE, no cyclical
 
       #build formula
+      #fall-back equation (used per model, if failure, e.g. only 1 geo group in ONE cluster)
+      reg_fallback <- stats::as.formula(paste("cases_epidemiar ~ ",
+                                              tp_geo_eq_fallback, " + ",
+                                              tp_env_eq))
+
 
       #need different formulas if 1+ or only 1 geographic grouping
       if (n_groupings > 1){
-        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+        reg_eq_tp <- stats::as.formula(paste("cases_epidemiar ~ ",
                                           rlang::as_name(quo_groupfield), " + ",
                                           tp_geo_eq, " + ",
                                           tp_env_eq))
       } else {
-        reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
+        reg_eq_tp <- stats::as.formula(paste("cases_epidemiar ~ ",
                                           tp_geo_eq, " + ",
                                           tp_env_eq))
       }
-    } #end else cyclicals
+    } #end else cyclical
 
+  #for splines tp, return is a named list of primary equation and fallback equation
+    reg_eq <- list("reg_eq" = reg_eq_tp,
+                   "req_eq_fallback" = reg_fallback)
 
   } #end splines tp
 

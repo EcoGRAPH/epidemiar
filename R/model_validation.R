@@ -98,7 +98,7 @@ run_validation <- function(date_start = NULL,
   report_settings[["fc_future_period"]] <- timesteps_ahead + reporting_lag
   report_settings[["report_period"]] <- report_settings[["fc_future_period"]] + 1
   #no event detection
-  report_settings[["ed_summary_period"]] <- 1 # 0 throws an error. with method = "none", no ED takes place
+  report_settings[["ed_summary_period"]] <- 0 #method is 0, nothing happens
   report_settings[["ed_method"]] <- "none"
   #report out in CASES for validation
   report_settings[["report_value_type"]] <- "cases"

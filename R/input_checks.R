@@ -703,20 +703,40 @@ input_check <- function(epi_data,
 
       #if model looks okay so far, then check further
 
-      #make sure given model (if given) is a regression object (using basic "lm" as test)
-      #model_cached$model_obj
-      classes <- class(raw_settings[["model_cached"]][["model_obj"]])
-      if (!"lm" %in% classes){
-        err_flag <- TRUE
-        err_msgs <- paste0(err_msgs, "The object in 'report_settings$model_cached$model_obj' is not a regression object, found classes are: ", classes, ".\n")
-      } #end lm check
+      #Removed: batch_bam returns list of models, will need to reconsider how to test
+      # #make sure given model (if given) is a regression object (using basic "lm" as test)
+      # #model_cached$model_obj
+      # classes <- class(raw_settings[["model_cached"]][["model_obj"]])
+      # if (!"lm" %in% classes){
+      #   err_flag <- TRUE
+      #   err_msgs <- paste0(err_msgs, "The object in 'report_settings$model_cached$model_obj' is not a regression object, found classes are: ", classes, ".\n")
+      # } #end lm check
 
       #if using a cached model, the model family from the cached model will be used
       #warn about overriding any user input family
-      if (fc_model_family != "cached"){
+      if ((fc_model_family != "cached") &
+          (raw_settings$model_cached$model_info$fc_model_family != fc_model_family)){
         warn_flag <- TRUE
         warn_msgs <- paste0(warn_msgs, "The cached model family ", raw_settings$model_cached$model_info$fc_model_family, ", will override any user input. ",
                            "Found 'fc_model_family' set to ",  fc_model_family, " instead of 'cached'.\n")
+      }
+
+      #use metadata to override fc_splines if needed. This MUST match for the correct function to be called.
+      if (raw_settings$model_cached$model_info$report_settings$fc_splines != new_settings$fc_splines){
+        warn_flag <- TRUE
+        warn_msgs <- paste0(warn_msgs, "The cached model fc_splines ",
+                            raw_settings$model_cached$model_info$report_settings$fc_splines,
+                            ", will override report_settings$fc_splines: ",
+                            new_settings$fc_splines)
+        new_settings$fc_splines <- raw_settings$model_cached$model_info$report_settings$fc_splines
+        #and repeat test that batch_bam is ok
+        #stop/error if requested tp if batchapply is not installed/available
+        if (new_settings[["fc_splines"]] == "tp" & !batchbam_ok){
+          err_flag <- TRUE
+          err_msgs <- paste0(err_msgs, "Cached model uses thin plate splines (fc_splines = 'tp'),",
+                             "but package clusterapply is not installed/available. \n")
+        }
+
       }
 
       #end if names

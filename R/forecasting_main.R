@@ -324,12 +324,15 @@ forecast_regression <- function(epi_lag,
   #   epi_lag <- dplyr::mutate(epi_lag, doy = as.numeric(format(.data$obs_date, "%j")))
   # }
 
-  if (report_settings[["fc_splines"]] == "modbs"){
-    # create modified bspline basis in epi_lag file to model longterm trends
-    epi_lag <- cbind(epi_lag, truncpoly(x=epi_lag$obs_date,
-                                        degree=6,
-                                        maxobs=max(epi_lag$obs_date[epi_lag$input==1], na.rm=TRUE)))
+  if (!fc_model_family == "naive-persistence" & !fc_model_family == "naive-averageweek"){
+    if (report_settings[["fc_splines"]] == "modbs"){
+      # create modified bspline basis in epi_lag file to model longterm trends
+      epi_lag <- cbind(epi_lag, truncpoly(x=epi_lag$obs_date,
+                                          degree=6,
+                                          maxobs=max(epi_lag$obs_date[epi_lag$input==1], na.rm=TRUE)))
+    }
   }
+
 
   #filter to input data for model building
   epi_input <- epi_lag %>% dplyr::filter(.data$input == 1)

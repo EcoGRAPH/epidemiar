@@ -62,7 +62,7 @@ extend_env_future <- function(env_data,
   # but only if missing run is larger than 2 weeks * 7 = 14 days
   # if less than, just use persistence/carry forward/last known value
   # E.g. if 20 missing in a run:
-  # 1 was filled in with previous week mean (recent value)
+  # 1 was filled in with previous week mean (recent value) for 'mean' type, 14 days for 'sum' type
   # 2: 19/20 recent + 1/20 historical, 3: 18/20 recent + 2/20 historical, ... 20: 1/20 recent + 19/20 historical.
   # Will ALWAYS include part of recent known data (relevant if recent patterns are departure from climate averages)
 

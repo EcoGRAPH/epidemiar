@@ -363,15 +363,18 @@ forecast_regression <- function(epi_lag,
     regress <- model_cached$model_obj
   }
 
+  ## Error check all model results if using batch_bam/tp
+  if (!fc_model_family == "naive-persistence" & !fc_model_family == "naive-averageweek"){
+    if (report_settings[["fc_splines"]] == "tp"){
+      check_bb_models(regress)
+    }
+  }
+
   ## If model run, return regression object to run_forecast() at this point
   if (report_settings[["model_run"]]){
     return(regress)
   }
 
-  ## Error check all model results if using batch_bam/tp
-  if (report_settings[["fc_splines"]] == "tp"){
-    check_bb_models(regress)
-  }
 
   ## Creating predictions switching point on model choice
   preds <- create_predictions(fc_model_family,

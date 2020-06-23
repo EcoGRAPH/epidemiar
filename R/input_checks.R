@@ -517,13 +517,12 @@ input_check <- function(epi_data,
                                        na.rm = TRUE)
   }
   #nthreads
-  #default value is 1 for 1 core machines, 2 for multi-core (testing shows no additional value past 2)
   if (!is.null(raw_settings[["fc_nthreads"]])) {
-    # nthreads above 2 is not actually helpful
-    new_settings[["fc_nthreads"]] <- ifelse(raw_settings[["fc_nthreads"]] > 1, 2, 1)
+    # allow override
+    new_settings[["fc_nthreads"]] <- raw_settings[["fc_nthreads"]]
   } else {
-    #calc default
-    new_settings[["fc_nthreads"]] <- ifelse(new_settings[["fc_ncores"]] > 1, 2, 1)
+    #calc default: number of physical cores
+    new_settings[["fc_nthreads"]] <- new_settings[["fc_ncores"]]
   }
 
 
@@ -534,13 +533,14 @@ input_check <- function(epi_data,
     #default
     new_settings[["dev_fc_fit_freq"]] <- "once"
   }
+  # for dev formula: dev must also set fc_splines and fc_cyclicals (if modbs) correctly,
+  # otherwise it will not know which function to call
   if (!is.null(raw_settings[["dev_fc_formula"]])){
     new_settings[["dev_fc_formula"]] <- raw_settings[["dev_fc_formula"]]
   } else {
     #default
     new_settings[["dev_fc_formula"]] <- NULL
   }
-
 
 
   # 4. Report settings -----------------------------------------------------------------

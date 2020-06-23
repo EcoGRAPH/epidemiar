@@ -42,10 +42,10 @@
 #'  first object is `skill_scores`, which contains `skill_overall` and
 #'  `skill_grouping`. The second list is `validations`, which contains lists per
 #'  model run (the forecast model and then optionally the naive models). Within
-#'  each, `validation_overall` is the results overall, and `validation_grouping`
-#'  is the results per geographic grouping. Lastly, a `metadata` list contains
-#'  the important parameter settings used to run validation and when the results
-#'  where generated.
+#'  each, `validation_overall` is the results overall, `validation_grouping` is
+#'  the results per geographic grouping, and `validation_perweek` is the raw
+#'  stats per week. Lastly, a `metadata` list contains the important parameter
+#'  settings used to run validation and when the results where generated.
 #'
 #'@export
 #'
@@ -174,6 +174,11 @@ run_validation <- function(date_start = NULL,
       this_report_settings <- report_settings
       this_timesteps_ahead <- this_report_settings[["fc_future_period"]]
 
+    }
+
+    #if a naive model, drop any cached models to avoid conflicts
+    if (this_model == "naive-persistence" | this_model == "naive-averageweek"){
+      this_report_settings[["model_cached"]] <- NULL
     }
 
     # Week loop ---------------------------------------------------------------
@@ -335,7 +340,7 @@ run_validation <- function(date_start = NULL,
 #'  testing.
 #'
 #'@return A named list of validation statistic results: validation_overall,
-#'  validation_grouping, validation_timeseries
+#'  validation_grouping, validation_timeseries, validation_perweek
 #'
 calc_val_stats <- function(fc_trim, quo_groupfield, per_timesteps, dots){
   # MAE: mean(|obs - pred|)
@@ -437,21 +442,27 @@ calc_val_stats <- function(fc_trim, quo_groupfield, per_timesteps, dots){
 
 
   #return all
-  # and raw data with hidden option
-  #possibly make "time series" version for clean full data table
-  if (!is.null(dots[['raw_data']])){
-    if (dots[['raw_data']] == TRUE){
-      val_stats <- create_named_list(validation_overall,
-                                     validation_grouping,
-                                     validation_timeseries,
-                                     raw_stats = fc_stats)
-    } #end raw data TRUE
-  } else {
-    #normal return with just results
-    val_stats <- create_named_list(validation_overall,
-                                   validation_grouping,
-                                   validation_timeseries)
-  }
+  val_stats <- create_named_list(validation_overall,
+                                 validation_grouping,
+                                 validation_timeseries,
+                                 validation_perweek = fc_stats)
+
+  # # and raw data with hidden option
+  # #possibly make "time series" version for clean full data table
+  # if (!is.null(dots[['raw_data']])){
+  #   if (dots[['raw_data']] == TRUE){
+  #     val_stats <- create_named_list(validation_overall,
+  #                                    validation_grouping,
+  #                                    validation_timeseries,
+  #                                    raw_stats = fc_stats)
+  #   } #end raw data TRUE
+  # } else {
+  #   #normal return with just results
+  #   val_stats <- create_named_list(validation_overall,
+  #                                  validation_grouping,
+  #                                  validation_timeseries)
+  # }
+
 } #end calc_val_stats()
 
 

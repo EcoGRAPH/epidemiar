@@ -27,6 +27,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+
 ```
 
 
@@ -91,7 +92,7 @@ Results are returned in a list.
 models if run with skill test comparison). Each model entry will have three items:
   + `validation_overall`: Overall model accuracy statistics per timestep_ahead (week in the future)
   + `validation_grouping`: Accuracy statistics per geographic grouping per timestep_ahead
-  + `validation_timeseries`: In beta-testing. Early version of a rolling validation results over time
+  + `validation_timeseries`: In beta-testing, an early version of a rolling validation results over time
   + `validation_perweek`: Validation results per week entry (per geographic group per timestep_ahead)
   
 3. `metadata`: Metadata on the parameters used to run validation and the date it was run.

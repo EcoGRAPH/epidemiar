@@ -84,9 +84,9 @@ Each geographic group, $geo$, identified in the `groupfield` column is included 
 
 Each geographic group also has a long term trend component. The long-term trend (and the lagged environmental data, see below) has two options. 
 
-Option 1) With the installation of a companion package (`batchapply`), thin plate splines are used instead (`report_settings$fc_splines = "tp"` and the default when `batchapply` is installed). 
+Option 1) With the installation of a companion package (`clusterapply`), thin plate splines are used instead (`report_settings$fc_splines = "tp"` and the default when `clusterapply` is installed). 
 
-Option 2) Using modified b-splines (`report_settings$fc_splines = "modbs"`), where $geo$ is multipled by each of 5 modified basis splines: $bs_1 * geo + bs_2 * geo + bs_3 * geo + bs_4 * geo + bs_5 * geo$. 
+Option 2) Using modified b-splines (`report_settings$fc_splines = "modbs"`), where $geo$ is multiplied by each of 5 modified basis splines: $bs_1 * geo + bs_2 * geo + bs_3 * geo + bs_4 * geo + bs_5 * geo$. 
 The modified basis splines are created by first using `splines::bs()` to create basis splines over the range of observations with degree 6. Then to reduce the edge effects of using splines, the following modifications are performed: the last basis spline function is reverse, and the second to last basis spline function is removed. 
 
 There is a an option to explicitly include a cyclical for account for seasonality. If `report_settings$fc_cyclical` is set to TRUE (default is FALSE), a cyclical cubic regression spline smooth is added based on day of year per geographic group: $s(doy, bs = "cc", by = geo)$
@@ -113,7 +113,7 @@ We allow the user to identify their own clusters of geographic units with `repor
 
 For modeling the lagged environmental drivers by cluster, there are two options:
 
-Option 1) With the installation of a companion package (`batchapply`), thin plate splines are used instead (`report_settings$fc_splines = "tp"` and the default when `batchapply` is installed). The `batchapply` package is our wrapper over some of the mgcv functions so that we can use thin plate splines for each lagged environmental variable by cluster. 
+Option 1) With the installation of a companion package (`clusterapply`), thin plate splines are used instead (`report_settings$fc_splines = "tp"` and the default when `clusterapply` is installed). The `clusterapply` package is our wrapper over some of the mgcv functions so that we can use thin plate splines for each lagged environmental variable by cluster. 
 
 Option 2) Using modified b-splines (`report_settings$fc_splines = "modbs"`), a distributed lag basis is created with the natural cubic splines function (ns, splines library), including intercept, with knots at 25%, 50%, and 75% of the lag length. The 5 basis functions that result are multiplied by each group's history, so that there are just 5 summary statistics, instead of lag length, for every combination of group, week, and environmental anomaly covariate. 
 

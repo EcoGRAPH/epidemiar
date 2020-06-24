@@ -53,7 +53,7 @@ The `run_validation()` function takes 5 arguments, plus all the `run_epidemia()`
 
 ## Other Arguments & Adjustments
 
-The `run_validation()` function will call `run_epidemia()`, so it will also take all the arguments for that function. The user does not need to modify any of these arguments (e.g. event detection settings, `fc_future_period`), as `run_validation()` will automatically handle all of thse adjustments. 
+The `run_validation()` function will call `run_epidemia()`, so it will also take all the arguments for that function. The user does not need to modify any of these arguments (e.g. event detection settings, `fc_future_period`), as `run_validation()` will automatically handle all of these adjustments for settings that are irrelevant for validation runs. 
 
 It is envisioned that users can take their usual script for running EPIDEMIA forecasts, and simply sub in the validation function with those validation settings for doing model assessments. 
 
@@ -92,10 +92,11 @@ models if run with skill test comparison). Each model entry will have three item
   + `validation_overall`: Overall model accuracy statistics per timestep_ahead (week in the future)
   + `validation_grouping`: Accuracy statistics per geographic grouping per timestep_ahead
   + `validation_timeseries`: In beta-testing. Early version of a rolling validation results over time
+  + `validation_perweek`: Validation results per week entry (per geographic group per timestep_ahead)
   
 3. `metadata`: Metadata on the parameters used to run validation and the date it was run.
 
 
 ## Results Display
 
-For a formatted validation report, please look at the accompanying R project `epidemiar-demo` and the `run_validation_amhara.R` script in the validation folder, using the `epidemia_validation.Rnw` Sweave formatting script.
+For a formatted validation report, please look at the accompanying R project `epidemiar-demo` and the `run_validation_amhara.R` script in the validation folder, using the `epidemia_validation.Rnw` formatting script.

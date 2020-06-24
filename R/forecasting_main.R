@@ -395,6 +395,16 @@ forecast_regression <- function(epi_lag,
     #remake into tibble
     tibble::as_tibble()
 
+  #was transform requested, such that we need to back-transform now?
+  if (report_settings[["epi_transform"]] == "log_plus_one"){
+    #log transform had been requested
+    #back-transform predictions, was transformed just before regression
+    epi_preds <- epi_preds %>%
+      #max used in case of very small predicted values (which would give strange results after subtracting 1)
+      #NAs intentionally propagate
+      dplyr::mutate(preds = pmax((exp(.data$preds) - 1), 0, na.rm = FALSE))
+  }
+
 
   if (report_settings[["dev_fc_fit_freq"]] == "once"){
     #for single model fit, this has all the data we need,
@@ -477,6 +487,14 @@ build_model <- function(fc_model_family,
 
   } else {
     #user supplied model family
+
+    #transform requested?
+    if (report_settings[["epi_transform"]] == "log_plus_one"){
+      #log transform requested
+      #transforming here just before regression, will back-transform predictions
+      epi_input <- epi_input %>%
+        dplyr::mutate(cases_epidemiar = log(.data$cases_epidemiar + 1))
+    }
 
     #Formula override: developer mode
     if (!is.null(report_settings[["dev_fc_formula"]])){

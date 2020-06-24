@@ -638,6 +638,25 @@ input_check <- function(epi_data,
     "weekISO"
   })
 
+  #epi_transform
+  # if provided, prepare for matching
+  if (!is.null(raw_settings[["epi_transform"]])){
+    new_settings[["epi_transform"]] <- tolower(raw_settings[["epi_transform"]])
+  } else {
+    #if not provided/missing/null
+    #nothing checks in case it in "none", but set for clarity, esp. in metadata
+    new_settings[["epi_transform"]] <- "none"
+  }
+  #try match
+  new_settings[["epi_transform"]] <- tryCatch({
+    match.arg(new_settings[["epi_transform"]], c("none", "log_plus_one"))
+  }, error = function(e){
+    warn_flag <- TRUE
+    warn_msgs <- paste0(warn_msgs, "Given 'epi_transform'", raw_settings[["epi_transform"]],
+                        "does not match 'none' or 'log_plus_one', running as 'none'.\n")
+    "none"
+  })
+
 
 
   # 5. Early Detection settings --------------------------------------------------------

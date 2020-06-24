@@ -118,7 +118,8 @@ Many of the settings are bundled into the named list `report_settings` argument.
 * `report_settings$report_value_type`: How to report the results, either in terms of "cases" (default) or "incidence". If 'incidence', population data must be supplied in the `epi_data` under `{populationfield}`.
 * `report_settings$report_inc_per`: If reporting incidence, what should be denominator be? Default is per 1000 persons, and ignored if `report_settings$report_value_type = "cases"`.
 * `report_settings$epi_date_type`: What type of weekly dates are the epidemiological data (and environmental reference data) in? This would be a string indicating the standard used: "weekISO" for WHO ISO-8601 weeks (default), or "weekCDC" for CDC epi weeks. Required: epidemiological observation dates listed are LAST day of the given week.
-* `report_settings$epi_date_type`: Should the epidemiological data be linearly interpolated for any missing values? Boolean value, default is FALSE. 
+* `report_settings$epi_interpolate`: Should the epidemiological data be linearly interpolated for any missing values? Boolean value, default is FALSE. 
+* `report_settings$epi_transform`: Should the case counts be transformed before creating the regression model and then back-transformed after predicting? Default is "none". Current option is for "log_plus_one": where log(cases + 1) is modeled and back-transformed by exp(pred) - 1 (though pmax(exp(pred) - 1, 0) is used in case of small predicted values).
 
 
 ### Setting up for Forecasting

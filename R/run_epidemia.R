@@ -79,8 +79,14 @@
 #'
 #'  \item \code{epi_interpolate} = FALSE: TRUE/FALSE flag for if the given
 #'  epidemiological data be linearly interpolated for any explicitly missing
-#'  values before modeling? Note: epidemiological data cannot have implicit
-#'  missing data (missing row as opposed to a row with NA).
+#'  values before modeling?
+#'
+#'  \item \code{epi_transform} = "none" (default if not set): Should the case
+#'  counts be transformed just before regression modeling and backtransformed
+#'  directly after prediction/forecast creation? The current only supported
+#'  transformation is "log_plus_one", where log(cases + 1) is modeled and
+#'  back-transformed by exp(pred) - 1 (though pmax(exp(pred) - 1, 0) is used in
+#'  case of small predicted values).
 #'
 #'  \item \code{model_run} = FALSE: TRUE/FALSE flag for whether to only generate
 #'  the model regression object plus metadata. This model can be cached and used
@@ -535,12 +541,6 @@ run_epidemia <- function(epi_data = NULL,
   env_data <- env_data %>%
     #copy over value
     dplyr::mutate(val_epidemiar = !!quo_valuefield)
-
-  #not needed, cut for speed. Will be sorted in extend_env_future
-  # %>%
-  #   #and sort by alphabetical groupfield
-  #   dplyr::arrange(!!quo_groupfield, !!quo_obsfield, .data$obs_date)
-
 
 
   # Set up output report data format ----------------------------------------

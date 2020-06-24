@@ -55,8 +55,14 @@ input "poisson()". If a cached model is being used, set the parameter to
 
  \item \code{epi_interpolate} = FALSE: TRUE/FALSE flag for if the given
  epidemiological data be linearly interpolated for any explicitly missing
- values before modeling? Note: epidemiological data cannot have implicit
- missing data (missing row as opposed to a row with NA).
+ values before modeling?
+
+ \item \code{epi_transform} = "none" (default if not set): Should the case
+ counts be transformed just before regression modeling and backtransformed
+ directly after prediction/forecast creation? The current only supported
+ transformation is "log_plus_one", where log(cases + 1) is modeled and
+ back-transformed by exp(pred) - 1 (though pmax(exp(pred) - 1, 0) is used in
+ case of small predicted values).
 
  \item \code{model_run} = FALSE: TRUE/FALSE flag for whether to only generate
  the model regression object plus metadata. This model can be cached and used

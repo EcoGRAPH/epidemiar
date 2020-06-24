@@ -82,9 +82,9 @@ These are multiple timeseries for the used environmental variables during the re
 * `obs_date`: The last day of the epidemiological week (ISO/CDC, by `report_settings$epi_date_type`), Date object
 * `val_epidemiar`: Value of the environmental variable for that geographic group for that week. Values are a combination of observed, or interpolated (for missing) or extended (future estimated) values.   
 * `reference_method`: Method for creating a weekly summary from daily data (e.g. "sum" for rainfall, or "mean" for NDWI)
-* `data_source`: "Observed", "Interpolated", or "Extended". Missing environmental data is handled in three different ways, depending on time period. For missing values in the middle of series, the value is a linear approximation of surrounding values ("Interpolated"). For missing values at the end of the series, up to the future forecast portion, values are carried forward in a persistence approach (also marked "Interpolated" at the moment). For the forecast future portion, values are a blending of the last known values and the climatic historical mean, with a gradual weighting scheme shifting from more weight from last known to historical mean ("Extended").      
+* `data_source`: "Observed" or "Imputed". Environment data was either observed, or if it was NA/missing, it was filled in (imputed). For gaps less than 2 weeks, the values are filled in with a persistence method (carry-forward). The recent values are calculated as the average of the past 7 days for 'mean' type variables (as defined in the user's `environ_info` metadata, e.g. for NDWI, LST), or the past 14 known days for 'sum' type variables (as defined in the user's `environ_info` metadata, e.g. for precipitation-like measures). For periods longer than 2 weeks, daily values were imputed using a progressive blend of the recent values (as above) with the climatology/historical averages for that week of the year (from `environ_ref_data`). 
 * `ref_value`: From `env_ref_data`.        
-* `ref_*`: Fields from `env_ref_data` that begin with `ref_` have been propogating through to here. (Potentially useful for plotting, for example.) 
+* `ref_*`: Fields from `env_ref_data` that begin with `ref_` have been propagating through to here. (Potentially useful for plotting, for example.) 
 
 
 ## `environ_anomalies`
@@ -110,7 +110,7 @@ Once a model has been generated, it can be fed back into `run_epidemiar(..., rep
 2. `model_info`
 
 ## `model_obj`
-The output regression object from the `mgcv::bam()` general additive model regression call. 
+The output regression object from the `mgcv::bam()` general additive model regression call, or a list of models per cluster from `clusterapply` depending on the model settings.
 
 ## `model_info`
 A list of dates, settings, and relevant parameters that `run_epidemiar()` was called with. Very similar to `params_meta` of a full run. 

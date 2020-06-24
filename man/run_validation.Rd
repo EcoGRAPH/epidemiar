@@ -217,10 +217,10 @@ Returns a nested list of validation results. Statistics are calculated
  first object is `skill_scores`, which contains `skill_overall` and
  `skill_grouping`. The second list is `validations`, which contains lists per
  model run (the forecast model and then optionally the naive models). Within
- each, `validation_overall` is the results overall, and `validation_grouping`
- is the results per geographic grouping. Lastly, a `metadata` list contains
- the important parameter settings used to run validation and when the results
- where generated.
+ each, `validation_overall` is the results overall, `validation_grouping` is
+ the results per geographic grouping, and `validation_perweek` is the raw
+ stats per week. Lastly, a `metadata` list contains the important parameter
+ settings used to run validation and when the results where generated.
 }
 \description{
 This function takes a few more arguments than `epidemiar::run_epidemia()` to

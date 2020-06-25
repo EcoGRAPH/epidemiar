@@ -54,7 +54,8 @@ input "poisson()". If a cached model is being used, set the parameter to
 
 \item{epi_date_type}{Extract from `report_settings$epi_date_type`}
 
-\item{valid_run}{Internal TRUE/FALSE for whether this is part of a validation run.}
+\item{valid_run}{Internal TRUE/FALSE for whether this is part of a validation
+run.}
 
 \item{groupings}{A unique list of the geographic groupings (from groupfield).}
 

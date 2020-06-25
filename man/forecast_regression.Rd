@@ -12,7 +12,9 @@ forecast_regression(
   groupings,
   env_variables_used,
   report_dates,
-  req_date
+  req_date,
+  valid_run,
+  naive
 )
 }
 \arguments{
@@ -158,6 +160,11 @@ forecast period, and early detection period.}
 \item{req_date}{The end date of requested forecast regression. When fit_freq
 == "once", this is the last date of the full report, the end date of the
 forecast period.}
+
+\item{valid_run}{Internal TRUE/FALSE for whether this is part of a validation
+run.}
+
+\item{naive}{Internal TRUE/FALSE flag on if this is a naive-model run.}
 }
 \value{
 Named list containing:

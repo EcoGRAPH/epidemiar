@@ -9,7 +9,9 @@ build_model(
   quo_groupfield,
   epi_input,
   report_settings,
-  env_variables_used
+  env_variables_used,
+  valid_run,
+  naive
 )
 }
 \arguments{
@@ -147,6 +149,11 @@ data and groupings converted to factors.}
 \item{env_variables_used}{a list of environmental variables that will be used in the
 modeling (had to be listed in model variables input file and present the
 env_data and env_info datasets)}
+
+\item{valid_run}{Internal TRUE/FALSE for whether this is part of a validation
+run.}
+
+\item{naive}{Internal TRUE/FALSE flag on if this is a naive-model run.}
 }
 \value{
 Regression object

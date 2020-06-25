@@ -175,7 +175,8 @@ input "poisson()". If a cached model is being used, set the parameter to
 
  }}
 
-\item{valid_run}{Internal TRUE/FALSE for whether this is part of a validation run.}
+\item{valid_run}{Internal TRUE/FALSE for whether this is part of a validation
+run.}
 
 \item{groupings}{A unique list of the geographic groupings (from groupfield).}
 

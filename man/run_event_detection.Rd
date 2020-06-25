@@ -13,7 +13,8 @@ run_event_detection(
   val_type,
   inc_per,
   groupings,
-  report_dates
+  report_dates,
+  valid_run
 )
 }
 \arguments{
@@ -46,6 +47,9 @@ report_settings$report_value_type is 'cases'.}
 \item{report_dates}{Internally generated set of report date information: min,
 max, list of dates for full report, known epidemiological data period,
 forecast period, and early detection period.}
+
+\item{valid_run}{Internal TRUE/FALSE for whether this is part of a validation
+run.}
 }
 \value{
 Returns a list of three generated series: "ed" : early detection

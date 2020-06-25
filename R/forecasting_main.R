@@ -70,6 +70,7 @@ run_forecast <- function(epi_data,
     dplyr::summarize(start_dt = min(.data$obs_date), end_dt = max(.data$obs_date))
 
   # extend data into future, for future forecast portion
+  # also gap fills any missing data
   env_data_extd <- extend_env_future(env_data,
                                      quo_groupfield,
                                      quo_obsfield,
@@ -412,7 +413,9 @@ forecast_regression <- function(epi_lag,
     tibble::as_tibble()
 
   #was transform requested, such that we need to back-transform now?
-  if (report_settings[["epi_transform"]] == "log_plus_one"){
+  #Note: Not for naive models in validation runs
+  if (!naive &
+      report_settings[["epi_transform"]] == "log_plus_one"){
     #log transform had been requested
     #back-transform predictions, was transformed just before regression
     epi_preds <- epi_preds %>%

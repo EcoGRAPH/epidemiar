@@ -198,7 +198,7 @@ run_validation <- function(date_start = NULL,
       this_fc_start <- this_dt + lubridate::weeks(1)
       this_report_settings$fc_start_date <- this_fc_start
 
-      message("Validation run - date: ", this_dt)
+      message("Validation run: ", this_dt)
 
       #set up data
       #censoring as appropriate

@@ -23,7 +23,8 @@
 #'@param report_dates Internally generated set of report date information: min,
 #'  max, list of dates for full report, known epidemiological data period,
 #'  forecast period, and early detection period.
-#'
+#'@param valid_run Internal TRUE/FALSE for whether this is part of a validation
+#'  run.
 #'
 #'@return Returns a list of three generated series: "ed" : early detection
 #'  alerts (ed period of most recent epi data) "ew" : early warning alerts
@@ -39,7 +40,8 @@ run_event_detection <- function(epi_fc_data,
                                 inc_per,
                                 #internal/calc
                                 groupings,
-                                report_dates){
+                                report_dates,
+                                valid_run){
   #message("Running early detection...")
 
   #only supporting Farrington Improved method from Surveillance right now,
@@ -61,7 +63,9 @@ run_event_detection <- function(epi_fc_data,
 
   } else if (ed_method == "none") {
 
-    message("Skipping early detection...")
+    if(!valid_run){
+      message("Skipping early detection...")
+    }
     ed_far_res <- run_no_detection(epi_fc_data,
                                    quo_groupfield,
                                    report_dates)

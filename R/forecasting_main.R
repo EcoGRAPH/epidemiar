@@ -14,7 +14,8 @@
 #'@param report_dates Internally generated set of report date information: min,
 #'  max, list of dates for full report, known epidemiological data period,
 #'  forecast period, and early detection period.
-#'@param valid_run Internal TRUE/FALSE for whether this is part of a validation run.
+#'@param valid_run Internal TRUE/FALSE for whether this is part of a validation
+#'  run.
 #'
 #'@inheritParams run_epidemia
 #'
@@ -47,8 +48,15 @@ run_forecast <- function(epi_data,
                           env_variables,
                           report_dates){
 
-  message("Preparing for forecasting...")
+  #flag for naive models in validation runs
+  naive <- ifelse((fc_model_family == "naive-persistence" |
+                  fc_model_family == "naive-averageweek"),
+                  TRUE,
+                  FALSE)
 
+  if(!valid_run){
+    message("Preparing for forecasting...")
+  }
 
   # trim to the needed env variables as dictated by the model
   env_data <- pull_model_envvars(env_data = env_data,
@@ -97,7 +105,7 @@ run_forecast <- function(epi_data,
   # note: brittle on format from env_format_fc(), edit with caution
   # AND not a naive model run
 
-  if (!fc_model_family == "naive-persistence" & !fc_model_family == "naive-averageweek"){
+  if (!naive){
     if (report_settings[["env_anomalies"]]){
       message("Anomalizing the environmental variables...")
       env_fc <- anomalize_env(env_fc,
@@ -138,7 +146,9 @@ run_forecast <- function(epi_data,
                                           groupings,
                                           env_variables_used,
                                           report_dates,
-                                          req_date = report_dates$full$max)
+                                          req_date = report_dates$full$max,
+                                          valid_run,
+                                          naive)
 
     model_run_only <- create_named_list(env_variables_used,
                                         env_dt_ranges,
@@ -159,7 +169,9 @@ run_forecast <- function(epi_data,
                                           groupings,
                                           env_variables_used,
                                           report_dates,
-                                          req_date = report_dates$full$max)
+                                          req_date = report_dates$full$max,
+                                          valid_run,
+                                          naive)
     preds_catch <- forereg_return$date_preds
     reg_obj <- forereg_return$regress
 
@@ -180,7 +192,9 @@ run_forecast <- function(epi_data,
                                             groupings,
                                             env_variables_used,
                                             report_dates,
-                                            req_date = dt)
+                                            req_date = dt,
+                                            valid_run,
+                                            naive)
 
       dt_preds <- forereg_return$date_preds
       preds_catch <- rbind(preds_catch, as.data.frame(dt_preds))
@@ -279,6 +293,7 @@ run_forecast <- function(epi_data,
 #'@param req_date The end date of requested forecast regression. When fit_freq
 #'  == "once", this is the last date of the full report, the end date of the
 #'  forecast period.
+#'@param naive Internal TRUE/FALSE flag on if this is a naive-model run.
 #'
 #'@inheritParams run_epidemia
 #'@inheritParams run_forecast
@@ -297,7 +312,9 @@ forecast_regression <- function(epi_lag,
                                 groupings,
                                 env_variables_used,
                                 report_dates,
-                                req_date){
+                                req_date,
+                                valid_run,
+                                naive){
 
 
   if (report_settings[["dev_fc_fit_freq"]] == "once"){
@@ -319,17 +336,13 @@ forecast_regression <- function(epi_lag,
   epi_lag <- epi_lag %>% dplyr::mutate(!!rlang::as_name(quo_groupfield) := factor(!!quo_groupfield))
 
 
-  # if (report_settings[["fc_cyclicals"]] == TRUE){
-  #   # create a doy field so that we can use a cyclical spline
-  #   epi_lag <- dplyr::mutate(epi_lag, doy = as.numeric(format(.data$obs_date, "%j")))
-  # }
-
   if (!fc_model_family == "naive-persistence" & !fc_model_family == "naive-averageweek"){
     if (report_settings[["fc_splines"]] == "modbs"){
       # create modified bspline basis in epi_lag file to model longterm trends
       epi_lag <- cbind(epi_lag, truncpoly(x=epi_lag$obs_date,
                                           degree=6,
-                                          maxobs=max(epi_lag$obs_date[epi_lag$input==1], na.rm=TRUE)))
+                                          maxobs=max(epi_lag$obs_date[epi_lag$input==1],
+                                                     na.rm=TRUE)))
     }
   }
 
@@ -348,7 +361,9 @@ forecast_regression <- function(epi_lag,
                            epi_lag,
                            report_settings,
                            #calc/internal
-                           env_variables_used)
+                           env_variables_used,
+                           valid_run,
+                           naive)
 
   } else {
     #if model_cached given, then use that as regress instead of building a new one (above)
@@ -356,15 +371,16 @@ forecast_regression <- function(epi_lag,
     model_cached <- report_settings[["model_cached"]]
 
     #message with model input
-    message("Using given cached ", model_cached$model_info$fc_model_family, " model, created ",
-            model_cached$model_info$date_created, ", with epidemiological data up through ",
+    message("Using given cached ", model_cached$model_info$fc_model_family,
+            " model, created ", model_cached$model_info$date_created,
+            ", with epidemiological data up through ",
             model_cached$model_info$known_epi_range$max, ".")
 
     regress <- model_cached$model_obj
   }
 
   ## Error check all model results if using batch_bam/tp
-  if (!fc_model_family == "naive-persistence" & !fc_model_family == "naive-averageweek"){
+  if (!naive){
     if (report_settings[["fc_splines"]] == "tp"){
       check_bb_models(regress)
     }
@@ -435,6 +451,7 @@ forecast_regression <- function(epi_lag,
 #'
 #'@inheritParams run_epidemia
 #'@inheritParams run_forecast
+#'@inheritParams forecast_regression
 #'
 #'@return Regression object
 #'
@@ -444,7 +461,9 @@ build_model <- function(fc_model_family,
                         epi_input,
                         report_settings,
                         #calc/internal
-                        env_variables_used){
+                        env_variables_used,
+                        valid_run,
+                        naive){
 
   #1. check and handle naive models
   # else is the user supplied model family
@@ -498,7 +517,8 @@ build_model <- function(fc_model_family,
 
     #Formula override: developer mode
     if (!is.null(report_settings[["dev_fc_formula"]])){
-      message("DEVELOPER: Using user-supplied formula: ", report_settings[["dev_fc_formula"]])
+      message("DEVELOPER: Using user-supplied formula: ",
+              report_settings[["dev_fc_formula"]])
       reg_eq <- report_settings[["dev_fc_formula"]]
       #note, if using formula override AND cyclicals,
       # dev users should put fc_cyclicals = TRUE, else message about discrete ignored.

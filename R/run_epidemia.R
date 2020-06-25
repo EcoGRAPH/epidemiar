@@ -256,7 +256,7 @@ run_epidemia <- function(epi_data = NULL,
   } else {calling_function <- "directly"}
   if(calling_function == "run_validation" | calling_function == "epidemiar::run_validation"){
     valid_run <-  TRUE
-    message("Running model validation...")
+    #message("Running model validation...")
     #rename already enquo'd variables
     quo_casefield <- casefield
     quo_popfield <- populationfield
@@ -531,12 +531,7 @@ run_epidemia <- function(epi_data = NULL,
   }
 
 
-    #Note: val_epidemiar is field name returned (env)
-    ##interpolation is no longer necessary with new extend_env_future()
-    #env_data <- env_NA_interpolate(env_data, quo_obsfield, quo_valuefield, quo_groupfield) %>%
-    ##first, mark which ones during known time range were observed versus (will be) interpolated
-    #dplyr::mutate(data_source = ifelse(!is.na(!!quo_valuefield), "Observed", "Interpolated")) %>%
-
+    #Note: val_epidemiar is field name (env)
   #prep environmental data, filling in of missing data will happen in extend_env_future()
   env_data <- env_data %>%
     #copy over value
@@ -713,7 +708,8 @@ run_epidemia <- function(epi_data = NULL,
                                 val_type = report_settings[["report_value_type"]],
                                 inc_per = report_settings[["report_inc_per"]],
                                 groupings,
-                                report_dates)
+                                report_dates,
+                                valid_run)
 
 
   # Combining forecast and event detection results --------------------------

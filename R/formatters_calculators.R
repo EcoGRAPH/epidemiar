@@ -18,9 +18,9 @@
 #'  the modeling.
 #'@param env_info Lookup table for environmental data - reference creation
 #'  method (e.g. sum or mean), report labels, etc.
-#'@param week_type String indicating the standard (WHO ISO-8601 or CDC epi
+#'@param epi_date_type String indicating the standard (WHO ISO-8601 or CDC epi
 #'  weeks) that the weeks of the year in epidemiological and environmental
-#'  reference data use ["ISO" or "CDC"].
+#'  reference data use ["ISO" or "CDC"]. <<>>
 #'@param report_dates Internally generated set of report date information: min,
 #'  max, list of dates for full report, known epidemiological data period,
 #'  forecast period, and early detection period.
@@ -29,9 +29,22 @@
 #'  during the report period for each geographic unit. Returned as
 #'  environ_timeseries in the run_epidemia() output.
 #'
-environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
-                                  quo_obsfield, env_used, env_info,
-                                  week_type, report_dates){
+environ_report_format <- function(env_ext_data,
+                                  env_ref_data,
+                                  quo_groupfield,
+                                  quo_obsfield,
+                                  env_used,
+                                  env_info,
+                                  epi_date_type,
+                                  report_dates){
+
+  #for adding week, year fields
+  week_type <- dplyr::case_when(
+    epi_date_type == "weekISO" ~ "ISO",
+    epi_date_type == "weekCDC"  ~ "CDC",
+    #default NA
+    TRUE             ~ NA_character_)
+
   #daily env data
   env_data_varused <- env_ext_data %>%
     dplyr::filter(!!quo_obsfield %in% env_used)
@@ -44,37 +57,37 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
   env_data_varused_sum <- env_data_varused %>%
     #get reference/summarizing method from user supplied env_info
     dplyr::left_join(env_info %>%
-                       dplyr::select(!!quo_obsfield, reference_method),
-                     by = rlang::set_names(rlang::quo_name(quo_obsfield),
-                                           rlang::quo_name(quo_obsfield))) %>%
-    #add week, year fields
+                       dplyr::select(!!quo_obsfield, .data$reference_method),
+                     by = rlang::set_names(rlang::as_name(quo_obsfield),
+                                           rlang::as_name(quo_obsfield))) %>%
+    #add date fields
     epidemiar::add_datefields(week_type) %>%
     #trim dates to reduce processing (dates are rough, technically just need week prior to start. 8 is not magical)
-    dplyr::filter(obs_date >= report_dates$full$min - 8 & obs_date <= report_dates$full$max + 8) %>%
+    dplyr::filter(.data$obs_date >= report_dates$full$min - 8 & .data$obs_date <= report_dates$full$max + 8) %>%
     #group by grouping, env var, and date week
-    dplyr::group_by(!!quo_groupfield, !!quo_obsfield, year_epidemiar, week_epidemiar) %>%
+    dplyr::group_by(!!quo_groupfield, !!quo_obsfield, .data$year_epidemiar, .data$week_epidemiar) %>%
     #calculate with case_when at row level (fx is not vectorized, so can't be used inside summarize)
-    dplyr::mutate(val_epidemiar = case_when(
-      reference_method == "sum"  ~ sum(val_epidemiar, na.rm = TRUE),
-      reference_method == "mean" ~ mean(val_epidemiar, na.rm = TRUE),
+    dplyr::mutate(val_epidemiar = dplyr::case_when(
+      .data$reference_method == "sum"  ~ sum(.data$val_epidemiar, na.rm = TRUE),
+      .data$reference_method == "mean" ~ mean(.data$val_epidemiar, na.rm = TRUE),
       #default is mean
-      TRUE                       ~ mean(val_epidemiar, na.rm = TRUE))) %>%
+      TRUE                       ~ mean(.data$val_epidemiar, na.rm = TRUE))) %>%
     #now summarize
     #max Date of that week is how the weekly dates are set up
-    dplyr::summarize(obs_date = max(obs_date),
+    dplyr::summarize(obs_date = max(.data$obs_date),
                      #val_epi is the same for the whole grouped set, so just taking the first value
-                     val_epidemiar = first(val_epidemiar),
+                     val_epidemiar = dplyr::first(.data$val_epidemiar),
                      #will be same throughout week
-                     reference_method = first(reference_method),
+                     reference_method = dplyr::first(.data$reference_method),
                      #observed/interpolated/extended -- Mode, whatever source was most often that week.
-                     data_source = Mode(data_source, na.rm = TRUE)) %>%
+                     data_source = Mode(.data$data_source, na.rm = TRUE)) %>%
     #ungroup to end
     dplyr::ungroup()
 
   #filter exact dates
   environ_timeseries <- env_data_varused_sum %>%
-    dplyr::filter(obs_date >= report_dates$full$min & obs_date <= report_dates$full$max) %>%
-    dplyr::arrange(!!quo_groupfield, obs_date, !!quo_obsfield)
+    dplyr::filter(.data$obs_date >= report_dates$full$min & .data$obs_date <= report_dates$full$max) %>%
+    dplyr::arrange(!!quo_groupfield, .data$obs_date, !!quo_obsfield)
 
   # add climatology data
   # climatology is based on week number
@@ -82,14 +95,15 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
   environ_timeseries <- environ_timeseries %>%
     #join
     dplyr::left_join(env_ref_varused %>%
-                       dplyr::select(!!quo_obsfield, !!quo_groupfield, week_epidemiar,
-                                     ref_value, starts_with("ref_")),
+                       dplyr::select(!!quo_obsfield, !!quo_groupfield,
+                                     .data$week_epidemiar,
+                                     .data$ref_value, dplyr::starts_with("ref_")),
                      #NSE fun
-                     by = rlang::set_names(c(rlang::quo_name(quo_groupfield),
-                                             rlang::quo_name(quo_obsfield),
+                     by = rlang::set_names(c(rlang::as_name(quo_groupfield),
+                                             rlang::as_name(quo_obsfield),
                                              "week_epidemiar"),
-                                           c(rlang::quo_name(quo_groupfield),
-                                             rlang::quo_name(quo_obsfield),
+                                           c(rlang::as_name(quo_groupfield),
+                                             rlang::as_name(quo_obsfield),
                                              "week_epidemiar")))
 }
 
@@ -107,56 +121,77 @@ environ_report_format <- function(env_ext_data, env_ref_data, quo_groupfield,
 #'@return Data set of early detection and early warning alert summaries for each
 #'  geographic group. Returned as summary_data in the run_epidemia() output.
 #'
-create_summary_data <- function(ed_res, quo_groupfield, report_dates){
+create_summary_data <- function(ed_res,
+                                quo_groupfield,
+                                report_dates){
 
   #levels
   alert_level <- c("Low", "Medium", "High")
 
-  #Early Detection
-  ed_summary <- ed_res %>%
-    #get the alert series
-    dplyr::filter(series == "ed") %>%
-    #filter to early detection period
-    dplyr::filter(obs_date %in% report_dates$ed_sum$seq) %>%
-    #group (because need to look at period per group level)
-    dplyr::group_by(!!quo_groupfield) %>%
-    #summarize to 1 obs per grouping
-    dplyr::summarize(ed_alert_count = if_else(all(is.na(value)), NA_real_, sum(value, na.rm = TRUE))) %>%
-    # create 3 levels (0, 1, 2 = >1)
-    dplyr::mutate(warning_level = if_else(ed_alert_count > 1, 2, ed_alert_count),
-                  #factor to label
-                  ed_sum_level = factor(warning_level, levels = 0:2,
-                                        labels = alert_level, ordered = TRUE)) %>%
-    #ungroup
-    dplyr::ungroup() %>%
-    #select minimal cols
-    dplyr::select(!!quo_groupfield, ed_alert_count, ed_sum_level)
+  #if early detection period was defined (ed_summary_period > 0)
+  if (!is.na(report_dates$ed_sum$min)) {
+    #Early Detection
+    ed_summary <- ed_res %>%
+      #get the alert series for all early detection
+      dplyr::filter(.data$series == "ed") %>%
+      #filter to defined early detection period
+      dplyr::filter(.data$obs_date %in% report_dates$ed_sum$seq) %>%
+      #group (because need to look at period per group level)
+      dplyr::group_by(!!quo_groupfield) %>%
+      #summarize to 1 obs per grouping
+      dplyr::summarize(ed_alert_count = dplyr::if_else(all(is.na(.data$value)), NA_real_, sum(.data$value, na.rm = TRUE))) %>%
+      # create 3 levels (0, 1, 2 = >1)
+      dplyr::mutate(warning_level = dplyr::if_else(.data$ed_alert_count > 1, 2, .data$ed_alert_count),
+                    #factor to label
+                    ed_sum_level = factor(.data$warning_level, levels = 0:2,
+                                          labels = alert_level, ordered = TRUE)) %>%
+      #ungroup
+      dplyr::ungroup() %>%
+      #select minimal cols
+      dplyr::select(!!quo_groupfield, .data$ed_alert_count, .data$ed_sum_level)
+
+  } else {
+    #create NA ED results for when ed_summary_period = 0
+    ed_summary <- ed_res %>%
+      #create an entry for each geogroup, for creating NA results)
+      dplyr::select(!!quo_groupfield) %>%
+      dplyr::group_by(!!quo_groupfield) %>%
+      unique() %>%
+      #add in NA results
+      dplyr::mutate(ed_alert_count = NA,
+                    ed_sum_level = NA) %>%
+      #confirm same output structure
+      #ungroup
+      dplyr::ungroup() %>%
+      #select minimal cols
+      dplyr::select(!!quo_groupfield, .data$ed_alert_count, .data$ed_sum_level)
+  }
 
 
   #Early Warning: ED results on forecast
   ew_summary <- ed_res %>%
     #get the alert series
-    dplyr::filter(series == "ew",
+    dplyr::filter(.data$series == "ew",
                   #get the forecast results ##not needed anymore b/c of new ew series, but just for completeness
-                  obs_date %in% report_dates$forecast$seq) %>%
+                  .data$obs_date %in% report_dates$forecast$seq) %>%
     #group
     dplyr::group_by(!!quo_groupfield) %>%
     #summarize to 1 obs per grouping
-    dplyr::summarize(ew_alert_count = if_else(all(is.na(value)), NA_real_, sum(value, na.rm = TRUE))) %>%
+    dplyr::summarize(ew_alert_count = dplyr::if_else(all(is.na(.data$value)), NA_real_, sum(.data$value, na.rm = TRUE))) %>%
     # create 3 levels (0, 1, 2 = >1)
-    dplyr::mutate(warning_level = if_else(ew_alert_count > 1, 2, ew_alert_count),
+    dplyr::mutate(warning_level = dplyr::if_else(.data$ew_alert_count > 1, 2, .data$ew_alert_count),
                   #factor to label
-                  ew_level = factor(warning_level, levels = 0:2,
+                  ew_level = factor(.data$warning_level, levels = 0:2,
                                     labels = alert_level, ordered = TRUE)) %>%
     #ungroup
     dplyr::ungroup() %>%
     #select minimal cols
-    dplyr::select(!!quo_groupfield, ew_alert_count, ew_level)
+    dplyr::select(!!quo_groupfield, .data$ew_alert_count, .data$ew_level)
 
   #join results
   summary_data <- dplyr::inner_join(ed_summary, ew_summary,
-                                    by = rlang::set_names(rlang::quo_name(quo_groupfield),
-                                                          rlang::quo_name(quo_groupfield)))
+                                    by = rlang::set_names(rlang::as_name(quo_groupfield),
+                                                          rlang::as_name(quo_groupfield)))
 
   summary_data
 }
@@ -173,17 +208,31 @@ create_summary_data <- function(ed_res, quo_groupfield, report_dates){
 #'@return Mean disease incidence per geographic group during the early detection
 #'  period, returned as epi_summary in the run_epidemia() ouput.
 #'
-create_epi_summary <- function(obs_res, quo_groupfield, report_dates){
-  #using obs_res - if cases/incidence becomes a user set choice, this might make it easier (value is already what it needs to be)
-  #but note that (as of writing this) that obs_res using the original, UNinterpolated values (so that end users are disturbed to see case data where there should not be)
+create_epi_summary <- function(obs_res,
+                               quo_groupfield,
+                               report_dates){
 
-  epi <- obs_res %>%
-    #epi data is weekly, get the data for the early detection summary period
-    dplyr::filter(obs_date %in% report_dates$ed_sum$seq) %>%
-    #group by groupings
-    dplyr::group_by(!!quo_groupfield) %>%
-    #get mean incidence
-    dplyr::summarize(mean_inc = mean(value, na.rm = TRUE))
+  #if early detection period was defined (ed_summary_period > 0)
+  if (!is.na(report_dates$ed_sum$min)) {
+    epi <- obs_res %>%
+      #epi data is weekly, get the data for the early detection summary period
+      dplyr::filter(.data$obs_date %in% report_dates$ed_sum$seq) %>%
+      #group by groupings
+      dplyr::group_by(!!quo_groupfield) %>%
+      #get mean incidence/cases (which ever user had selected will be in value field)
+      dplyr::summarize(mean_epi = mean(.data$value, na.rm = TRUE))
+  } else {
+    #create NA epi results for when ed_summary_period = 0
+    epi <- obs_res %>%
+      #create an entry for each geogroup, for creating NA results)
+      dplyr::select(!!quo_groupfield) %>%
+      dplyr::group_by(!!quo_groupfield) %>%
+      unique() %>%
+      #add NA result
+      dplyr::mutate(mean_epi = NA)
+  }
+
+  epi
 
 }
 
@@ -206,56 +255,63 @@ create_epi_summary <- function(obs_res, quo_groupfield, report_dates){
 #'   environmental anomalies calculated as residuals from GAM in anomalize_env()
 #'   as part of forecasting.
 #'
-calc_env_anomalies <- function(env_ts, quo_groupfield, quo_obsfield, report_dates){
-  # anomalies
-  anom_env <- env_ts %>%
-    # only mapping those in the early detection period
-    dplyr::filter(obs_date %in% report_dates$ed_sum$seq) %>%
-    dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
-    # anomaly value is observed value minus the ref value from env_ref
-    dplyr::mutate(anom = val_epidemiar - ref_value) %>%
-    # summarized over ED period
-    dplyr::summarize(anom_ed_mean = mean(anom, na.rm = TRUE)) %>%
-    dplyr::ungroup()
+calc_env_anomalies <- function(env_ts,
+                               quo_groupfield,
+                               quo_obsfield,
+                               report_dates){
+
+  #if early detection period was defined (ed_summary_period > 0)
+  if (!is.na(report_dates$ed_sum$min)) {
+    #environmental observed data in early detection period
+    env_ed <- env_ts %>%
+      # only mapping those in the early detection period
+      dplyr::filter(.data$obs_date %in% report_dates$ed_sum$seq) %>%
+      # do not use "Extended" or "Interpolated" data, only "Observed"
+      dplyr::mutate(val_epidemiar = dplyr::if_else(.data$data_source == "Observed", .data$val_epidemiar, NA_real_))
+
+    # anomalies
+    anom_env <- env_ed %>%
+      #group
+      dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
+      # anomaly value is observed value minus the ref value from env_ref
+      dplyr::mutate(anom = .data$val_epidemiar - .data$ref_value) %>%
+      # summarized over ED period
+      dplyr::summarize(anom_ed_mean = mean(.data$anom, na.rm = TRUE)) %>%
+      dplyr::ungroup()
+
+  } else {
+    #create NA results for when there is no early detection period
+    anom_env <- env_ts %>%
+      #create an entry for each geogroup, for creating NA results)
+      dplyr::select(!!quo_groupfield, !!quo_obsfield) %>%
+      dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
+      unique() %>%
+      #add NA result
+      dplyr::mutate(anom_ed_mean = NA) %>%
+      dplyr::ungroup()
+
+  }
+
+  anom_env
 }
 
-## Chooses the appropriate function to return the results in the desired form
-#' Calculate the epidemiological value to be shown as result, and on the reports.
+
+#' Formats report_settings for including in metadata part of final report data
 #'
-#'@param cases Field containing case counts, if a quosure, c_quo_tf should be TRUE.
-#'@param c_quo_tf Binary T/F if case field is a quosure rather than a column name.
-#'@param q_pop Quosure of user-given field containing population values.
-#'@param inc_per Number for what unit of population the incidence should be
-#'  reported in, e.g. incidence rate of 3 per 1000 people. Parameter ignored if
-#'  vt == "cases" ("incidence" is default, if not set).
-#'@param vt From match.arg evaluation of fc_control$value_type, whether to return
-#'  epidemiological report values in "incidence" (default) or "cases".
-#'@param mc From match.arg evaluation of model_choice. Reserved for future overrides on value_type depending on
-#'  model choice selection.
+#'@param rpt_settings Report settings after processing defaults and matching.
 #'
-#'@return Epidemiolgical return values, either in cases or incidence, depending
-#'  on user settings.
+#'@return Named list of report_settings, in alphabetical order and no developer settings
 #'
-# calc_return_value <- function(cases,
-#                               c_quo_tf = FALSE,
-#                               q_pop = NULL,
-#                               inc_per,
-#                               vt,
-#                               mc){
-#   dplyr::case_when(
-#     #if reporting in case counts
-#     #if quosure, evaluate
-#     vt == "cases" & c_quo_tf ~ !!cases,
-#     #otherwise given case field directly
-#     vt == "cases" ~ cases,
-#     #if incidence and case field quosure
-#     vt == "incidence" & c_quo_tf ~ !!cases / !!q_pop * inc_per,
-#     #if incidence
-#     vt == "incidence" ~ cases / !!q_pop * inc_per,
-#     #otherwise
-#     TRUE ~ NA_real_
-#   )
-#   #FAILS.
-#   ##Error: Quosures can only be unquoted within a quasiquotation context.
-#
-# }
+format_report_settings <- function(rpt_settings){
+  #order alphabetically
+  clean_settings <- rpt_settings[order(names(rpt_settings))]
+
+  #remove dev IF no dev settings were changed from default
+  #so if dev settings all default, then remove
+  if (rpt_settings[["dev_fc_fit_freq"]] == "once" &
+      is.null(rpt_settings[["dev_fc_formula"]])){
+    clean_settings <- clean_settings[!grepl("^dev", names(clean_settings))]
+  }
+
+  clean_settings
+}

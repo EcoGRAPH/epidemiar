@@ -22,7 +22,7 @@ testing.}
 }
 \value{
 A named list of validation statistic results: validation_overall,
- validation_grouping, validation_timeseries
+ validation_grouping, validation_timeseries, validation_perweek
 }
 \description{
 Helper function to calculate the validation statistics from each model run.

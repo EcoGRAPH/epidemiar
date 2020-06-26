@@ -4,8 +4,16 @@
 \alias{environ_report_format}
 \title{Formats environmental data for report timeseries.}
 \usage{
-environ_report_format(env_ext_data, env_ref_data, quo_groupfield,
-  quo_obsfield, env_used, env_info, week_type, report_dates)
+environ_report_format(
+  env_ext_data,
+  env_ref_data,
+  quo_groupfield,
+  quo_obsfield,
+  env_used,
+  env_info,
+  epi_date_type,
+  report_dates
+)
 }
 \arguments{
 \item{env_ext_data}{An environmental dataset extended into the
@@ -29,9 +37,9 @@ the modeling.}
 \item{env_info}{Lookup table for environmental data - reference creation
 method (e.g. sum or mean), report labels, etc.}
 
-\item{week_type}{String indicating the standard (WHO ISO-8601 or CDC epi
+\item{epi_date_type}{String indicating the standard (WHO ISO-8601 or CDC epi
 weeks) that the weeks of the year in epidemiological and environmental
-reference data use ["ISO" or "CDC"].}
+reference data use ["ISO" or "CDC"]. <<>>}
 
 \item{report_dates}{Internally generated set of report date information: min,
 max, list of dates for full report, known epidemiological data period,

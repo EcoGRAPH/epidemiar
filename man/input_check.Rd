@@ -2,65 +2,34 @@
 % Please edit documentation in R/input_checks.R
 \name{input_check}
 \alias{input_check}
-\title{Functions to check input to epidemiar}
+\title{Functions to check input to epidemiar and set report settings defaults.}
 \usage{
-input_check(epi_data, quo_casefield, quo_popfield, inc_per, quo_groupfield,
-  week_type, report_period, ed_summary_period, ed_method, ed_control,
-  env_data, quo_obsfield, quo_valuefield, forecast_future, fc_control,
-  env_ref_data, env_info, model_obj, model_cached, model_choice)
+input_check(
+  epi_data,
+  env_data,
+  env_ref_data,
+  env_info,
+  quo_casefield,
+  quo_popfield,
+  quo_groupfield,
+  quo_obsfield,
+  quo_valuefield,
+  fc_model_family,
+  raw_settings,
+  groupings,
+  env_variables
+)
 }
 \arguments{
 \item{epi_data}{Epidemiological data with case numbers per week, with date
 field "obs_date".}
 
-\item{quo_casefield}{Quosure of user given field containing the disease case
-counts.}
-
-\item{quo_popfield}{Quosure of user-given field containing population values.}
-
-\item{inc_per}{Number for what unit of population the incidence should be
-reported in, e.g. incidence rate of 3 per 1000 people.}
-
-\item{quo_groupfield}{Quosure of the user given geographic grouping field to
-run_epidemia().}
-
-\item{week_type}{String indicating the standard (WHO ISO-8601 or CDC epi
-weeks) that the weeks of the year in epidemiological and environmental
-reference data use ["ISO" or "CDC"]. (Required: epidemiological observation
-dates listed are LAST day of week).}
-
-\item{report_period}{The number of weeks that the entire report will cover.
-The \code{report_period} minus \code{forecast_future} is the number of weeks
-of past (known) data that will be included.}
-
-\item{ed_summary_period}{The number of weeks that will be considered the
-"early detection period". It will count back from the week of last known
-epidemiological data.}
-
-\item{ed_method}{Which method for early detection should be used ("Farrington"
-is only current option, or "None").}
-
-\item{ed_control}{All parameters for early detection algorithm, passed through
-to that subroutine.}
-
 \item{env_data}{Daily environmental data for the same groupfields and date
 range as the epidemiological data. It may contain extra data (other
 districts or date ranges). The data must be in long format (one row for each
 date and environmental variable combination), and must start at absolutel
-minimum \code{laglen} (in \code{fc_control}) days before epi_data for
-forecasting.}
-
-\item{quo_obsfield}{Quosure of user given field name of the environmental data
-variables}
-
-\item{quo_valuefield}{Quosure of user given field name of the value of the
-environmental data variable observations.}
-
-\item{forecast_future}{Number of futre weeks from the end of the
-\code{epi_data} to produce forecasts.}
-
-\item{fc_control}{Parameters for forecasting, including which environmental
-variable to include and any geographic clusters.}
+minimum \code{report_settings$env_lag_length} days (default 180) before
+epi_data for forecasting.}
 
 \item{env_ref_data}{Historical averages by week of year for environmental
 variables. Used in extended environmental data into the future for long
@@ -70,32 +39,39 @@ display on timeseries in reports.}
 \item{env_info}{Lookup table for environmental data - reference creation
 method (e.g. sum or mean), report labels, etc.}
 
-\item{model_obj}{Deprecated, use model_cached.}
+\item{quo_casefield}{Quosure of user given field containing the disease case
+counts.}
 
-\item{model_cached}{The output of a previous model_run = TRUE run of
-run_epidemia() that produces a model (regression object) and metadata. The
-metadata will be used for input checking and validation. Using a prebuilt
-model saves on processing time, but will need to be updated periodically.}
+\item{quo_popfield}{Quosure of user-given field containing population values.}
 
-\item{model_choice}{Critical argument to choose the type of model to generate.
-The options are versions that the EPIDEMIA team has used for forecasting.
-The first supported options is "poisson-gam" ("p") which is the original
-epidemiar model: a Poisson regression using bam (for large data GAMs), with
-a smoothed cyclical for seasonality. The default for fc_control$anom_env is
-TRUE for using the anomalies of environmental variables rather than their
-raw values. The second option is "negbin" ("n") which is a negative binomial
-regression using glm, with no external seasonality terms - letting the
-natural cyclical behavior of the environmental variables fill that role. The
-default for fc_control$anom_env is FALSE and uses the actual observation
-values in the modeling. The fc_control$anom_env can be overruled by the user
-providing a value, but this is not recommended unless you are doing
-comparisons.}
+\item{quo_groupfield}{Quosure of the user given geographic grouping field to
+run_epidemia().}
+
+\item{quo_obsfield}{Quosure of user given field name of the environmental data
+variables}
+
+\item{quo_valuefield}{Quosure of user given field name of the value of the
+environmental data variable observations.}
+
+\item{fc_model_family}{The \code{\link[stats]{family}} parameter passsed to
+\code{\link[mgcv:bam]{mgcv::bam}}, and the extended families in
+\code{\link[mgcv]{family.mgcv}} can also be used. This sets the type of
+generalized additive model (GAM) to run: it specifies the distribution and
+link to use in model fitting. E.g. for a Poisson regression, the user would
+input "poisson()". If a cached model is being used, set the parameter to
+`"cached"`.}
+
+\item{raw_settings}{The report_settings object as given by the user.}
+
+\item{groupings}{List of all unique geographical groupings in epi_data.}
+
+\item{env_variables}{List of all unique environmental variables in env_data.}
 }
 \value{
-Returns a flag if there were any errors, plus accompanying error
- messages. Also returns a flag and messages for warnings, as well.
+Returns a list of items: a flag if there were any errors, plus accompanying error
+ messages; a flag and messages for warnings; updated report_settings
 }
 \description{
 Function does basic existance checks and variety of logic checks on input data
-to run_epidemia().
+to run_epidemia(), and sets defaults to report_settings parameters.
 }

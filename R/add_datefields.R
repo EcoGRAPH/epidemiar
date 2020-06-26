@@ -18,13 +18,13 @@ add_datefields <- function(df, type = "ISO"){
   if (week_type == "ISO"){
     df <- df %>%
       #add iso wk/yr
-      dplyr::mutate(week_epidemiar = lubridate::isoweek(obs_date),
-                    year_epidemiar = lubridate::isoyear(obs_date))
+      dplyr::mutate(week_epidemiar = lubridate::isoweek(.data$obs_date),
+                    year_epidemiar = lubridate::isoyear(.data$obs_date))
 
   } else if (week_type == "CDC"){
     #add CDC epi wk/yr
-    dplyr::mutate(week_epidemiar = lubridate::epiweek(obs_date),
-                  year_epidemiar = lubridate::epiyear(obs_date))
+    dplyr::mutate(week_epidemiar = lubridate::epiweek(.data$obs_date),
+                  year_epidemiar = lubridate::epiyear(.data$obs_date))
   }
 
   df

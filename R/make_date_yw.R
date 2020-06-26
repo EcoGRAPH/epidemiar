@@ -15,9 +15,6 @@
 #'  reference data use ["ISO" or "CDC"]. (Required: epidemiological observation
 #'  dates listed are LAST day of week).#'
 #'
-#' @inheritParams lubridate::isoweek
-#' @inheritParams lubridate::epiweek
-#'
 #' @inherit lubridate::isoweek references
 #' @inherit lubridate::epiweek references
 #'

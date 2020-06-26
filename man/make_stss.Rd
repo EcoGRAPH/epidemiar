@@ -4,16 +4,16 @@
 \alias{make_stss}
 \title{Make the list of sts objects}
 \usage{
-make_stss(epi_fc_data, quo_popfield, quo_groupfield, groupings)
+make_stss(epi_fc_data, quo_groupfield, quo_popfield, groupings)
 }
 \arguments{
 \item{epi_fc_data}{Internal pass of epidemiological data complete with future
 forecast values.}
 
-\item{quo_popfield}{Quosure of user-given field containing population values.}
-
 \item{quo_groupfield}{Quosure of the user given geographic grouping field to
 run_epidemia().}
+
+\item{quo_popfield}{Quosure of user-given field containing population values.}
 
 \item{groupings}{A unique list of the geographic groupings (from groupfield).}
 }

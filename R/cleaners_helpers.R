@@ -4,11 +4,11 @@
 
 #' Interpolates missing epi data.
 #'
-#' @param epi_data Input data tibble with case counts in casefield, grouping
-#'   field groupfield, and date column "obs_date".
 #' @param quo_casefield Quosure of user given casefield to run_epidemia().
 #' @param quo_groupfield Quosure of the user given geographic grouping field to
 #'   run_epidemia().
+#'
+#'@inheritParams run_epidemia
 #'
 #' @return Same data as epi_data with new interpolated case field,
 #'   cases_epidemiar.
@@ -17,43 +17,48 @@
 epi_NA_interpolate <- function(epi_data, quo_casefield, quo_groupfield){
   epi_data %>%
     dplyr::group_by(!!quo_groupfield) %>%
-    #confirm date sorting
-    dplyr::arrange(obs_date) %>%
-    #interpolate
-    dplyr::mutate(cases_epidemiar = epidemiar::na_approx(!!quo_casefield)) %>%
+    #confirm geogroup-date sorting
+    dplyr::arrange(!!quo_groupfield, .data$obs_date) %>%
+    #interpolate, but not on trailing edge
+    #dplyr::mutate(cases_epidemiar = epidemiar::na_approx(!!quo_casefield)) %>%
+    dplyr::mutate(cases_epidemiar = zoo::na.approx(!!quo_casefield, rule=2:1, na.rm = FALSE)) %>%
+    #force into integer after interpolating (could cause problems with modeling otherwise)
+    dplyr::mutate(cases_epidemiar = floor(.data$cases_epidemiar)) %>%
     #finish by ungrouping
     dplyr::ungroup()
 }
 
-#' Interpolates missing environmental data.
-#'
-#' @param env_data Input data tibble with environmental data: geographic
-#'   groupings in groupfield, environmental variable identified in obsfield, and
-#'   data values in valuefield. Contains a date column "obs_date".
-#' @param quo_obsfield Quosure of the user given field that holds the
-#'   environmental variable identifiers/names/IDs.
-#' @param quo_valuefield Quosure of the user given field that holds the
-#'   environmental variable observation value.
-#' @param quo_groupfield Quosure of the user given geographic grouping field to
-#'   run_epidemia().
-#'
-#' @return Same data as env_data, with new interpolated field, val_epidemiar, of
-#'   the environmental variable data.
-#'
-env_NA_interpolate <- function(env_data, quo_obsfield, quo_valuefield, quo_groupfield){
-  env_data %>%
-    #first, mark which ones are observed versus (will be) interpolated
-    dplyr::mutate(data_source = ifelse(!is.na(!!quo_valuefield), "Observed", "Interpolated")) %>%
-    #two levels of group_by
-    dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
-    #confirm date sorting
-    dplyr::arrange(obs_date) %>%
-    #interpolate
-    dplyr::mutate(val_epidemiar = !!quo_valuefield,
-                  val_epidemiar = epidemiar::na_approx(val_epidemiar)) %>%
-    #finish by ungrouping
-    dplyr::ungroup()
-}
+
+#' #' Interpolates missing environmental data.
+#' #' Deprecated, no longer used as extend_env_data() will fill any gaps.
+#' #'
+#' #' @param quo_obsfield Quosure of the user given field that holds the
+#' #'   environmental variable identifiers/names/IDs.
+#' #' @param quo_valuefield Quosure of the user given field that holds the
+#' #'   environmental variable observation value.
+#' #' @param quo_groupfield Quosure of the user given geographic grouping field to
+#' #'   run_epidemia().
+#' #'
+#' #'@inheritParams run_epidemia
+#' #'
+#' #' @return Same data as env_data, with new interpolated field, val_epidemiar, of
+#' #'   the environmental variable data.
+#' #'
+#' env_NA_interpolate <- function(env_data, quo_obsfield, quo_valuefield, quo_groupfield){
+#'   env_data %>%
+#'     #first, mark which ones are observed versus (will be) interpolated
+#'     dplyr::mutate(data_source = ifelse(!is.na(!!quo_valuefield), "Observed", "Interpolated")) %>%
+#'     #two levels of group_by
+#'     dplyr::group_by(!!quo_groupfield, !!quo_obsfield) %>%
+#'     #confirm date sorting
+#'     dplyr::arrange(!!quo_groupfield, !!quo_obsfield, .data$obs_date) %>%
+#'     #interpolate
+#'     #dplyr::mutate(val_epidemiar = !!quo_valuefield,
+#'     #              val_epidemiar = epidemiar::na_approx(.data$val_epidemiar)) %>%
+#'     dplyr::mutate(val_epidemiar = zoo::na.approx(!!quo_valuefield, rule = 2:1, na.rm = FALSE)) %>%
+#'     #finish by ungrouping
+#'     dplyr::ungroup()
+#' }
 
 
 

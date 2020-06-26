@@ -26,17 +26,24 @@ data_to_daily <- function(data_notdaily, valuefield, interpolate = TRUE){
 
   data_1day <- data_notdaily %>%
     #should handle all grouping/categories
-    dplyr::group_by_at(dplyr::vars(-obs_date, -!!quo_valuefield)) %>%
+    dplyr::group_by_at(dplyr::vars(-.data$obs_date, -!!quo_valuefield)) %>%
     #all explicit missing data - line for every Date for all groupings (above)
-    tidyr::complete(obs_date = tidyr::full_seq(c(min(data_notdaily$obs_date), max(data_notdaily$obs_date)), 1)) %>%
+    tidyr::complete(obs_date = tidyr::full_seq(c(min(data_notdaily$obs_date),
+                                                 max(data_notdaily$obs_date)), 1)) %>%
     dplyr::ungroup()
 
   if (interpolate){
     data_1day <- data_1day %>%
       #should handle all grouping/categories
-      dplyr::group_by_at(dplyr::vars(-obs_date, -!!quo_valuefield)) %>%
+      #Likely does not, actually, need to add ... for grouping variables
+      dplyr::group_by_at(dplyr::vars(-.data$obs_date, -!!quo_valuefield)) %>%
+      #confirm sorting
+      #check if group_vars will handle grouping sorting issue
+      dplyr::arrange(dplyr::group_vars(), .data$obs_date) %>%
       #will not extrapolate beyond last known value, that will happen inside run_epidemia()
-      mutate(!!quo_name(quo_valuefield) := epidemiar::na_approx(!!quo_valuefield)) %>%
+      #dplyr::mutate(!!rlang::as_name(quo_valuefield) := epidemiar::na_approx(!!quo_valuefield)) %>%
+      dplyr::mutate(!!rlang::as_name(quo_valuefield) := zoo::na.approx(!!quo_valuefield,
+                                                                        rule = 2:1, na.rm = FALSE)) %>%
       #finish by ungrouping
       dplyr::ungroup()
   }

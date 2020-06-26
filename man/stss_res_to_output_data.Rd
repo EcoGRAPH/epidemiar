@@ -4,8 +4,16 @@
 \alias{stss_res_to_output_data}
 \title{Formats output data from sts result objects}
 \usage{
-stss_res_to_output_data(stss_res_list, epi_fc_data, quo_popfield, inc_per,
-  quo_groupfield, groupings, report_dates, vt, mc)
+stss_res_to_output_data(
+  stss_res_list,
+  epi_fc_data,
+  quo_groupfield,
+  quo_popfield,
+  val_type,
+  inc_per,
+  groupings,
+  report_dates
+)
 }
 \arguments{
 \item{stss_res_list}{List of sts output object from Farrington algorithm.}
@@ -13,25 +21,25 @@ stss_res_to_output_data(stss_res_list, epi_fc_data, quo_popfield, inc_per,
 \item{epi_fc_data}{Internal pass of epidemiological data complete with future
 forecast values.}
 
-\item{quo_popfield}{Quosure of user-given field containing population values.}
-
-\item{inc_per}{Number for what unit of population the incidence should be
-reported in, e.g. incidence rate of 3 per 1000 people.}
-
 \item{quo_groupfield}{Quosure of the user given geographic grouping field to
 run_epidemia().}
+
+\item{quo_popfield}{Quosure of user-given field containing population values.}
+
+\item{val_type}{An extract of report_settings$report_value_type after defaults
+applies - whether to return epidemiological report values in "incidence" or
+"cases" (default).}
+
+\item{inc_per}{An extract of report_settings$report_inc_per after defaults
+applies - number for what unit of population the incidence should be
+reported in, e.g. incidence rate per 1000 people. Ignored when
+report_settings$report_value_type is 'cases'.}
 
 \item{groupings}{A unique list of the geographic groupings (from groupfield).}
 
 \item{report_dates}{Internally generated set of report date information: min,
 max, list of dates for full report, known epidemiological data period,
 forecast period, and early detection period.}
-
-\item{vt}{From match.arg evaluation of fc_control$value_type, whether to return
-epidemiological report values in "incidence" (default) or "cases".}
-
-\item{mc}{From match.arg evaluation of model_choice. Reserved for future overrides on value_type depending on
-model choice selection.}
 }
 \value{
 Returns a list of three series from the Farrington sts result output:

@@ -1,7 +1,7 @@
 ---
 title: "Model Validation and Assessment"
 author: |
-  | Dawn Nekorchuk, Michael Wimberly, and EPIDEMIA Team Members
+  | Dawn M. Nekorchuk, Michael C. Wimberly, and EPIDEMIA Team Members
   | Department of Geography and Environmental Sustainability, University of Oklahoma
   | dawn.nekorchuk@ou.edu; mcwimberly@ou.edu
 date: "Updated `r format(Sys.time(), '%B %d, %Y')`"
@@ -27,6 +27,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+
 ```
 
 
@@ -42,9 +43,9 @@ With on-demand implementation and time-range flexibility, one can also investiga
 
 ## Specific Arguments
 
-The `run_validation()` function takes 4 arguments, plus all the `run_epidemia()` arguments. 
+The `run_validation()` function takes 5 arguments, plus all the `run_epidemia()` arguments. 
 
-* `date_start`: The week to begin validation, can be built with `epidemiar::make_date_yw()` and isoyear and isoweek numbers (or epiweeks, with appropriate modifications).
+* `date_start`: The week to begin validation, can be built with `epidemiar::make_date_yw()` and isoyear and isoweek numbers (or epiweeks, with appropriate settings).
 * `total_timesteps`: The number of weeks from `week_start` to run the validation.
 * `timesteps_ahead`: To validate 1 through _n_-week ahead predictions (the number of weeks into the future the predictions are made).
 * `reporting_lag`: Default of 0 weeks, but can be adjusted for different assumptions about the length of the lag in data reporting. Enter the number of timesteps to simulate reporting lag. For instance, if you have weekly data, and a `reporting_lag` of 1 week, and are working with a timesteps_ahead of 1 week, then that is the functional equivalent to reporting lag of 0, and timesteps_ahead of 2 weeks. I.e. You are forecasting next week, but you don’t know this week’s data yet, you only know last week’s numbers.
@@ -53,9 +54,9 @@ The `run_validation()` function takes 4 arguments, plus all the `run_epidemia()`
 
 ## Other Arguments & Adjustments
 
-The `run_validation()` function will call `run_epidemia()`, so it will also take all the arguments for that function. The user does not need to modify any of these arguments (e.g. event detection settings, `forecast_future`), as `run_validation()` will automatically handle all of thse adjustments. 
+The `run_validation()` function will call `run_epidemia()`, so it will also take all the arguments for that function. The user does not need to modify any of these arguments (e.g. event detection settings, `fc_future_period`), as `run_validation()` will automatically handle all of these adjustments for settings that are irrelevant for validation runs. 
 
-It is envisioned that users can take their usual script for running EPIDEMIA forecasts, and simply sub in the validation function with those five validation settings for doing model assessments. 
+It is envisioned that users can take their usual script for running EPIDEMIA forecasts, and simply sub in the validation function with those validation settings for doing model assessments. 
 
 
 # Validation Output
@@ -91,11 +92,12 @@ Results are returned in a list.
 models if run with skill test comparison). Each model entry will have three items:
   + `validation_overall`: Overall model accuracy statistics per timestep_ahead (week in the future)
   + `validation_grouping`: Accuracy statistics per geographic grouping per timestep_ahead
-  + `validation_timeseries`: In beta-testing. Early version of a rolling validation results over time
+  + `validation_timeseries`: In beta-testing, an early version of a rolling validation results over time
+  + `validation_perweek`: Validation results per week entry (per geographic group per timestep_ahead)
   
 3. `metadata`: Metadata on the parameters used to run validation and the date it was run.
 
 
 ## Results Display
 
-For a formatted validation report, please look at the accompanying R project `epidemiar-demo` and the `run_validation_amhara.R` script in the validation folder, using the `epidemia_validation.Rnw` Sweave formatting script.
+For a formatted validation report, please look at the accompanying R project `epidemiar-demo` and the `run_validation_amhara.R` script in the validation folder, using the `epidemia_validation.Rnw` formatting script.

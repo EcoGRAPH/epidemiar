@@ -4,8 +4,14 @@
 \alias{env_daily_to_ref}
 \title{Create historical reference data from daily environmental datasets.}
 \usage{
-env_daily_to_ref(daily_env_data, groupfield, obsfield, valuefield,
-  week_type = c("ISO", "CDC"), env_info)
+env_daily_to_ref(
+  daily_env_data,
+  groupfield,
+  obsfield,
+  valuefield,
+  week_type = c("ISO", "CDC"),
+  env_info
+)
 }
 \arguments{
 \item{daily_env_data}{Daily environmental data. Must be in long format - one

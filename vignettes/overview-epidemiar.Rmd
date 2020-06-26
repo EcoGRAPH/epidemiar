@@ -69,7 +69,7 @@ The main requirements for using this package are:
 
 The epidemiar package is flexible on many aspects of modeling. It is all based on general additive model (GAM) regression of multiple factors, including lagged environmental drivers, long term trends, and potentially several other factors such as geographic group, seasonality, and clustering of geographic groups. 
 
-The modeling utilizes `mgcv::bam()`, so the model form can be any accepted by it - any quadractically penalized GLM with the extended families in family.mgcv also being available. This is user set with the `fc_model_family` parameter. For example, you can run regression with a Poisson distribution (`fc_model_family = "poisson()"`). 
+The modeling utilizes `mgcv::bam()`, so the model form can be any accepted by it - any quadractically penalized GLM with the extended families in family.mgcv also being available. This is user set with the `fc_model_family` parameter. For example, you can run regression with a Poisson distribution (`fc_model_family = "poisson()"`) or a Gaussian (`fc_model_family = "gaussian()`). For a Gaussian or other relevant models, there is also a log(cases)+1 transformation (and corresponding back-transformation of predicted values) with `epi_transform = "log_plus_one`. 
 
 ## Timeframes
 
@@ -84,7 +84,7 @@ Each geographic group, $geo$, identified in the `groupfield` column is included 
 
 Each geographic group also has a long term trend component. The long-term trend (and the lagged environmental data, see below) has two options. 
 
-Option 1) With the installation of a companion package (`clusterapply`), thin plate splines are used instead (`report_settings$fc_splines = "tp"` and the default when `clusterapply` is installed). A smooth term is created for length of history for that geogroup: $s(numericdate, bs = "tp", by = geo)$
+Option 1) This is the recommended option. With the installation of a companion package (`clusterapply`), thin plate splines are used instead (`report_settings$fc_splines = "tp"` and the default when `clusterapply` is installed). A smooth term is created for length of history for that geogroup: $s(numericdate, bs = "tp", by = geo)$
 
 Option 2) Using modified b-splines (`report_settings$fc_splines = "modbs"`), where $geo$ is multiplied by each of 5 modified basis splines: $bs_1 * geo + bs_2 * geo + bs_3 * geo + bs_4 * geo + bs_5 * geo$. 
 The modified basis splines are created by first using `splines::bs()` to create basis splines over the range of observations with degree 6. Then to reduce the edge effects of using splines, the following modifications are performed: the last basis spline function is reverse, and the second to last basis spline function is removed. 
@@ -114,9 +114,9 @@ We allow the user to identify their own clusters of geographic units with `repor
 
 For modeling the lagged environmental drivers by cluster, there are two options:
 
-Option 1) With the installation of a companion package (`clusterapply`), thin plate splines are used instead (`report_settings$fc_splines = "tp"` and the default when `clusterapply` is installed). The `clusterapply` package is our wrapper over some of the mgcv functions so that we can use thin plate splines for each lagged environmental variable by cluster. Thin plate splines are more effective at capturing complex, non-linear relationships and our preliminary analyses show that using thin plate splines produce better predictions without overfitting. To allow for clusters that may have only one geogroup in that cluster, a fall-back equation without geogroup as a factor is also constructed and tried in case of model failure. 
+Option 1) This is the recommended option. With the installation of a companion package (`clusterapply`), thin plate splines are used instead (`report_settings$fc_splines = "tp"` and the default when `clusterapply` is installed). The `clusterapply` package is our wrapper over some of the mgcv functions so that we can use thin plate splines for each lagged environmental variable by cluster. Thin plate splines are more effective at capturing complex, non-linear relationships and our preliminary analyses show that using thin plate splines produce better predictions without over-fitting. To allow for clusters that may have only one geogroup in that cluster, a fall-back equation without geogroup as a factor is also constructed and tried in case of model failure. 
 
-Option 2) Using modified b-splines (`report_settings$fc_splines = "modbs"`), a distributed lag basis is created with the natural cubic splines function (ns, splines library), including intercept, with knots at 25%, 50%, and 75% of the lag length. The 5 basis functions that result are multiplied by each group's history, so that there are just 5 summary statistics, instead of lag length, for every combination of group, week, and environmental anomaly covariate. 
+Option 2) Using modified b-splines (`report_settings$fc_splines = "modbs"`), a distributed lag basis is created with the natural cubic splines function (ns, splines library), including intercept, with knots at 25%, 50%, and 75% of the lag length. The 5 basis functions that result are multiplied by each group's history, so that there are just 5 summary statistics, instead of lag length, for every combination of group, week, and environmental anomaly co-variate. 
 
 
 

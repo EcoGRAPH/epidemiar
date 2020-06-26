@@ -6,16 +6,16 @@ author: |
   | dawn.nekorchuk@ou.edu; mcwimberly@ou.edu
 date: "Updated `r format(Sys.time(), '%B %d, %Y')`"
 output:
-  rmarkdown::html_vignette:
-    fig_caption: yes
-  html_document:
-    df_print: paged
-    toc: yes
-    toc_depth: '2'
   pdf_document:
     number_sections: yes
     toc: yes
     toc_depth: 2
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '2'
+  rmarkdown::html_vignette:
+    fig_caption: yes
 vignette: |
   %\VignetteIndexEntry{Modeling Data and Parameters} 
   %\VignetteEncoding{UTF-8} 
@@ -124,7 +124,7 @@ Many of the settings are bundled into the named list `report_settings` argument.
 
 ### Setting up for Forecasting
 
-*`fc_model_family`: The modeling utilizes `mgcv::bam()`, so the model form can be any accepted by it - any quadractically penalized GLM with the extended families in family.mgcv also being available. This is user set with the `fc_model_family` parameter. For example, you can run regression with a Poisson distribution (`fc_model_family = "poisson()"`). This is required, with no default.
+*`fc_model_family`: The modeling utilizes `mgcv::bam()`, so the model form can be any accepted by it - any quadractically penalized GLM with the extended families in family.mgcv also being available. This is user set with the `fc_model_family` parameter. For example, you can run regression with a Poisson distribution (`fc_model_family = "poisson()"`) or Gaussian (`fc_model_family = "gaussian()"` and note that you may also want to set `epi_transform = "log_plus_one`). This is required, with no default.
 
 Besides `fc_model_family`, the rest of the forecasting controls (along with other settings) are bundled into the named list `report_settings`:
 

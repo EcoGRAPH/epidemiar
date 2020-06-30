@@ -56,8 +56,9 @@ knitr::include_graphics("EPIDEMIA_system_v2.png")
 2.	Google Earth Engine script: A GEE script to gather the environmental data summaries
 3.	Custom R Project: Contains the surveillance and environmental data, user parameters on the model and outbreak detection algorithm, and script to produce a finalized report (or validation report if validation functions were run). 
 
-This package can be used for modelling and forecasting for a variety of environmentally-mediated disease. 
-For example GEE scripts and R project, see the `epidemiar-demo` repository at https://github.com/EcoGRAPH/epidemiar-demo.
+This package can be used for modeling and forecasting for a variety of environmentally-mediated disease. 
+For example GEE scripts and R project, see the `epidemiar-demo` repository at:
+https://github.com/EcoGRAPH/epidemiar-demo/releases/latest.
 
 The main requirements for using this package are:
 

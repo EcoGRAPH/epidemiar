@@ -702,6 +702,16 @@ format_lag_ca <- function(tbl,
   #column bind the non-lagged with the submatrix-filled dataframe
   dfm <- cbind(front_df, collecting_df)
 
+  ## Also add censored numericdate -
+  # this prevents splines from going off into extreme directions when forecasting into the future
+  numericdate_end_known <- dfm %>%
+    dplyr::filter(.data$input == 1) %>%
+    dplyr::summarize(maxdt = max(.data$numericdate, na.rm = TRUE)) %>%
+    dplyr::pull(.data$maxdt)
+  #censored date is the numericdate, but capped at the latest known data
+  dfm <- dfm %>%
+    dplyr::mutate(censored_date = pmin(.data$numericdate, numericdate_end_known))
+
   #return
   dfm
 }

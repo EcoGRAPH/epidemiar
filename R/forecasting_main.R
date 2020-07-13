@@ -94,7 +94,7 @@ run_forecast <- function(epi_data,
                                      groupings,
                                      report_dates)
 
-  # format the data for forecasting algorithm
+  # format the data for forecasting algorithm (base, more later)
   env_fc <- env_format_fc(env_data_extd,
                           quo_groupfield,
                           quo_obsfield)
@@ -696,7 +696,8 @@ build_equation <- function(quo_groupfield,
     message("Creating equation using thin plate splines...")
 
     #create s({}, by = {}, bs = 'tp', id = {unique})
-    # numericdate column for long-term trend
+    # censored_date column for long-term trend
+    #     (numericdate, capped at last known date to prevent spline issues)
     # lag column-matrix for environmental variables
     # ids need to be unique for each, but do not have to be sequential
       # id = 1 reserved for cyclicals which may or may not be present
@@ -710,11 +711,11 @@ build_equation <- function(quo_groupfield,
     ## Long term trend
 
     #fallback / single geo group
-    tp_geo_eq_fallback <- paste0("s(numericdate, ", "bs = \'tp\', id = 2)")
+    tp_geo_eq_fallback <- paste0("s(censored_date, ", "bs = \'tp\', id = 2)")
 
     #need different formulas if 1+ or only 1 geographic grouping (over all dataset)
     tp_geo_eq <- if (n_groupings > 1){
-      paste0("s(numericdate, by = ", rlang::as_name(quo_groupfield),
+      paste0("s(censored_date, by = ", rlang::as_name(quo_groupfield),
              ", bs = \'tp\', id = 2)")
     } else {
       tp_geo_eq_fallback

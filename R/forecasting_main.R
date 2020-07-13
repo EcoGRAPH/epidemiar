@@ -359,7 +359,7 @@ forecast_regression <- function(epi_lag,
 
     regress <- build_model(fc_model_family,
                            quo_groupfield,
-                           epi_lag,
+                           epi_input,
                            report_settings,
                            #calc/internal
                            env_variables_used,

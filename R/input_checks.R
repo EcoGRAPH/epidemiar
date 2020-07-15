@@ -535,6 +535,7 @@ input_check <- function(epi_data,
   }
   # for dev formula: dev must also set fc_splines and fc_cyclicals (if modbs) correctly,
   # otherwise it will not know which function to call
+  # also need to set correct env vars (or let take all)
   if (!is.null(raw_settings[["dev_fc_formula"]])){
     new_settings[["dev_fc_formula"]] <- raw_settings[["dev_fc_formula"]]
   } else {

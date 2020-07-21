@@ -574,7 +574,7 @@ build_model <- function(fc_model_family,
                                                       "family" = fc_model_family,
                                                       "discrete" = TRUE,
                                                       "nthreads" = report_settings[["fc_nthreads"]]),
-                                       bamargs_fallback = list("formula" = reg_eq$req_eq_fallback,
+                                       bamargs_fallback = list("formula" = reg_eq$reg_eq_fallback,
                                                                "family" = fc_model_family,
                                                                "discrete" = TRUE,
                                                                "nthreads" = report_settings[["fc_nthreads"]]),
@@ -793,7 +793,7 @@ build_equation <- function(quo_groupfield,
 
   #for splines tp, return is a named list of primary equation and fallback equation
     reg_eq <- list("reg_eq" = reg_eq_tp,
-                   "req_eq_fallback" = reg_fallback)
+                   "reg_eq_fallback" = reg_fallback)
 
   } #end splines tp
 

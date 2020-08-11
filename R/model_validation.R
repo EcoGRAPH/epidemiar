@@ -235,6 +235,9 @@ run_validation <- function(date_start = NULL,
         #don't need 0 week predictions (same week)
         dplyr::filter(.data$timestep_ahead_orig > 0)
 
+      #force garbage collection
+      rm(reportdata)
+      gc()
 
     } #end timestep loop
 

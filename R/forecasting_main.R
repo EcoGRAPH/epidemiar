@@ -523,9 +523,9 @@ build_model <- function(fc_model_family,
       message("DEVELOPER: Using user-supplied formula: ",
               report_settings[["dev_fc_formula"]])
       reg_eq <- report_settings[["dev_fc_formula"]]
-      #note, if using formula override AND cyclicals,
-      # dev users should put fc_cyclicals = TRUE, else message about discrete ignored.
-      # dev users also need to set fc_splines appropriately
+      # for dev formula: dev must also set fc_splines and fc_cyclicals (if modbs) correctly,
+      # otherwise it will not know which function to call
+      # also need to set correct env vars (or let take all)
 
     } else {
       #build equation(s)

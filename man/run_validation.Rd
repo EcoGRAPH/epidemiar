@@ -183,6 +183,10 @@ input "poisson()". If a cached model is being used, set the parameter to
  smooth term based on day of year in the modeling (as one way of accounting
  for seasonality).
 
+ \item \code{fc_cyclicals_by}: Unit to run the `fc_cyclicals` terms by.
+ Either by 'cluster' (default; clusters given by `fc_clusters`) or by 'group'
+ (per geogroup in `groupfield`).
+
  \item \code{fc_splines}: The type of splines that will be used to handle
  long-term trends and lagged environmental variables. If supplemental package
  `clusterapply` is not installed, the default (and only choice) uses modified

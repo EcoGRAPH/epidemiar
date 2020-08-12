@@ -279,6 +279,28 @@ input_check <- function(epi_data,
   }
 
 
+  #fc_cyclicals_by 'group' or 'cluster'
+
+  # if provided, prepare for matching
+  if (!is.null(raw_settings[["fc_cyclicals_by"]])){
+    new_settings[["fc_cyclicals_by"]] <- tolower(raw_settings[["fc_cyclicals_by"]])
+  } else {
+    #if not provided/missing/null
+    new_settings[["fc_cyclicals_by"]] <- "cluster"
+  }
+  #try match
+  new_settings[["fc_cyclicals_by"]] <- tryCatch({
+    match.arg(new_settings[["fc_cyclicals_by"]], c("cluster", "group"))
+  }, error = function(e){
+    warn_flag <- TRUE
+    warn_msgs <- paste0(warn_msgs, "Given 'fc_cyclicals_by'",
+                        raw_settings[["fc_cyclicals_by"]],
+                        "does not match 'cluster' or 'group', running as 'cluster'.\n")
+    "cases"
+  })
+
+
+
   #env_var
   #has entries in env_data, env_ref_data, & env_info?
   #create list of all environmental variables in env_info

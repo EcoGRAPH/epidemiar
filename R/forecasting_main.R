@@ -659,10 +659,18 @@ build_equation <- function(quo_groupfield,
 
       #need different formulas if 1+ or only 1 geographic grouping
       if (n_groupings > 1){
+
+        #new cyclical (seasonal) option between by geogroup or by cluster
+        cycl_by_piece <- if (report_settings$fc_cyclicals_by == "group") {
+          rlang::as_name(quo_groupfield)
+        } else if (report_settings$fc_cyclicals_by == "cluster") {
+          "cluster_id"
+        }
+
         reg_eq <- stats::as.formula(paste("cases_epidemiar ~ ",
                                           rlang::as_name(quo_groupfield),
                                           " + s(doy, bs=\"cc\", by=",
-                                          rlang::as_name(quo_groupfield),
+                                          cycl_by_piece,
                                           ") + ",
                                           modb_eq, " + ",
                                           bandsums_eq))
@@ -750,12 +758,21 @@ build_equation <- function(quo_groupfield,
 
       #need different formulas if 1+ or only 1 geographic grouping (over all of dataset)
       if (n_groupings > 1){
+
+        #new cyclical (seasonal) option between by geogroup or by cluster
+        cycl_by_tp <- if (report_settings$fc_cyclicals_by == "group") {
+
+          paste0(" + s(doy, bs=\"cc\", by=", rlang::as_name(quo_groupfield), ", id = 1) + ")
+
+        } else if (report_settings$fc_cyclicals_by == "cluster") {
+
+          " + s(doy, bs=\"cc\", id = 1) + "
+        }
+
         reg_eq_tp <- stats::as.formula(paste("cases_epidemiar ~ ",
                                           rlang::as_name(quo_groupfield),
                                           #cyclical
-                                          " + s(doy, bs=\"cc\", by=",
-                                          rlang::as_name(quo_groupfield),
-                                          ", id = 1) + ",
+                                          cycl_by_tp,
                                           #tp
                                           tp_geo_eq, " + ",
                                           tp_env_eq))

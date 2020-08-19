@@ -296,7 +296,7 @@ input_check <- function(epi_data,
     warn_msgs <- paste0(warn_msgs, "Given 'fc_cyclicals_by'",
                         raw_settings[["fc_cyclicals_by"]],
                         "does not match 'cluster' or 'group', running as 'cluster'.\n")
-    "cases"
+    "cluster"
   })
 
 

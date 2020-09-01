@@ -188,12 +188,13 @@ run_farrington <- function(epi_fc_data,
 
 
   ## input check / overrides:
-  #do all groups have the same number of weeks? Farrington will error otherwise.
-  wks_diff_grps <- epi_fc_data %>%
-    dplyr::group_by(!!quo_groupfield) %>%
-    dplyr::count() %>%
-    dplyr::pull(.data$n) %>%
-    range() %>% diff()
+    # #This test is useless now that implicit missing weeks are handled.
+    # #do all groups have the same number of weeks? Farrington will error otherwise.
+    # wks_diff_grps <- epi_fc_data %>%
+    #   dplyr::group_by(!!quo_groupfield) %>%
+    #   dplyr::count() %>%
+    #   dplyr::pull(.data$n) %>%
+    #   range() %>% diff()
 
   #only run if b > 0. If 0 full years available (or b=0 requested), then "none"
   if (far_control[["b"]] < 1) {
@@ -204,21 +205,35 @@ run_farrington <- function(epi_fc_data,
                                 report_dates)
 
 
-  } else if (wks_diff_grps > .Machine$double.eps ^ 0.5){
-    #do all groups have the same number of weeks? Farrington will error otherwise.
-    #using small tolerance rather than == 0.
-    message("Warning: Groups do not have the same number of weeks of epidemiological data. Cannot run Farrington, skipping event detection.")
-    far_res <- run_no_detection(epi_fc_data,
-                                quo_groupfield,
-                                report_dates)
   }
+  # else if (wks_diff_grps > .Machine$double.eps ^ 0.5){
+  #   #do all groups have the same number of weeks? Farrington will error otherwise.
+  #   #using small tolerance rather than == 0.
+  #   message("Warning: Groups do not have the same number of weeks of epidemiological data. Cannot run Farrington, skipping event detection.")
+  #   far_res <- run_no_detection(epi_fc_data,
+  #                               quo_groupfield,
+  #                               report_dates)
+  # }
   else {
     #if all okay, then run Farrington
 
     #run Farringtons
     far_res_list <- vector('list', length(epi_stss))
     for (i in 1:length(epi_stss)){
-      far_res_list[[i]] <- surveillance::farringtonFlexible(epi_stss[[i]], control = far_control)
+      #far_res_list[[i]] <- surveillance::farringtonFlexible(epi_stss[[i]], control = far_control)
+      far_res_list[[i]] <- tryCatch({
+        #successful run will have Farrington results
+        surveillance::farringtonFlexible(epi_stss[[i]], control = far_control)},
+        error = function(e){
+          #failed run
+          #use pre-farrington sts for the appropriate evaluation weeks (range)
+          #will have the correct format and matches the rest of the results
+          #but will not have thresholds or alert values
+          message(paste0("Farrington model failure on ", groupings[i],
+                         " with error ", e,
+                         ". Continuing for the remaining groups."))
+            #print(i); print(groupings[i]); print(e)
+          epi_stss[[i]][far_control$range,]})
     }
 
 

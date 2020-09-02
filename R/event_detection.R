@@ -230,8 +230,9 @@ run_farrington <- function(epi_fc_data,
           #will have the correct format and matches the rest of the results
           #but will not have thresholds or alert values
           message(paste0("Farrington model failure on ", groupings[i],
-                         " with error ", e,
-                         ". Continuing for the remaining groups."))
+                         "and will not have thresholds values or alerts for this group.",
+                         "Continuing with remaining groups.",
+                         "Error from Farrington:", e))
             #print(i); print(groupings[i]); print(e)
           epi_stss[[i]][far_control$range,]})
     }

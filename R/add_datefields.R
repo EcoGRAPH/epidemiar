@@ -4,7 +4,8 @@
 #' @param type String to indicate whether to use "ISO" ISO-8601 week of year
 #'   (used by WHO) or "CDC" epi weeks.
 #'
-#' @return dataframe (or tibble) with week and year fields added
+#' @return dataframe (or tibble) with week (`week_epidemiar`) and year
+#'   (`year_epidemiar`) fields added
 #'
 #' @export
 #'

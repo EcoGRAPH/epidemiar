@@ -337,7 +337,7 @@ forecast_regression <- function(epi_lag,
   epi_lag <- epi_lag %>% dplyr::mutate(!!rlang::as_name(quo_groupfield) := factor(!!quo_groupfield))
 
 
-  if (!fc_model_family == "naive-persistence" & !fc_model_family == "naive-averageweek"){
+  if (!naive){
     if (report_settings[["fc_splines"]] == "modbs"){
       # create modified bspline basis in epi_lag file to model longterm trends
       epi_lag <- cbind(epi_lag, truncpoly(x=epi_lag$obs_date,

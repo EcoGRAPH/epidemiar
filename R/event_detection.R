@@ -136,7 +136,7 @@ run_farrington <- function(epi_fc_data,
     far_control[["alpha"]] <- ed_control[["alpha"]]
   }
   if (!is.null(ed_control[["trend"]])){
-    ed_control[["trend"]] <- ed_control[["trend"]]
+    far_control[["trend"]] <- ed_control[["trend"]]
   }
   if (!is.null(ed_control[["pThresholdTrend"]])){
     far_control[["pThresholdTrend"]] <- ed_control[["pThresholdTrend"]]

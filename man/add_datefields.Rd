@@ -13,7 +13,8 @@ add_datefields(df, type = "ISO")
 (used by WHO) or "CDC" epi weeks.}
 }
 \value{
-dataframe (or tibble) with week and year fields added
+dataframe (or tibble) with week (`week_epidemiar`) and year
+  (`year_epidemiar`) fields added
 }
 \description{
 Adds ISO or CDC datefields to a data set with a "obs_date" (Date) field

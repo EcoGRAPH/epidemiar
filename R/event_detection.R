@@ -122,7 +122,10 @@ run_farrington <- function(epi_fc_data,
                                 nrow(epi_stss[[1]]))
 
   #test for all other parameters that can be passed onto Farrington flexible method
-  # if not null, use user parameter, otherwise leave as null to use its defaults
+  # if not null, use user parameter, otherwise leave as null to use its defaults (or calc for b)
+  if (!is.null(ed_control[["b"]])){
+    far_control[["b"]] <- ed_control[["b"]]
+  }
   if (!is.null(ed_control[["w"]])){
     far_control[["w"]] <- ed_control[["w"]]
   }
@@ -163,64 +166,98 @@ run_farrington <- function(epi_fc_data,
     far_control[["thresholdMethod"]] <- ed_control[["thresholdMethod"]]
   }
 
-  #set number of years to go back in time
-  # allow user set b, else calculate maximum number of years previous data available
-  # includes allowance for window value, w # of weeks
-  if (is.null(ed_control[["b"]])){
 
-    #subtract window to earliest report date
-    #    this will appropriately increase the amount of time needed without altering the actual available data date
-    #    allow default w=3
-    if (!is.null(ed_control[["w"]])){
-      adjdt <- report_dates$full$min - lubridate::weeks(ed_control[["w"]])
-    } else adjdt <- report_dates$full$min - lubridate::weeks(3)
+  #run Farringtons
+  far_res_list <- vector('list', length(epi_stss))
 
-    #calculate number of years difference between earliest available data date and adjusted report date "start"
-    #    using interval(), because this allows time_lenth() to deal with leap years, etc.
-    yrdiff <- lubridate::interval(min(epi_fc_data$obs_date), adjdt) %>%
-      lubridate::time_length(unit = "years")
+  for (i in 1:length(epi_stss)){
 
-    #get the minimum integer year value to feed to Farrington control
-    #(cannot round up, must only request data that exists)
-    far_control[["b"]] <- floor(yrdiff)
+    if (is.null(far_control[["b"]])){
 
-  } else far_control[["b"]] <- ed_control[["b"]]
+      ## Adaptive b for each geogroup for each week
+      # b = number of years to go back in time
+      # allow user set b, else calculate maximum number of years previous data available
+      # includes allowance for window value, w # of weeks
 
+      #week setup
+      this_week_far_control <- far_control
+      week_collector <- vector("list", length(far_control[["range"]]))
 
-  ## input check / overrides:
-    # #This test is useless now that implicit missing weeks are handled.
-    # #do all groups have the same number of weeks? Farrington will error otherwise.
-    # wks_diff_grps <- epi_fc_data %>%
-    #   dplyr::group_by(!!quo_groupfield) %>%
-    #   dplyr::count() %>%
-    #   dplyr::pull(.data$n) %>%
-    #   range() %>% diff()
+      for (wk in seq_along(far_control[["range"]])){
 
-  #only run if b > 0. If 0 full years available (or b=0 requested), then "none"
-  if (far_control[["b"]] < 1) {
+        #eval 'range' will be just this week
+        this_week_far_control[["range"]] <- far_control[["range"]][wk]
 
-    message("Warning: Less than 1 full year of epidemiological data available or requested (ed_control$b). Cannot run Farrington, skipping event detection.")
-    far_res <- run_no_detection(epi_fc_data,
-                                quo_groupfield,
-                                report_dates)
+        #get date of current week
+        this_week_dt <- as.data.frame(epi_stss[[i]])[this_week_far_control[["range"]], "epoch"]
 
+      # calculate maximum number of years previous data available
+      # allowance for window, and default w=3
+      if (!is.null(this_week_far_control[["w"]])){
+        this_adjdt <- this_week_dt - lubridate::weeks(this_week_far_control[["w"]])
+      } else {
+        this_adjdt <- this_week_dt - lubridate::weeks(3)
+      }
 
-  }
-  # else if (wks_diff_grps > .Machine$double.eps ^ 0.5){
-  #   #do all groups have the same number of weeks? Farrington will error otherwise.
-  #   #using small tolerance rather than == 0.
-  #   message("Warning: Groups do not have the same number of weeks of epidemiological data. Cannot run Farrington, skipping event detection.")
-  #   far_res <- run_no_detection(epi_fc_data,
-  #                               quo_groupfield,
-  #                               report_dates)
-  # }
-  else {
-    #if all okay, then run Farrington
+      #calculate number of years difference between earliest available data date
+      # and adjusted report date "start"
+      # Using interval(), because this allows time_length() to deal with leap years, etc.
+      this_geogroup_min_date <- epi_stss[[i]] %>% as.data.frame() %>% dplyr::pull(.data$epoch) %>% min()
+      #set the minimum integer year value to feed to Farrington control
+      #(cannot round up, must only request data that exists)
+      this_week_far_control[["b"]] <- lubridate::interval(this_geogroup_min_date, this_adjdt) %>%
+        lubridate::time_length(unit = "years") %>%
+        floor()
 
-    #run Farringtons
-    far_res_list <- vector('list', length(epi_stss))
-    for (i in 1:length(epi_stss)){
-      #far_res_list[[i]] <- surveillance::farringtonFlexible(epi_stss[[i]], control = far_control)
+      #with graceful fail catching
+      week_collector[[wk]] <- tryCatch({
+        #successful run will have Farrington results
+        surveillance::farringtonFlexible(epi_stss[[i]], control = this_week_far_control)
+        },
+        error = function(e){
+          #failed run
+          message(paste0("Farrington model failure on ", groupings[i],
+                         " week of ", this_week_dt,
+                         ". Continuing with remaining. ",
+                         "Error from Farrington: ", e))
+            #print(i); print(groupings[i]); print(e)
+          #use pre-farrington sts for the appropriate evaluation weeks (range)
+          #will have the correct format and matches the rest of the results
+          #but will not have thresholds or alert values
+          epi_stss[[i]][this_week_far_control$range,]
+          })
+
+    } #end week loop
+
+      #have sts per week of i geogroup, need to make 1 sts
+      this_geogroup_df <- week_collector %>%
+        #turn into dataframes to be able to combine
+        lapply(as.data.frame) %>%
+        #bind all together into one df
+        dplyr::bind_rows()
+
+      #turn combined df into one sts
+      far_res_list[[i]] <- surveillance::sts(observed = dplyr::select(this_geogroup_df,
+                                                                      .data$observed) %>%
+                                                   as.matrix(),
+                                                 start = epi_stss[[i]]@start,
+                                                 frequency = epi_stss[[i]]@freq,
+                                                 epochAsDate = TRUE,
+                                                 epoch = as.numeric(this_geogroup_df$epoch),
+                                                 population = dplyr::select(this_geogroup_df,
+                                                                            .data$population) %>%
+                                                   as.matrix(),
+                                                 state = this_geogroup_df[["state"]],
+                                                 alarm = this_geogroup_df[["alarm"]],
+                                                 upperbound = this_geogroup_df[["upperbound"]])
+
+      #end adaptive b calculations
+
+    } else {
+
+      #If b is not null, then use user set value
+
+      #with graceful fail catching
       far_res_list[[i]] <- tryCatch({
         #successful run will have Farrington results
         surveillance::farringtonFlexible(epi_stss[[i]], control = far_control)},
@@ -233,25 +270,26 @@ run_farrington <- function(epi_fc_data,
                          "and will not have thresholds values or alerts for this group.",
                          "Continuing with remaining groups.",
                          "Error from Farrington:", e))
-            #print(i); print(groupings[i]); print(e)
+          #print(i); print(groupings[i]); print(e)
           epi_stss[[i]][far_control$range,]})
-    }
 
+    } #end else of b is null
 
-    #results into output report data form
-    far_res <- stss_res_to_output_data(stss_res_list = far_res_list,
-                                       epi_fc_data,
-                                       quo_groupfield,
-                                       quo_popfield,
-                                       val_type,
-                                       inc_per,
-                                       groupings,
-                                       report_dates)
+  } #end geogroups loop
 
-  }
+  #results into output report data form
+  far_res <- stss_res_to_output_data(stss_res_list = far_res_list,
+                                     epi_fc_data,
+                                     quo_groupfield,
+                                     quo_popfield,
+                                     val_type,
+                                     inc_per,
+                                     groupings,
+                                     report_dates)
 
   far_res
-}
+
+} #end run farrington
 
 #' Make the list of sts objects
 #'

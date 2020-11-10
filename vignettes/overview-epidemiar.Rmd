@@ -85,12 +85,12 @@ Each geographic group, $geo$, identified in the `groupfield` column is included 
 
 Each geographic group also has a long term trend component. The long-term trend (and the lagged environmental data, see below) has two options. 
 
-Option 1) This is the recommended option. With the installation of a companion package (`clusterapply`), thin plate splines are used instead (`report_settings$fc_splines = "tp"` and the default when `clusterapply` is installed). A smooth term is created for length of history for that geogroup: $s(numericdate, bs = "tp", by = geo)$
+Option 1) This is the recommended option. With the installation of a companion package (`clusterapply`), thin plate splines are used instead (`report_settings$fc_splines = "tp"` and the default when `clusterapply` is installed). A smooth term is created for length of history for that geogroup: $s(censorednumericdate, bs = "tp", by = geo)$. The covariate (the date variable) is frozen at the end of the known data. This has the effect of freezing the long-term trend: the trend value is carried persistently to the end of the forecast period and does not suffer from spline edge effects (evolving beyond the domain). 
 
 Option 2) Using modified b-splines (`report_settings$fc_splines = "modbs"`), where $geo$ is multiplied by each of 5 modified basis splines: $bs_1 * geo + bs_2 * geo + bs_3 * geo + bs_4 * geo + bs_5 * geo$. 
 The modified basis splines are created by first using `splines::bs()` to create basis splines over the range of observations with degree 6. Then to reduce the edge effects of using splines, the following modifications are performed: the last basis spline function is reverse, and the second to last basis spline function is removed. 
 
-There is a an option to explicitly include a cyclical for account for seasonality. If `report_settings$fc_cyclical` is set to TRUE (default is FALSE), a cyclical cubic regression spline smooth is added based on day of year per geographic group: $s(doy, bs = "cc", by = geo)$
+There is a an option to explicitly include a cyclical for account for seasonality. If `report_settings$fc_cyclicals` is set to TRUE (default is FALSE), a cyclical cubic regression spline smooth is added based on day of year. There is also a setting `report_settings$fc_cyclicals_by` for the unit to calculate the cyclicals by. By default, these cyclicals are calculated per cluster ('cluster'; clusters given in `report_settings$fc_clusters`, see below): $s(doy, bs = "cc", by = clusterid)$. The other option is by 'group' (per geogroup in `groupfield`): $s(doy, bs = "cc", by = geo)$. 
 
 If there is only one geogroup, all of these equation pieces are modified accordingly. 
 

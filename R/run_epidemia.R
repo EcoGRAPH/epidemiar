@@ -780,13 +780,25 @@ run_epidemia <- function(epi_data = NULL,
 
     # Collect all results -----------------------------------------------------
 
-    all_results <- create_named_list(summary_data,
-                                     epi_summary,
-                                     modeling_results_data,
-                                     environ_timeseries,
-                                     environ_anomalies,
-                                     params_meta,
-                                     regression_object)
+    if (report_settings[["dev_env_save"]]){
+      all_results <- create_named_list(summary_data,
+                                       epi_summary,
+                                       modeling_results_data,
+                                       environ_timeseries,
+                                       environ_anomalies,
+                                       params_meta,
+                                       regression_object,
+                                       full_env_data = fc_res_all$env_data_extd)
+
+    } else {
+      all_results <- create_named_list(summary_data,
+                                       epi_summary,
+                                       modeling_results_data,
+                                       environ_timeseries,
+                                       environ_anomalies,
+                                       params_meta,
+                                       regression_object)
+    }
     message("Finished.")
     return(all_results)
 

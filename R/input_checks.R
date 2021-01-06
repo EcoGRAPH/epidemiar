@@ -564,6 +564,14 @@ input_check <- function(epi_data,
     #default
     new_settings[["dev_fc_formula"]] <- NULL
   }
+  #option for saving out full environmental data table
+  if (!is.null(raw_settings[["dev_env_save"]])){
+    new_settings[["dev_env_save"]] <- raw_settings[["dev_env_save"]]
+  } else {
+    #default
+    new_settings[["dev_env_save"]] <- FALSE
+  }
+
 
 
   # 4. Report settings -----------------------------------------------------------------

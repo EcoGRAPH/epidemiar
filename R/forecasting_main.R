@@ -71,20 +71,20 @@ run_forecast <- function(epi_data,
 
   # extend data into future, for future forecast portion
   # also gap fills any missing data
-  env_data_extd <- extend_env_future(env_data,
-                                     quo_groupfield,
-                                     quo_obsfield,
-                                     quo_valuefield,
-                                     env_ref_data,
-                                     env_info,
-                                     fc_model_family, #reduced processing for naive models
-                                     #pull from report_settings
-                                     epi_date_type = report_settings[["epi_date_type"]],
-                                     #calculated/internal
-                                     valid_run,
-                                     groupings,
-                                     env_variables_used,
-                                     report_dates)
+  env_data_extd <- fill_env_data(env_data,
+                                 quo_groupfield,
+                                 quo_obsfield,
+                                 quo_valuefield,
+                                 env_ref_data,
+                                 env_info,
+                                 fc_model_family, #reduced processing for naive models
+                                 #pull from report_settings
+                                 epi_date_type = report_settings[["epi_date_type"]],
+                                 #calculated/internal
+                                 valid_run,
+                                 groupings,
+                                 env_variables_used,
+                                 report_dates)
 
   #extend into future and/or gaps in requested report dates & known data
   epi_data_extd <- extend_epi_future(epi_data,

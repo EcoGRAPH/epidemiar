@@ -327,34 +327,22 @@ fill_env_data <- function(env_data,
                           env_variables_used,
                           report_dates){
 
-  # recent_window (in days). This is the window to gather observations for the most recent observation (last known) prior to a gap or future missing values to be filled in.
+  # recent_window (in days). This is the window to gather observations for the most recent observation (last known) AND climatologies prior to missing environmental data values. It will be used to calculate the departure from historical to add an anomaly-adjustment to the climatology averages that will be used to fill in the missing values. Anomaly: mean of historical values over the past known recent_window days subtracted from the mean of the actual observed values over the same past known recent_window days.
   #
-  # blend_window (in days). This is the amount of time it takes to blend recent observations back to climatological averages. Value of 0 means an immediate snap back to climatological averages.
+  # weighting_window (in days). This is the amount of time (days) to add the anomaly-adjustment to the climatological averages for filling in missing environmental data. Value of 0 means an immediate snap back to climatological averages.
 
   # Missing example, 5 missing days. w is blend_window
-  # recent_modifier : (blend_window - id_in_run) / blend_window
-  # Day  TotalGap   RecentMod(w=5)  RecentMod(w=3)    RecentMod(w=0)        RecentMod(w=8)
+  # anomaly_modifier : (weighting_window - id_in_run) / weighting_window, MINIMUM of 0
+  # Day  TotalGap   Modider(w=5)    Modifier(w=3)     Modifier(w=0)         Modifier(w=8)
   # 1     5         4/5             2/3               -1/0 [-Inf, Force 0]  7/8
   # 2     5         3/5             1/3               -2/0 [Force 0]        6/8
   # 3     5         2/5             0/3               -3/0 [Force 0]        5/8
   # 4     5         1/5             -1/3 [Force 0]    -4/0 [Force 0]        4/8
   # 5     5         0/5             -2/3 [Force 0]    -5/0 [Force 0]        3/8
-  # historical_modifier : id_in_run / blend_window
-  # Day  TotalGap   HxMod(w=5)      HxMod(w=3)        HxMod(w=0)          HxMod(w=8)
-  # 1     5         1/5             1/3               1/0 [Inf, Force 1]  1/8
-  # 2     5         2/5             2/3               2/0 [Force 1]       2/8
-  # 3     5         3/5             3/3               3/0 [Force 1]       3/8
-  # 4     5         4/5             4/3 [Force 1]     4/0 [Force 1]       4/8
-  # 5     5         5/5             5/3 [Force 1]     5/0 [Force 1]       5/8
   #
-  # recent_modifier = (blend_window - id_in_run) / blend_window), MINIMUM 0
-  # historical_modifier = ifelse(blend_window == 0, 1, id_in_run / blend_window)), MAXIMUM 1
-
-  # if using a combination of blending for longer runs and persistence for shorter runs
-  # minimum_missing_for_blending <- 7
 
   recent_window_default <- 14
-  blend_window_default <- 0
+  weighting_window_default <- 0
 
   # switch epi_date_type to week_type needed for add_datefields()
   week_type <- dplyr::case_when(
@@ -464,6 +452,9 @@ fill_env_data <- function(env_data,
           #use defaults instead and warn
           env_info_used[["recent_window"]] <- rep(recent_window_default, times = nrow(env_info_used))
           message(paste0("Non-numeric values found in env_info$recent_window, using default values of ", recent_window_default, ".\n"))
+        } else if (any(env_info_used[["recent_window"]] <= 0)){
+          env_info_used[["recent_window"]] <- rep(recent_window_default, times = nrow(env_info_used))
+          message(paste0("Zero or negative values found in env_info$recent_window, using default values of ", recent_window_default, ".\n"))
         } else {
           #do nothing, as user value seems to be good
         }
@@ -472,21 +463,24 @@ fill_env_data <- function(env_data,
         env_info_used[["recent_window"]] <- rep(recent_window_default, times = nrow(env_info_used))
         message(paste0("'env_info$recent_window' was not found, using default values of ", recent_window_default, ".\n"))
       }
-      #blend_window
+      #weighting_window
       #does the column exist?
-      if (!is.null(env_info_used[["blend_window"]])){
+      if (!is.null(env_info_used[["weighting_window"]])){
         #is it numeric/integer?
-        if (!(is.numeric(env_info_used[["blend_window"]]) | is.integer(env_info_used[["blend_window"]]))){
+        if (!(is.numeric(env_info_used[["weighting_window"]]) | is.integer(env_info_used[["weighting_window"]]))){
           #use defaults instead and warn
-          env_info_used[["blend_window"]] <- rep(blend_window_default, times = nrow(env_info_used))
-          message(paste0("Non-numeric values found in env_info$blend_window, using default values of ", blend_window_default, ".\n"))
+          env_info_used[["weighting_window"]] <- rep(weighting_window_default, times = nrow(env_info_used))
+          message(paste0("Non-numeric values found in env_info$weighting_window, using default values of ", weighting_window_default, ".\n"))
+        } else if (any(env_info_used[["weighting_window"]] < 0)){
+          env_info_used[["weighting_window"]] <- rep(weighting_window_default, times = nrow(env_info_used))
+          message(paste0("Negative values found in env_info$weighting_window, using default values of ", weighting_window_default, ".\n"))
         } else {
           #do nothing, as user value seems to be good
         }
       } else {
         #missing, so set defaults and warn
-        env_info_used[["blend_window"]] <- rep(blend_window_default, times = nrow(env_info_used))
-        message(paste0("'env_info$blend_window' was not found, using default values of ", blend_window_default, ".\n"))
+        env_info_used[["weighting_window"]] <- rep(weighting_window_default, times = nrow(env_info_used))
+        message(paste0("'env_info$weighting_window' was not found, using default values of ", weighting_window_default, ".\n"))
       }
 
 
@@ -494,14 +488,12 @@ fill_env_data <- function(env_data,
       env_join_ref <- env_na_rle %>%
         #add week, year fields
         epidemiar::add_datefields(week_type) %>%
-        #from user supplied env_info, get reference/summarizing method and
-        # the window to calculate the 'recent' value
-        # the window to calculate the blend of recent to historical climatologies
+        #from user supplied env_info, get reference/summarizing method and windows
         dplyr::left_join(env_info_used %>%
                            dplyr::select(!!quo_obsfield,
                                          .data$reference_method,
                                          .data$recent_window,
-                                         .data$blend_window),
+                                         .data$weighting_window),
                          by = rlang::set_names(rlang::as_name(quo_obsfield),
                                                rlang::as_name(quo_obsfield))) %>%
         #get weekly ref value
@@ -528,11 +520,9 @@ fill_env_data <- function(env_data,
         this_env_data <- env_join_ref %>%
           dplyr::filter(!!quo_obsfield == this_env_var)
 
-        #find 1st NA, then take mean of previous week, input for that day
-        #first NA now can be found with is.na(val_epidemiar) & id_in_run == 1
-        #use zoo::rollapply for mean
-
-        #Fill in first NA of a run with the mean of previous
+        #Find first NA with is.na(val_epidemiar) & id_in_run == 1
+        #use zoo::rollapply for mean of recent, historical
+        #subtract to find recent anomaly value
         this_env_na1fill <- this_env_data %>%
           #confirm proper grouping
           dplyr::group_by(!!quo_groupfield) %>%
@@ -549,13 +539,28 @@ fill_env_data <- function(env_data,
                                                            na.rm = TRUE,
                                                            #fill important to align properly with mutate
                                                            fill = NA),
-                                            #if not first NA, then use original val_epidemiar value
-                                            .data$val_epidemiar)) %>%
+                                            #if not first NA, then we aren't going to use this
+                                            NA_real_),
+                        #same for historical values
+                        hx_lag1 = dplyr::lag(.data$ref_value, n = 1),
+                        hx_recent = ifelse(is.na(.data$val_epidemiar) & .data$id_in_run == 1,
+                                           #historical mean value in recent window period
+                                           zoo::rollapply(data = .data$hx_lag1,
+                                                          width = .data$recent_window,
+                                                          FUN = mean,
+                                                          align = "right",
+                                                          na.rm = TRUE,
+                                                          #fill important to align properly with mutate
+                                                          fill = NA),
+                                           #if not first NA, then we aren't going to use this
+                                           NA_real_),
+                        #departure of observed from climatologies, the 'recent anomaly'
+                        recent_anomaly = .data$last_known - .data$hx_recent) %>%
           #propagate last known value down rows
-          #fill down, so missing weeks has "last known value" IN row for calculations
-          tidyr::fill(.data$last_known, .direction = "down") %>%
-          #drop unneeded lag column
-          dplyr::select(-c(.data$val_lag1))
+          #fill down, so missing weeks has "recent_anomaly" IN row for calculations
+          tidyr::fill(.data$recent_anomaly, .direction = "down") %>%
+          #drop unneeded lag and calculation columns
+          dplyr::select(-c(.data$val_lag1, .data$last_known, .data$hx_lag1, .data$hx_recent))
 
         #split out NA values so that only running calculations on these (saving processing time)
         # all data needed is already IN row
@@ -565,35 +570,24 @@ fill_env_data <- function(env_data,
         this_already_filled <- this_env_na1fill %>%
           dplyr::filter(!is.na(.data$val_epidemiar))
 
-        #calculate NA missing values using blending technique
-        # recent_modifier = (blend_window - id_in_run) / blend_window) MINIMUM 0
-        # historical_modifier = ifelse(blend_window == 0, 1, id_in_run / blend_window)) MAXIMUM 1
+        #calculate NA missing values using technique adding a decreasing weighted anomaly modifier to the climatology averages
+        # anomaly_modifier : (weighting_window - id_in_run) / weighting_window, MINIMUM of 0
         this_env_filled <- this_to_fill %>%
           #order very important for filling next step, so just ensuring
           dplyr::arrange(!!quo_groupfield, .data$obs_date) %>%
           #by geogroup
           dplyr::group_by(!!quo_groupfield) %>%
           #calculate parts
-          # with progressive blending based on id_in_run and blend_window
+          # with decreasing weight modifier based on id_in_run and weighting_window
           dplyr::mutate(
-            #recent
-            recent_modifier_raw = (.data$blend_window - .data$id_in_run) / .data$blend_window,
+            #recent anomaly modifier calculations step 1
+            anomaly_modifier_raw = (.data$weighting_window - .data$id_in_run) / .data$weighting_window,
             #capped at 0, i.e. negative values should be 0
-            recent_modifier = ifelse(.data$recent_modifier_raw < 0,
-                                     0,
-                                     .data$recent_modifier_raw),
-            recent_part = .data$recent_modifier * .data$last_known,
-            #historical
-            historical_modifier_raw = .data$id_in_run / .data$blend_window,
-            #capped at 1, i.e. values greater than 1 should be 1
-            historical_modifier_raw_max = ifelse(.data$historical_modifier_raw > 1,
-                                                 1,
-                                                 .data$historical_modifier_raw),
-            #a blend window of 0 is an immediate snap back and should always have modifier of value 1
-            # also therefore ignoring the div by 0 results
-            historical_modifier = ifelse(.data$blend_window == 0,
-                                         1,
-                                         .data$historical_modifier_raw_max),
+            anomaly_modifier = ifelse(.data$anomaly_modifier_raw < 0,
+                                      0,
+                                      .data$anomaly_modifier_raw),
+            #apply modifier to anomaly value. This will be added to climatology value for imputing
+            anomaly_part = .data$anomaly_modifier * .data$recent_anomaly,
             #historical is by week, so get pseudo-daily value depending on reference method,
             # i.e. how to summarize a week of data
             historical_value = dplyr::case_when(
@@ -601,24 +595,11 @@ fill_env_data <- function(env_data,
               .data$reference_method == "sum"  ~ .data$ref_value / 7,
               #default as if mean
               TRUE             ~ .data$ref_value),
-            historical_part = .data$historical_modifier * .data$historical_value,
-            #testing
-            val_orig = .data$val_epidemiar,
             #only fill NA values
             val_epidemiar = ifelse(is.na(.data$val_epidemiar),
-                                   .data$recent_part + .data$historical_part,
+                                   .data$anomaly_part + .data$historical_value,
                                    #if notNA, then use existing val_epidemiar value
                                    .data$val_epidemiar))
-        #if ONLY blending for longer runs, and persist/carry for shorter missing runs
-        # val_epidemiar = ifelse(is.na(.data$val_epidemiar),
-        #                        #persist if <n days, blend if greater
-        #                        ifelse(.data$run_tot <= minimum_missing_for_blending,
-        #                               .data$last_known,
-        #                               .data$recent_part + .data$historical_part),
-        #                        #if notNA, then use existing val_epidemiar value
-        #                        #fill down in clean up will do the persist/carry fill
-        #                        .data$val_epidemiar))
-
 
 
         #clean up & persist fill
@@ -635,19 +616,13 @@ fill_env_data <- function(env_data,
                            .data$year_epidemiar,
                            .data$reference_method,
                            .data$recent_window,
-                           .data$blend_window,
-                           .data$blend_window,
+                           .data$weighting_window,
                            .data$ref_value,
-                           .data$last_known,
-                           .data$recent_modifier_raw,
-                           .data$recent_modifier,
-                           .data$recent_part,
-                           .data$historical_modifier_raw,
-                           .data$historical_modifier_raw_max,
-                           .data$historical_modifier,
-                           .data$historical_value,
-                           .data$historical_part,
-                           .data$val_orig)) %>%
+                           .data$recent_anomaly,
+                           .data$anomaly_modifier_raw,
+                           .data$anomaly_modifier,
+                           .data$anomaly_part,
+                           .data$historical_value)) %>%
           #Fill down everything except original value field
           # # This will do the persist part of short missing runs if using persistence at all
           #   fills any other column that got vanished during crossing (for missing rows).
@@ -656,6 +631,7 @@ fill_env_data <- function(env_data,
                       .direction = "down") %>%
           #ungroup to end
           dplyr::ungroup()
+
 
         #bind to collector
         env_extended_final <- dplyr::bind_rows(env_extended_final,
@@ -1126,8 +1102,8 @@ check_bb_models <- function(reg_bb){
 
     #quick data frame for failure model names and messages
     fails_msg_df <- data.frame(Model = unlist(names(reg_bb[fails])),
-                              Error_message = unlist(lapply(reg_bb[fails],
-                                                  function(x) conditionMessage(x))))
+                               Error_message = unlist(lapply(reg_bb[fails],
+                                                             function(x) conditionMessage(x))))
 
     #stop and message
     stop(paste("Model(s) failed, please review: \n",

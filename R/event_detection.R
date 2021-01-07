@@ -205,9 +205,10 @@ run_farrington <- function(epi_fc_data,
       this_geogroup_min_date <- epi_stss[[i]] %>% as.data.frame() %>% dplyr::pull(.data$epoch) %>% min()
       #set the minimum integer year value to feed to Farrington control
       #(cannot round up, must only request data that exists)
-      this_week_far_control[["b"]] <- lubridate::interval(this_geogroup_min_date, this_adjdt) %>%
-        lubridate::time_length(unit = "years") %>%
-        floor()
+      #split into two calculations because package check complained floor had the wrong number of arguments
+      this_week_time_length <- lubridate::interval(this_geogroup_min_date, this_adjdt) %>%
+        lubridate::time_length(unit = "years")
+      this_week_far_control[["b"]] <- floor(this_week_time_length)
 
       #with graceful fail catching
       week_collector[[wk]] <- tryCatch({

@@ -328,13 +328,21 @@ into any future/unknown period.
 Environmental dataset, with data extended into the future forecast
  period, if necessary.
 
- Any missing values are filled in using a progressive blend of the the mean of the
- last known period, which is set in env_info$recent_window, default 14 days)
- and the historical means.
+ The imputation is based on the historical climatologies (or whatever is
+ given in env_ref). It will use two user settings from env_info:
 
- The progressive blend happens over n days, set in env_info$blend_window,
- default 0 days, meaning an immediate snap back to historical climiatology
- values.
+ Recent_window (in days). This is the window to gather observations for the
+ most recent observation (last known) AND climatologies prior to missing
+ environmental data values. It will be used to calculate the departure from
+ historical to add an anomaly-adjustment to the climatology averages that
+ will be used to fill in the missing values. Anomaly: mean of historical
+ values over the past known recent_window days subtracted from the mean of
+ the actual observed values over the same past known recent_window days.
+
+ Weighting_window (in days). This is the amount of time (days) to add the
+ anomaly-adjustment to the climatological averages for filling in missing
+ environmental data. Value of 0 means an immediate snap back to
+ climatological averages.
 
  These are all processed per used environmental variable.
 }

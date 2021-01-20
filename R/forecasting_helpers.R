@@ -516,7 +516,15 @@ fill_env_data <- function(env_data,
                                                  "week_epidemiar"),
                                                c(rlang::as_name(quo_groupfield),
                                                  rlang::as_name(quo_obsfield),
-                                                 "week_epidemiar")))
+                                                 "week_epidemiar"))) %>%
+        #hx is by week, so get pseudo-daily value depending on reference method,
+        # i.e. how to summarize a week of data
+        dplyr::mutate(ref_value_daily = dplyr::case_when(
+          .data$reference_method == "mean" ~ .data$ref_value,
+          .data$reference_method == "sum"  ~ .data$ref_value / 7,
+          #default as if mean
+          TRUE             ~ .data$ref_value))
+
 
       #now need to do rest PER ENV VAR, collector for results
       env_extended_final <- tibble::tibble()
@@ -549,8 +557,8 @@ fill_env_data <- function(env_data,
                                                            fill = NA),
                                             #if not first NA, then we aren't going to use this
                                             NA_real_),
-                        #same for historical values
-                        hx_lag1 = dplyr::lag(.data$ref_value, n = 1),
+                        #similar for historical values
+                        hx_lag1 = dplyr::lag(.data$ref_value_daily, n = 1),
                         hx_recent = ifelse(is.na(.data$val_epidemiar) & .data$id_in_run == 1,
                                            #historical mean value in recent window period
                                            zoo::rollapply(data = .data$hx_lag1,
@@ -563,7 +571,7 @@ fill_env_data <- function(env_data,
                                            #if not first NA, then we aren't going to use this
                                            NA_real_),
                         #departure of observed from climatologies, the 'recent anomaly'
-                        recent_anomaly = .data$last_known - .data$hx_recent) %>%
+                        recent_anomaly_week = .data$last_known - .data$hx_recent) %>%
           #propagate last known value down rows
           #fill down, so missing weeks has "recent_anomaly" IN row for calculations
           tidyr::fill(.data$recent_anomaly, .direction = "down") %>%
@@ -598,11 +606,7 @@ fill_env_data <- function(env_data,
             anomaly_part = .data$anomaly_modifier * .data$recent_anomaly,
             #historical is by week, so get pseudo-daily value depending on reference method,
             # i.e. how to summarize a week of data
-            historical_value = dplyr::case_when(
-              .data$reference_method == "mean" ~ .data$ref_value,
-              .data$reference_method == "sum"  ~ .data$ref_value / 7,
-              #default as if mean
-              TRUE             ~ .data$ref_value),
+            historical_value = .data$ref_value_daily,
             #only fill NA values
             val_epidemiar = ifelse(is.na(.data$val_epidemiar),
                                    .data$anomaly_part + .data$historical_value,

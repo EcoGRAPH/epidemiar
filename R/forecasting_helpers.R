@@ -571,7 +571,7 @@ fill_env_data <- function(env_data,
                                            #if not first NA, then we aren't going to use this
                                            NA_real_),
                         #departure of observed from climatologies, the 'recent anomaly'
-                        recent_anomaly_week = .data$last_known - .data$hx_recent) %>%
+                        recent_anomaly = .data$last_known - .data$hx_recent) %>%
           #propagate last known value down rows
           #fill down, so missing weeks has "recent_anomaly" IN row for calculations
           tidyr::fill(.data$recent_anomaly, .direction = "down") %>%
